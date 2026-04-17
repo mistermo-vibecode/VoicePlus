@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: { }
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/build_setup
+
+      - name: Build Libre Release APK (unsigned)
+        run: ./gradlew :app:assembleLibreRelease
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: app/build/outputs/apk/libre/release/*.apk
+          generate_release_notes: true
+          draft: true

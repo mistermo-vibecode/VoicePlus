@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:description="@string/widget_compact_description"
+  android:initialLayout="@layout/widget_compact"
+  android:minWidth="250dp"
+  android:minHeight="48dp"
+  android:minResizeWidth="48dp"
+  android:minResizeHeight="48dp"
+  android:resizeMode="horizontal|vertical"
+  android:widgetFeatures="reconfigurable"
+  android:configure="voice.features.widget.config.WidgetConfigActivity"
+  tools:ignore="UnusedAttribute" />
