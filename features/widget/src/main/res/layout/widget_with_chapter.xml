@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:id="@+id/wholeWidget"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  tools:ignore="Overdraw">
+
+  <!-- Background injected here so it can be tinted transparently -->
+  <ImageView
+    android:id="@+id/widgetBackground"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:src="@drawable/widget_background"
+    android:scaleType="fitXY" />
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <ImageView
+      android:id="@+id/imageView"
+      android:layout_width="wrap_content"
+      android:layout_height="match_parent"
+      android:adjustViewBounds="true"
+      android:contentDescription="@string/content_cover" />
+
+    <LinearLayout
+      android:layout_width="0dp"
+      android:layout_weight="1"
+      android:layout_height="match_parent"
+      android:gravity="center"
+      android:orientation="vertical">
+
+      <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="8dp"
+        android:layout_marginRight="8dp"
+        android:gravity="center_vertical|center_horizontal"
+        android:orientation="vertical"
+        tools:ignore="NestedWeights">
+
+        <TextView
+          android:id="@+id/title"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:ellipsize="end"
+          android:maxLines="1"
+          android:textColor="@color/copy_abc_primary_text_material_dark"
+          android:textSize="@dimen/list_text_primary_size"
+          tools:text="Audiobook title" />
+
+        <TextView
+          android:id="@+id/summary"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:ellipsize="end"
+          android:maxLines="1"
+          android:textColor="@color/copy_abc_secondary_text_material_dark"
+          android:textSize="@dimen/list_text_secondary_size"
+          tools:text="Current chapter" />
+      </LinearLayout>
+
+      <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:divider="@drawable/notification_divider"
+        android:dividerPadding="8dp"
+        android:gravity="center_horizontal|center_vertical"
+        android:orientation="horizontal"
+        android:showDividers="middle">
+
+        <LinearLayout 
+            android:id="@+id/rewindContainer"
+            android:orientation="vertical" 
+            android:gravity="center" 
+            android:layout_width="wrap_content" 
+            android:layout_height="wrap_content">
+          <ImageView
+            android:id="@+id/rewind"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/widget_skip_back_a11y"
+            android:padding="8dp"
+            android:src="@drawable/ic_rewind_white_36dp" />
+          <TextView
+            android:id="@+id/rewindText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/copy_abc_secondary_text_material_dark"
+            android:textSize="11sp"
+            tools:text="30s" />
+        </LinearLayout>
+
+        <ImageView
+          android:id="@+id/playPause"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:background="@android:color/transparent"
+          android:contentDescription="@string/play_pause"
+          android:padding="8dp"
+          android:src="@drawable/ic_play_white_36dp" />
+
+        <LinearLayout 
+            android:id="@+id/fastForwardContainer"
+            android:orientation="vertical" 
+            android:gravity="center" 
+            android:layout_width="wrap_content" 
+            android:layout_height="wrap_content">
+          <ImageView
+            android:id="@+id/fastForward"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/widget_skip_forward_a11y"
+            android:padding="8dp"
+            android:src="@drawable/ic_fast_forward_white_36dp" />
+          <TextView
+            android:id="@+id/fastForwardText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/copy_abc_secondary_text_material_dark"
+            android:textSize="11sp"
+            tools:text="30s" />
+        </LinearLayout>
+
+      </LinearLayout>
+    </LinearLayout>
+  </LinearLayout>
+
+</FrameLayout>

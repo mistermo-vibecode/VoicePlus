@@ -1,0 +1,120 @@
+package voice.core.scanner.matroska
+
+import android.content.ContentResolver
+import android.net.Uri
+import android.os.ParcelFileDescriptor
+import org.ebml.io.DataSource
+import java.io.FileInputStream
+import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import kotlin.math.max
+
+internal class SafSeekableDataSource(
+  contentResolver: ContentResolver,
+  uri: Uri,
+) : DataSource,
+  AutoCloseable {
+
+  private var fileInputStream: FileInputStream
+  private val fileChannel: FileChannel
+  private val parcelFileDescriptor: ParcelFileDescriptor
+  private val length: Long
+  private var closed = false
+  private val buffer = ByteBuffer.allocate(4096)
+  private var bufferPosition = 0
+  private var bufferLimit = 0
+  private var filePosition = 0L
+
+  init {
+    try {
+      parcelFileDescriptor = contentResolver.openFileDescriptor(uri, "r")
+        ?: throw IOException("Cannot open URI as seekable source: $uri")
+      val fileDescriptor = parcelFileDescriptor.fileDescriptor
+      fileInputStream = FileInputStream(fileDescriptor)
+      fileChannel = fileInputStream.channel
+      length = fileChannel.size()
+    } catch (e: Exception) {
+      throw MatroskaParseException("Cannot open URI as seekable source: $uri", e)
+    }
+  }
+
+  override fun length(): Long = length
+
+  override fun getFilePointer(): Long {
+    if (closed) return -1
+    return try {
+      filePosition
+    } catch (_: IOException) {
+      -1
+    }
+  }
+
+  override fun isSeekable(): Boolean = !closed
+
+  override fun seek(pos: Long): Long {
+    if (closed) return -1
+    try {
+      fileChannel.position(pos)
+      bufferPosition = bufferLimit // Invalidate buffer
+      filePosition = pos
+      return fileChannel.position()
+    } catch (_: IOException) {
+      return -1
+    }
+  }
+
+  override fun readByte(): Byte {
+    check(!closed) { "DataSource is closed" }
+
+    try {
+      // Refill buffer if needed
+      if (bufferPosition >= bufferLimit) {
+        buffer.clear()
+        val bytesRead = fileChannel.read(buffer)
+        if (bytesRead == -1) {
+          throw IOException("End of stream reached")
+        }
+        bufferLimit = bytesRead
+        bufferPosition = 0
+        filePosition = fileChannel.position() - bytesRead
+      }
+      val byte = buffer[bufferPosition]
+      bufferPosition++
+      filePosition++
+      return byte
+    } catch (e: IOException) {
+      throw RuntimeException("Failed to read byte", e)
+    }
+  }
+
+  override fun read(buff: ByteBuffer): Int {
+    if (closed) return -1
+    return try {
+      fileChannel.read(buff)
+    } catch (_: IOException) {
+      -1
+    }
+  }
+
+  override fun skip(offset: Long): Long {
+    if (closed) return 0
+    try {
+      val currentPos = fileChannel.position()
+      val newPos = max(0.0, (currentPos + offset).toDouble()).toLong()
+      fileChannel.position(newPos)
+      return newPos - currentPos
+    } catch (_: IOException) {
+      return 0
+    }
+  }
+
+  override fun close() {
+    if (!closed) {
+      closed = true
+      fileChannel.close()
+      fileInputStream.close()
+      parcelFileDescriptor.close()
+    }
+  }
+}

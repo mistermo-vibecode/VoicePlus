@@ -1,0 +1,1 @@
+Inaugural F-Droid release of VoicePlus (v1.18). Forked from Voice by Paul Woitaschek. Adds Listening Log, Listening Statistics, Character List, Hidden Books, collapsible library sections, widget enhancements, customizable media button actions, and sleep timer improvements. No ads, no analytics, fully local.
