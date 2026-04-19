@@ -97,16 +97,16 @@ VoicePlus does not knowingly collect personal information from anyone, including
 If this policy changes in a future version of VoicePlus, the updated policy will be committed to the public repository alongside the source code that motivated the change. The effective date at the top of this document will be updated. Continued use of the app after a policy update constitutes acceptance of the revised policy.
 
 You can always view the current policy at:
-https://github.com/Mistermo/VoicePlus/blob/main/PRIVACY.md
+https://github.com/mistermo-vibecode/VoicePlus/blob/main/PRIVACY.md
 
 ---
 
 ## Contact
 
 If you have questions about this privacy policy, please open an issue on the public repository:
-https://github.com/Mistermo/VoicePlus/issues
+https://github.com/mistermo-vibecode/VoicePlus/issues
 
-*(Placeholder — replace with `https://github.com/Mistermo/VoicePlus/issues` or your preferred contact method before Phase 3 publish.)*
+*(Placeholder — replace with `https://github.com/mistermo-vibecode/VoicePlus/issues` or your preferred contact method before Phase 3 publish.)*
 
 ---
 

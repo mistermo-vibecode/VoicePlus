@@ -37,7 +37,7 @@ The only network activity is a cover art image search, and only when you explici
 
 All listening data (history, statistics, characters, bookmarks, preferences) is stored in a local database on your device and never leaves it.
 
-Privacy policy: https://github.com/Mistermo/VoicePlus/blob/main/PRIVACY.md
+Privacy policy: https://github.com/mistermo-vibecode/VoicePlus/blob/main/PRIVACY.md
 
 
 PERMISSIONS EXPLAINED
@@ -57,4 +57,4 @@ The AD_ID (advertising identifier) permission is explicitly removed. VoicePlus h
 
 OPEN SOURCE
 
-VoicePlus is free and open source software, licensed under the GNU General Public License v3.0. Source code is available at https://github.com/Mistermo/VoicePlus
+VoicePlus is free and open source software, licensed under the GNU General Public License v3.0. Source code is available at https://github.com/mistermo-vibecode/VoicePlus
