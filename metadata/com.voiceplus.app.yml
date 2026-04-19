@@ -12,9 +12,18 @@ Summary: Audiobook player with listening logs, statistics, and no tracking
 Description: |
   VoicePlus is a local audiobook player for Android. It plays audio files stored on your device, keeps track of where you left off, and adds a set of listening tools not found in most audiobook apps. There are no accounts, no cloud sync, no ads, and no analytics.
 
-  VoicePlus is a fork of the Voice Audiobook Player by Paul Woitaschek, an open-source project released under the GNU General Public License v3.0. The original Voice app is at https://github.com/PaulWoitaschek/Voice. VoicePlus extends Voice with additional features while keeping the same privacy-first, offline design.
+  VOICEPLUS FEATURES:
 
-  CORE FEATURES (inherited from Voice):
+  - Listening Log: every listening session is recorded locally so you can see when and how long you listened
+  - Listening Statistics: charts and summaries of your listening history, all computed on-device
+  - Character List: attach a list of characters to any book for quick reference while listening
+  - Hidden Books: hide books from your library without deleting them
+  - Collapsible library sections: organize your library with expandable groups
+  - Widget enhancements: updated home screen widget with more playback information
+  - Customizable media button actions: configure what double-tap and triple-tap on your headset button does
+  - Sleep timer enhancements: extended options including end-of-chapter detection
+
+  CORE FEATURES:
 
   - Add audiobook folders from local storage using Android's file picker
   - Each subfolder is treated as one book, keeping your library clean
@@ -27,17 +36,6 @@ Description: |
   - Chapter navigation
   - Cover art: set manually or search online via DuckDuckGo (user-initiated only)
 
-  VOICEPLUS EXTRAS:
-
-  - Listening Log: every listening session is recorded locally so you can see when and how long you listened
-  - Listening Statistics: charts and summaries of your listening history, all computed on-device
-  - Character List: attach a list of characters to any book for quick reference while listening
-  - Hidden Books: hide books from your library without deleting them
-  - Collapsible library sections: organize your library with expandable groups
-  - Widget enhancements: updated home screen widget with more playback information
-  - Customizable media button actions: configure what double-tap and triple-tap on your headset button does
-  - Sleep timer enhancements: extended options including end-of-chapter detection
-
   PRIVACY:
 
   VoicePlus does not collect, transmit, or store any data about you outside your device. There are no analytics SDKs, no crash-reporting services, no advertising networks, and no Google or Firebase services in this app.
@@ -45,6 +43,8 @@ Description: |
   The only network activity is a cover art image search, and only when you explicitly open the "Search for cover online" screen and trigger it yourself. The search query (book title and author) is sent to DuckDuckGo. DuckDuckGo does not track searches or build user profiles. No other network requests are made.
 
   All listening data (history, statistics, characters, bookmarks, preferences) is stored in a local database on your device and never leaves it.
+
+  VoicePlus is built on Voice Audiobook Player by Paul Woitaschek (https://github.com/PaulWoitaschek/Voice), licensed under GPL-3.0.
 
 RepoType: git
 Repo: https://github.com/mistermo-vibecode/VoicePlus
