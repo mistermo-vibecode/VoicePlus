@@ -6,7 +6,6 @@ WebSite: https://github.com/mistermo-vibecode/VoicePlus
 SourceCode: https://github.com/mistermo-vibecode/VoicePlus
 IssueTracker: https://github.com/mistermo-vibecode/VoicePlus/issues
 Changelog: https://github.com/mistermo-vibecode/VoicePlus/releases
-PrivacyPolicy: https://github.com/mistermo-vibecode/VoicePlus/blob/main/PRIVACY.md
 Summary: Audiobook player with listening logs, statistics, and no tracking
 Description: |
   VoicePlus is a local audiobook player for Android. It plays audio files stored on your device, keeps track of where you left off, and adds a set of listening tools not found in most audiobook apps. There are no accounts, no cloud sync, no ads, and no analytics.
