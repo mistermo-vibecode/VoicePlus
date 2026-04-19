@@ -105,6 +105,11 @@ sealed interface Destination {
     override val trackingName: String get() = "OnboardingExplanation"
   }
 
+  @Serializable
+  data object OpenSourceLicenses : Compose {
+    override val trackingName: String get() = "OpenSourceLicenses"
+  }
+
   data object BatteryOptimization : Destination
 
   @Serializable

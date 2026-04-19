@@ -48,7 +48,7 @@
           android:layout_height="wrap_content"
           android:ellipsize="end"
           android:maxLines="1"
-          android:textColor="@color/copy_abc_primary_text_material_dark"
+          android:textColor="@color/widget_text_primary"
           android:textSize="@dimen/list_text_primary_size"
           tools:text="Audiobook title" />
 
@@ -58,7 +58,7 @@
           android:layout_height="wrap_content"
           android:ellipsize="end"
           android:maxLines="1"
-          android:textColor="@color/copy_abc_secondary_text_material_dark"
+          android:textColor="@color/widget_text_secondary"
           android:textSize="@dimen/list_text_secondary_size"
           tools:text="Current chapter" />
       </LinearLayout>
@@ -91,7 +91,7 @@
             android:id="@+id/rewindText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/copy_abc_secondary_text_material_dark"
+            android:textColor="@color/widget_text_secondary"
             android:textSize="11sp"
             tools:text="30s" />
         </LinearLayout>
@@ -123,7 +123,7 @@
             android:id="@+id/fastForwardText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/copy_abc_secondary_text_material_dark"
+            android:textColor="@color/widget_text_secondary"
             android:textSize="11sp"
             tools:text="30s" />
         </LinearLayout>

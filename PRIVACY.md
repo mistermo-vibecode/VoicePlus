@@ -106,6 +106,7 @@ https://github.com/Mistermo/VoicePlus/blob/main/PRIVACY.md
 If you have questions about this privacy policy, please open an issue on the public repository:
 https://github.com/Mistermo/VoicePlus/issues
 
+*(Placeholder — replace with `https://github.com/Mistermo/VoicePlus/issues` or your preferred contact method before Phase 3 publish.)*
 
 ---
 

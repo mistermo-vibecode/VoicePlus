@@ -6,4 +6,10 @@
   <color name="copy_background_material_dark">#ff424242</color>
   <color name="copy_secondary_text_disabled_material_dark">#36ffffff</color>
   <color name="copy_secondary_text_default_material_dark">#b3ffffff</color>
+
+  <!-- Widget adaptive colors — light mode defaults (API 28-30) -->
+  <color name="widget_background_color">#ECE6F0</color>
+  <color name="widget_text_primary">#1C1B1F</color>
+  <color name="widget_text_secondary">#49454F</color>
+  <color name="widget_icon_tint">#1C1B1F</color>
 </resources>

@@ -25,3 +25,14 @@ releases
 /fastlane/report.xml
 /.idea/copilot.data.migration.ask.xml
 /.idea/copilot.data.migration.ask2agent.xml
+
+# Internal F-Droid planning — not for public release
+docs/fdroid/
+docs/fdroid-release-plan.md
+
+# IDE / editor config
+.vscode/
+.idea/
+
+# Compiled plugin artifacts
+plugins/bin/

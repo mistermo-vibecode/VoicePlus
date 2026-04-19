@@ -7,6 +7,7 @@ plugins {
   id("voice.compose")
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.metro)
+  alias(libs.plugins.aboutlibraries)
 }
 
 android {
@@ -24,7 +25,7 @@ android {
   }
 
   defaultConfig {
-    applicationId = "com.moaudiobook.app"
+    applicationId = "com.voiceplus.app"
     versionName = "1.18"
     versionCode = 5404007
 
@@ -49,6 +50,7 @@ android {
     getByName("debug") {
       isMinifyEnabled = false
       isShrinkResources = false
+      applicationIdSuffix = ".debug"
     }
     all {
       setProguardFiles(

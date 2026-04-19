@@ -44,6 +44,7 @@ public interface PersistenceModule {
   ): AppDb {
     return Room.databaseBuilder(context, AppDb::class.java, AppDb.DATABASE_NAME)
       .addMigrations(*migrations.toTypedArray())
+      .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = false)
       .build()
   }
 

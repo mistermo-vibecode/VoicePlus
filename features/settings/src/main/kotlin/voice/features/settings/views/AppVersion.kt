@@ -6,7 +6,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -37,10 +39,17 @@ internal fun AppVersion(
       )
     },
     supportingContent = {
-      Text(
-        text = appVersion,
-        color = LocalContentColor.current.copy(alpha = 0.5F),
-      )
+      Column {
+        Text(
+          text = appVersion,
+          color = LocalContentColor.current.copy(alpha = 0.5F),
+        )
+        Text(
+          text = "Based on Voice by Paul Woitaschek",
+          color = LocalContentColor.current.copy(alpha = 0.4F),
+          style = MaterialTheme.typography.bodySmall,
+        )
+      }
     },
   )
 }
