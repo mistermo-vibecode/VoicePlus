@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Widget adaptive colors — dark mode (API 28-30) -->
+  <color name="widget_background_color">#ff424242</color>
+  <color name="widget_text_primary">#FFFFFF</color>
+  <color name="widget_text_secondary">#B3FFFFFF</color>
+  <color name="widget_icon_tint">#FFFFFF</color>
+</resources>

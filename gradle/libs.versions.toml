@@ -14,8 +14,10 @@ ktlint-gradlePlugin = "0.13.0"
 retrofit = "3.0.0"
 metro = "0.10.2"
 navigation3 = "1.0.0"
+aboutlibraries = "11.2.3"
 
 [libraries]
+aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutlibraries" }
 androidPluginForGradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 material = "com.google.android.material:material:1.13.0"
 junit = "junit:junit:4.13.2"
@@ -140,3 +142,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version = "2.3.5" }
 ktlint = { id = "io.github.usefulness.ktlint-gradle-plugin", version.ref = "ktlint-gradlePlugin" }
 metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
+aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }

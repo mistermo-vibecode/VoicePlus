@@ -1,7 +1,7 @@
 # VoicePlus
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![F-Droid](https://img.shields.io/f-droid/v/com.moaudiobook.app.svg?logo=f-droid)](https://f-droid.org/packages/com.moaudiobook.app/)
+[![F-Droid](https://img.shields.io/f-droid/v/com.voiceplus.app.svg?logo=f-droid)](https://f-droid.org/packages/com.voiceplus.app/)
 
 **A privacy-focused Android audiobook player with enhanced listening tools.**
 

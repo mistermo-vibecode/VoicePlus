@@ -12,7 +12,6 @@ import voice.core.data.repo.BookRepository
 import voice.core.logging.api.Logger
 import voice.core.playback.session.MediaId
 import voice.core.playback.session.toMediaIdOrNull
-import kotlin.time.Duration.Companion.milliseconds
 
 @Inject
 class PositionUpdater(
@@ -23,8 +22,7 @@ class PositionUpdater(
 
   private lateinit var player: Player
   private var lastWrittenPosition: Long = -1L
-  private var pendingPosition: Long? = null
-  private val updateIntervalMs = 1500L
+  private val updateIntervalMs = 1000L
 
   fun attachTo(player: Player) {
     this.player = player
@@ -37,13 +35,12 @@ class PositionUpdater(
         .collectLatest { playing ->
           if (playing) {
             while (true) {
-              delay(updateIntervalMs)
-              val pending = pendingPosition
-              if (pending != null && pending != lastWrittenPosition) {
+              val current = player.currentPosition
+              if (current >= 0 && current != lastWrittenPosition) {
                 updatePosition()
-                lastWrittenPosition = pending
-                pendingPosition = null
+                lastWrittenPosition = current
               }
+              delay(updateIntervalMs)
             }
           }
         }
@@ -68,7 +65,6 @@ class PositionUpdater(
     val mediaId = mediaItem.mediaId.toMediaIdOrNull() ?: return
     mediaId as MediaId.Chapter
     val chapterId = mediaId.chapterId
-    pendingPosition = currentPosition
     bookRepo.updateBook(mediaId.bookId) { content ->
       if (chapterId in content.chapters) {
         Logger.d("$currentPosition is the new position!")

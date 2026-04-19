@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.GridView
@@ -183,6 +184,21 @@ private fun Settings(
           },
           headlineContent = {
             Text(stringResource(StringsR.string.hidden_books))
+          },
+        )
+      }
+
+      item {
+        ListItem(
+          modifier = Modifier.clickable { listener.openLicenses() },
+          leadingContent = {
+            Icon(
+              imageVector = Icons.Outlined.Gavel,
+              contentDescription = stringResource(StringsR.string.open_source_licenses),
+            )
+          },
+          headlineContent = {
+            Text(stringResource(StringsR.string.open_source_licenses))
           },
         )
       }

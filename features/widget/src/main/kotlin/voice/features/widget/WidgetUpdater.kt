@@ -227,6 +227,12 @@ class WidgetUpdater(
     // Apply alpha to background
     remoteViews.setInt(R.id.widgetBackground, "setImageAlpha", alpha)
 
+    // Tint icons to match theme (light/dark/Material You)
+    val iconTint = context.getColor(R.color.widget_icon_tint)
+    remoteViews.setInt(R.id.playPause, "setColorFilter", iconTint)
+    remoteViews.setInt(R.id.rewind, "setColorFilter", iconTint)
+    remoteViews.setInt(R.id.fastForward, "setColorFilter", iconTint)
+
     // Apply scaling
     remoteViews.setTextViewTextSize(R.id.title, TypedValue.COMPLEX_UNIT_SP, 16f * scale)
     if (variant == WidgetVariant.WithChapter) {

@@ -199,6 +199,10 @@ class SettingsViewModel(
     navigator.goTo(Destination.HiddenBooks)
   }
 
+  override fun openLicenses() {
+    navigator.goTo(Destination.OpenSourceLicenses)
+  }
+
   override fun onMediaButtonDoubleClickRowClick() {
     dialog.value = SettingsViewState.Dialog.MediaButtonDoubleClickAction
   }

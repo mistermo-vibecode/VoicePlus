@@ -21,10 +21,6 @@ internal class SafSeekableDataSource(
   private val parcelFileDescriptor: ParcelFileDescriptor
   private val length: Long
   private var closed = false
-  private val buffer = ByteBuffer.allocate(4096)
-  private var bufferPosition = 0
-  private var bufferLimit = 0
-  private var filePosition = 0L
 
   init {
     try {
@@ -44,7 +40,7 @@ internal class SafSeekableDataSource(
   override fun getFilePointer(): Long {
     if (closed) return -1
     return try {
-      filePosition
+      fileChannel.position()
     } catch (_: IOException) {
       -1
     }
@@ -54,38 +50,24 @@ internal class SafSeekableDataSource(
 
   override fun seek(pos: Long): Long {
     if (closed) return -1
-    try {
+    return try {
       fileChannel.position(pos)
-      bufferPosition = bufferLimit // Invalidate buffer
-      filePosition = pos
-      return fileChannel.position()
+      fileChannel.position()
     } catch (_: IOException) {
-      return -1
+      -1
     }
   }
 
   override fun readByte(): Byte {
     check(!closed) { "DataSource is closed" }
-
-    try {
-      // Refill buffer if needed
-      if (bufferPosition >= bufferLimit) {
-        buffer.clear()
-        val bytesRead = fileChannel.read(buffer)
-        if (bytesRead == -1) {
-          throw IOException("End of stream reached")
-        }
-        bufferLimit = bytesRead
-        bufferPosition = 0
-        filePosition = fileChannel.position() - bytesRead
-      }
-      val byte = buffer[bufferPosition]
-      bufferPosition++
-      filePosition++
-      return byte
+    val buf = ByteBuffer.allocate(1)
+    val bytesRead = try {
+      fileChannel.read(buf)
     } catch (e: IOException) {
       throw RuntimeException("Failed to read byte", e)
     }
+    if (bytesRead == -1) throw RuntimeException("Failed to read byte", IOException("End of stream reached"))
+    return buf[0]
   }
 
   override fun read(buff: ByteBuffer): Int {
