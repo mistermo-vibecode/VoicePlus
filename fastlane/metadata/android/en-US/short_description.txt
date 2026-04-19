@@ -1,1 +1,1 @@
-Local audiobook player with listening logs, statistics, and no tracking.
+Audiobook player with listening logs, statistics, and no tracking.
