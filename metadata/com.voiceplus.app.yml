@@ -52,15 +52,11 @@ Builds:
     commit: v1.18
     gradle:
       - libre
-    # F-Droid build task: ./gradlew :app:assembleLibreRelease
-    # Output APK: app/build/outputs/apk/libre/release/app-libre-release-unsigned.apk
-    # F-Droid will sign the unsigned APK with their own key.
-    #
-    # JVM Toolchain: Java 21
-    # This build requires Gradle to use Java 21 (set via jvmToolchain in baseSetup.kt).
-    # F-Droid build servers must have Java 21+ available. As of April 2026, this should be
-    # available on F-Droid's infrastructure, but if the build fails with JVM errors, this may
-    # indicate Java 21 is not yet available and may require a server update or fallback.
+    scanignore:
+      - settings.gradle.kts
+      - plugins/settings.gradle.kts
+    scandelete:
+      - features/review/play
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: '1.18'
