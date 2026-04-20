@@ -6,6 +6,7 @@ WebSite: https://github.com/mistermo-vibecode/VoicePlus
 SourceCode: https://github.com/mistermo-vibecode/VoicePlus
 IssueTracker: https://github.com/mistermo-vibecode/VoicePlus/issues
 Changelog: https://github.com/mistermo-vibecode/VoicePlus/releases
+
 Summary: Audiobook player with listening logs, statistics, and no tracking
 Description: |
   VoicePlus is a local audiobook player for Android. It plays audio files stored on your device, keeps track of where you left off, and adds a set of listening tools not found in most audiobook apps. There are no accounts, no cloud sync, no ads, and no analytics.
@@ -46,6 +47,7 @@ Description: |
 
 RepoType: git
 Repo: https://github.com/mistermo-vibecode/VoicePlus
+
 Builds:
   - versionName: '1.18'
     versionCode: 5404007
@@ -57,6 +59,7 @@ Builds:
       - plugins/settings.gradle.kts
     scandelete:
       - features/review/play
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: '1.18'
