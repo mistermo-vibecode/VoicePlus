@@ -39,7 +39,7 @@ Description: |
 
   VoicePlus does not collect, transmit, or store any data about you outside your device. There are no analytics SDKs, no crash-reporting services, no advertising networks, and no Google or Firebase services in this app.
 
-  The only network activity is a cover art image search, and only when you explicitly open the "Search for cover online" screen and trigger it yourself. The search query (book title and author) is sent to DuckDuckGo. DuckDuckGo does not track searches or build user profiles. No other network requests are made.
+  The only network activity is a cover art image search, and only when you explicitly open the 'Search for cover online' screen and trigger it yourself. The search query (book title and author) is sent to DuckDuckGo. DuckDuckGo does not track searches or build user profiles. No other network requests are made.
 
   All listening data (history, statistics, characters, bookmarks, preferences) is stored in a local database on your device and never leaves it.
 
@@ -47,6 +47,7 @@ Description: |
 
 RepoType: git
 Repo: https://github.com/mistermo-vibecode/VoicePlus
+Binaries: https://github.com/mistermo-vibecode/VoicePlus/releases/download/v%v/app-libre-release.apk
 
 Builds:
   - versionName: '1.18'
@@ -62,8 +63,6 @@ Builds:
       - features/review/play
 
 AllowedAPKSigningKeys: e9b7ebffdfd96d08bb751810819c2133a6c060bb6f17449d95223b6f8b16d2f2
-Binaries: https://github.com/mistermo-vibecode/VoicePlus/releases/download/v%v/app-libre-release.apk
-
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: '1.18'
