@@ -47,7 +47,8 @@ Description: |
 
 RepoType: git
 Repo: https://github.com/mistermo-vibecode/VoicePlus
-Binaries: https://github.com/mistermo-vibecode/VoicePlus/releases/download/v%v/app-libre-release.apk
+Binaries:
+  https://github.com/mistermo-vibecode/VoicePlus/releases/download/v%v/app-libre-release.apk
 
 Builds:
   - versionName: '1.18'
@@ -63,6 +64,7 @@ Builds:
       - features/review/play
 
 AllowedAPKSigningKeys: e9b7ebffdfd96d08bb751810819c2133a6c060bb6f17449d95223b6f8b16d2f2
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: '1.18'
