@@ -52,6 +52,7 @@ Builds:
   - versionName: '1.18'
     versionCode: 5404007
     commit: v1.18
+    subdir: app
     gradle:
       - libre
     scanignore:
