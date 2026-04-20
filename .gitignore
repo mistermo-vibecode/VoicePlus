@@ -36,3 +36,6 @@ docs/fdroid-release-plan.md
 
 # Compiled plugin artifacts
 plugins/bin/
+
+# Release signing key — NEVER commit this
+signing/
