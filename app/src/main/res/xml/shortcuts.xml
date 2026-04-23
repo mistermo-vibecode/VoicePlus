@@ -6,6 +6,6 @@
     <intent
       android:action="playCurrent"
       android:targetClass="voice.app.MainActivity"
-      android:targetPackage="com.voiceplus.app" />
+      android:targetPackage="com.github.mistermo_vibecode.voiceplus" />
   </shortcut>
 </shortcuts>
