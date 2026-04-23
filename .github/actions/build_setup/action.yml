@@ -6,7 +6,7 @@ runs:
       uses: actions/setup-java@v5
       with:
         distribution: zulu
-        java-version: 17
+        java-version: 21
     - name: Boostrap Gradle Memory
       shell: bash
       run: ./scripts/gradle_bootstrap.sh
