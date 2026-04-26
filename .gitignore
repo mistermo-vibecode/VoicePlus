@@ -39,3 +39,7 @@ plugins/bin/
 
 # Release signing key — NEVER commit this
 signing/
+
+# Local AI assistant context — not for public release
+CLAUDE.md
+.claude/
