@@ -57,6 +57,18 @@ CI runs `:app:lintLibreDebug`, then `voiceUnitTest lintKotlin :app:assembleLibre
 - **Test conventions**: JVM tests use JUnit4 + MockK + Turbine + Robolectric. `failOnNoDiscoveredTests=false` is set on library modules so `voiceUnitTest` works as a repo-wide task even for modules without tests.
 - **Reproducible builds**: `dependenciesInfo.includeInApk = false` in `app/build.gradle.kts`. Don't re-enable.
 
+## Upstream sync setup
+
+This repo merges from upstream Voice (`PaulWoitaschek/Voice`) periodically. The `.gitattributes` file marks several VoicePlus identity files (README, PRIVACY, CREDITS, CI workflows, English store text, `metadata/`) with `merge=ours` so they don't conflict on every sync.
+
+**One-time setup per clone** — the `merge=ours` attribute requires a custom merge driver:
+
+```bash
+git config merge.ours.driver true
+```
+
+This writes to local `.git/config` (not tracked). Run it once after cloning. Without it, `merge=ours` silently does nothing and you'll see the conflicts again.
+
 ## Gotchas
 
 - `fastlane/Fastfile` references `assembleGithubRelease` / `bundlePlayRelease` flavors that no longer exist (the flavors are now `libre`/`proprietary`). It's inherited from upstream and is not used by this fork's CI — release builds go through [.github/workflows/release.yml](.github/workflows/release.yml) which calls `:app:assembleLibreRelease` directly.
