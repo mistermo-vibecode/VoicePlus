@@ -29,6 +29,7 @@ releases
 # Internal F-Droid planning — not for public release
 docs/fdroid/
 docs/fdroid-release-plan.md
+docs/fdroid-release-howto.md
 
 # IDE / editor config
 .vscode/
