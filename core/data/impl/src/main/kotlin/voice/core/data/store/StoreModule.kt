@@ -202,4 +202,10 @@ public interface StoreModule {
     )
   }
 
+  @Provides
+  @SingleIn(AppScope::class)
+  @ExperimentalPlaybackPersistenceStore
+  private fun experimentalPlaybackPersistenceStore(factory: VoiceDataStoreFactory): DataStore<Boolean> {
+    return factory.boolean("experimentalPlaybackPersistence", defaultValue = false)
+  }
 }

@@ -2,6 +2,28 @@
 
 This document tracks all the custom features, enhancements, and granular changes built on top of the original Voice app baseline.
 
+## v1.19 — Upstream Sync, Quick Bookmark, Experimental Playback Persistence
+
+### Upstream Voice sync
+- Merged upstream Voice changes through the v26.4-series releases. Brought in: Kotlin 2.3.21, AGP 9.2.0, Compose BOM 2026.04.01, navigation3 1.1.1, metro 0.13.2, media3 1.10.0, plus assorted dep bumps.
+- Brought in upstream's "hide audiobook folders that are no longer persisted" cleanup, the LivePlaybackState/CurrentBookResolver playback infrastructure, several scanner/test additions, and a fix for "use folder name instead of title for books with multiple files".
+- Migrated VoicePlus's custom screens (HiddenBooks, ListeningStats, CharacterList, ListeningLog) from the now-removed `voice.core.ui.rememberScoped` helper to upstream's new `androidx.compose.runtime.retain.retain` API.
+- Skipped: upstream's reintroduction of remote-config / developer menu / signing-flavor system (kept VoicePlus telemetry-free per project policy).
+- See `MERGE_LOG.md` for the full per-file decision log.
+
+### Media Button Quick Bookmark
+- **New "Quick bookmark" action:** Added to the media-button double-click and triple-click action settings.
+- **Instant bookmarking:** When assigned, pressing the headset button the configured number of times saves a bookmark at the exact current playback position with no interruption to playback.
+- **Seamlessly integrated:** Works alongside all existing multi-click actions (skip forward/backward, skip chapter, none) — assignable independently to double or triple click.
+
+### Experimental Playback Persistence Toggle
+- **New Settings toggle:** "Experimental playback state" in Settings, off by default.
+- **What it does when on:** Position writes happen every 5 minutes instead of every 1 second; the UI shows live position from the player rather than reading from disk. Trades shorter battery drain for slightly delayed persistence on app kill.
+- **What it does when off (default):** Preserves VoicePlus's v1.18 1-second polling behavior.
+- **Persistent across restarts:** Stored in DataStore.
+
+---
+
 ## v1.18 — Battery Efficiency Optimization
 
 ### Performance & Battery Improvements

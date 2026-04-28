@@ -9,4 +9,5 @@ public enum class MediaButtonClickAction {
   SKIP_BACKWARD,
   SKIP_FORWARD_CHAPTER,
   SKIP_BACKWARD_CHAPTER,
+  QUICK_BOOKMARK,
 }

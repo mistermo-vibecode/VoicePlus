@@ -208,4 +208,7 @@
     <string name="media_button_action_skip_backward">Skip backward</string>
     <string name="media_button_action_skip_forward_chapter">Skip forward chapter</string>
     <string name="media_button_action_skip_backward_chapter">Skip backward chapter</string>
+    <string name="media_button_action_quick_bookmark">Quick bookmark</string>
+    <string name="pref_experimental_playback_persistence">Experimental playback state</string>
+    <string name="pref_experimental_playback_persistence_summary">Persists playback position less frequently and shows live position from the player. Reduces battery drain further; may delay the saved position briefly if the app is killed.</string>
 </resources>

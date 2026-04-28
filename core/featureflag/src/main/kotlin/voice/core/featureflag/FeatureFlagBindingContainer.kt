@@ -1,10 +1,16 @@
 package voice.core.featureflag
 
+import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.Qualifier
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
+import voice.core.data.store.ExperimentalPlaybackPersistenceStore
 
 @ContributesTo(AppScope::class)
 interface FeatureFlagBindingContainer {
@@ -44,11 +50,20 @@ interface FeatureFlagBindingContainer {
   @Provides
   @SingleIn(AppScope::class)
   @ExperimentalPlaybackPersistenceQualifier
-  fun experimentalPlaybackPersistenceQualifier(factory: FeatureFlagFactory): FeatureFlag<Boolean> {
-    return factory.boolean(
-      key = "experimental_playback_persistence",
-      description = "Uses the experimental playback persistence implementation.",
-    )
+  fun experimentalPlaybackPersistenceFeatureFlag(
+    @ExperimentalPlaybackPersistenceStore store: DataStore<Boolean>,
+  ): FeatureFlag<Boolean> {
+    return object : FeatureFlag<Boolean> {
+      override val key: String = "experimental_playback_persistence"
+      override val description: String = "Uses the experimental playback persistence implementation."
+      override val type = Boolean::class
+      override fun get(): Boolean = runBlocking { store.data.first() }
+      override val flow: Flow<FeatureFlagValue<Boolean>> = store.data.map { FeatureFlagValue(it, false) }
+      override fun overwrite(value: Boolean) {
+        runBlocking { store.updateData { value } }
+      }
+      override fun clearOverwrite() = Unit
+    }
   }
 
   @Provides

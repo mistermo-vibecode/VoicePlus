@@ -17,6 +17,7 @@ data class SettingsViewState(
   val showFolderPickerEntry: Boolean,
   val mediaButtonDoubleClickAction: MediaButtonClickAction,
   val mediaButtonTripleClickAction: MediaButtonClickAction,
+  val experimentalPlaybackPersistenceEnabled: Boolean,
 ) {
 
   enum class Dialog {
@@ -41,6 +42,7 @@ data class SettingsViewState(
         showFolderPickerEntry = false,
         mediaButtonDoubleClickAction = MediaButtonClickAction.SKIP_FORWARD,
         mediaButtonTripleClickAction = MediaButtonClickAction.SKIP_BACKWARD,
+        experimentalPlaybackPersistenceEnabled = false,
       )
     }
   }

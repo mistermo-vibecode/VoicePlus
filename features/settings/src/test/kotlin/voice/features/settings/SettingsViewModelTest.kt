@@ -45,6 +45,7 @@ class SettingsViewModelTest {
   private val folderPickerFeatureFlag = MemoryFeatureFlag(false)
   private val mediaButtonDoubleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_FORWARD)
   private val mediaButtonTripleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_BACKWARD)
+  private val experimentalPlaybackPersistenceStore = MemoryDataStore(false)
 
   private val viewModel = SettingsViewModel(
     useDarkThemeStore = useDarkThemeStore,
@@ -58,6 +59,7 @@ class SettingsViewModelTest {
     folderPickerInSettingsFeatureFlag = folderPickerFeatureFlag,
     mediaButtonDoubleClickHandlerStore = mediaButtonDoubleClickHandlerStore,
     mediaButtonTripleClickHandlerStore = mediaButtonTripleClickHandlerStore,
+    experimentalPlaybackPersistenceStore = experimentalPlaybackPersistenceStore,
     dispatcherProvider = DispatcherProvider(scope.coroutineContext, scope.coroutineContext, scope.coroutineContext),
   )
 

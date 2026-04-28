@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -165,6 +166,28 @@ private fun Settings(
           title = stringResource(StringsR.string.pref_media_button_triple_click),
           currentAction = viewState.mediaButtonTripleClickAction,
           onClick = listener::onMediaButtonTripleClickRowClick,
+        )
+      }
+
+      item {
+        ListItem(
+          modifier = Modifier.clickable {
+            listener.setExperimentalPlaybackPersistence(!viewState.experimentalPlaybackPersistenceEnabled)
+          },
+          leadingContent = {
+            Icon(
+              imageVector = Icons.Outlined.Science,
+              contentDescription = stringResource(StringsR.string.pref_experimental_playback_persistence),
+            )
+          },
+          headlineContent = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence)) },
+          supportingContent = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence_summary)) },
+          trailingContent = {
+            Switch(
+              checked = viewState.experimentalPlaybackPersistenceEnabled,
+              onCheckedChange = { listener.setExperimentalPlaybackPersistence(it) },
+            )
+          },
         )
       }
 

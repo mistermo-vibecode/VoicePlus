@@ -93,4 +93,5 @@ private fun MediaButtonClickAction.toLabelRes(): Int = when (this) {
   MediaButtonClickAction.SKIP_BACKWARD -> StringsR.string.media_button_action_skip_backward
   MediaButtonClickAction.SKIP_FORWARD_CHAPTER -> StringsR.string.media_button_action_skip_forward_chapter
   MediaButtonClickAction.SKIP_BACKWARD_CHAPTER -> StringsR.string.media_button_action_skip_backward_chapter
+  MediaButtonClickAction.QUICK_BOOKMARK -> StringsR.string.media_button_action_quick_bookmark
 }

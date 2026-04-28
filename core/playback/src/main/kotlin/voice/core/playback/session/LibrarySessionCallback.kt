@@ -32,6 +32,7 @@ import voice.core.data.MediaButtonClickAction
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.repo.BookRepository
+import voice.core.data.repo.BookmarkRepo
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.MediaButtonDoubleClickHandlerStore
 import voice.core.data.store.MediaButtonTripleClickHandlerStore
@@ -54,6 +55,7 @@ class LibrarySessionCallback(
   private val doubleClickHandlerStore: DataStore<MediaButtonClickAction>,
   @MediaButtonTripleClickHandlerStore
   private val tripleClickHandlerStore: DataStore<MediaButtonClickAction>,
+  private val bookmarkRepo: BookmarkRepo,
 ) : MediaLibrarySession.Callback {
 
   private var mediaButtonClickCount = 0
@@ -305,7 +307,15 @@ class LibrarySessionCallback(
       MediaButtonClickAction.SKIP_BACKWARD -> player.seekBack()
       MediaButtonClickAction.SKIP_FORWARD_CHAPTER -> player.forceSeekToNext()
       MediaButtonClickAction.SKIP_BACKWARD_CHAPTER -> player.forceSeekToPrevious()
+      MediaButtonClickAction.QUICK_BOOKMARK -> scope.launch { createQuickBookmark() }
       MediaButtonClickAction.NONE -> Unit
     }
+  }
+
+  private suspend fun createQuickBookmark() {
+    val bookId = currentBookStoreId.data.first() ?: return
+    val book = bookRepository.get(bookId) ?: return
+    bookmarkRepo.addBookmarkAtBookPosition(book = book, title = null, setBySleepTimer = false)
+    Logger.d("Quick bookmark created at current position")
   }
 }

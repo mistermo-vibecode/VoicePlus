@@ -20,6 +20,7 @@ import voice.core.data.MediaButtonClickAction
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.AutoRewindAmountStore
 import voice.core.data.store.DarkThemeStore
+import voice.core.data.store.ExperimentalPlaybackPersistenceStore
 import voice.core.data.store.GridModeStore
 import voice.core.data.store.MediaButtonDoubleClickHandlerStore
 import voice.core.data.store.MediaButtonTripleClickHandlerStore
@@ -55,6 +56,8 @@ class SettingsViewModel(
   private val mediaButtonDoubleClickHandlerStore: DataStore<MediaButtonClickAction>,
   @MediaButtonTripleClickHandlerStore
   private val mediaButtonTripleClickHandlerStore: DataStore<MediaButtonClickAction>,
+  @ExperimentalPlaybackPersistenceStore
+  private val experimentalPlaybackPersistenceStore: DataStore<Boolean>,
   dispatcherProvider: DispatcherProvider,
 ) : SettingsListener {
 
@@ -81,6 +84,9 @@ class SettingsViewModel(
     val mediaButtonTripleClickAction by remember { mediaButtonTripleClickHandlerStore.data }.collectAsState(
       initial = MediaButtonClickAction.SKIP_BACKWARD,
     )
+    val experimentalPlaybackPersistenceEnabled by remember { experimentalPlaybackPersistenceStore.data }.collectAsState(
+      initial = false,
+    )
     return SettingsViewState(
       useDarkTheme = useDarkTheme,
       showDarkThemePref = DARK_THEME_SETTABLE,
@@ -102,6 +108,7 @@ class SettingsViewModel(
       showFolderPickerEntry = showFolderPickerEntry,
       mediaButtonDoubleClickAction = mediaButtonDoubleClickAction,
       mediaButtonTripleClickAction = mediaButtonTripleClickAction,
+      experimentalPlaybackPersistenceEnabled = experimentalPlaybackPersistenceEnabled,
     )
   }
 
@@ -226,6 +233,12 @@ class SettingsViewModel(
   override fun setMediaButtonTripleClickAction(action: MediaButtonClickAction) {
     mainScope.launch {
       mediaButtonTripleClickHandlerStore.updateData { action }
+    }
+  }
+
+  override fun setExperimentalPlaybackPersistence(enabled: Boolean) {
+    mainScope.launch {
+      experimentalPlaybackPersistenceStore.updateData { enabled }
     }
   }
 }

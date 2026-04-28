@@ -29,6 +29,8 @@ interface SettingsListener {
   fun setMediaButtonDoubleClickAction(action: MediaButtonClickAction)
   fun setMediaButtonTripleClickAction(action: MediaButtonClickAction)
 
+  fun setExperimentalPlaybackPersistence(enabled: Boolean)
+
   companion object {
     fun noop() = object : SettingsListener {
       override fun close() {}
@@ -54,6 +56,8 @@ interface SettingsListener {
       override fun onMediaButtonTripleClickRowClick() {}
       override fun setMediaButtonDoubleClickAction(action: MediaButtonClickAction) {}
       override fun setMediaButtonTripleClickAction(action: MediaButtonClickAction) {}
+
+      override fun setExperimentalPlaybackPersistence(enabled: Boolean) {}
     }
   }
 }
