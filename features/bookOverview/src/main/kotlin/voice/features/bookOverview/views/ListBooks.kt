@@ -22,6 +22,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +33,6 @@ import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import kotlinx.collections.immutable.ImmutableMap
 import voice.core.data.BookId
 import voice.core.ui.ImmutableFile
 import voice.features.bookOverview.overview.BookOverviewCategory
@@ -42,7 +42,7 @@ import voice.core.ui.R as UiR
 
 @Composable
 internal fun ListBooks(
-  books: ImmutableMap<BookOverviewCategory, List<BookOverviewItemViewState>>,
+  books: Map<BookOverviewCategory, Map<BookId, State<BookOverviewItemViewState>>>,
   categoryExpanded: (BookOverviewCategory) -> Boolean,
   onCategoryToggle: (BookOverviewCategory) -> Unit,
   onBookClick: (BookId) -> Unit,
@@ -83,12 +83,12 @@ internal fun ListBooks(
       }
       if (expanded) {
         items(
-          items = sectionBooks,
-          key = { it.id.value },
+          items = sectionBooks.toList(),
+          key = { (bookId, _) -> bookId.value },
           contentType = { "item" },
-        ) { book ->
+        ) { (_, bookState) ->
           ListBookRow(
-            book = book,
+            book = bookState.value,
             onBookClick = onBookClick,
             onBookLongClick = onBookLongClick,
           )
@@ -143,7 +143,9 @@ internal fun ListBookRow(
           )
 
           Row(
-            modifier = Modifier.fillMaxWidth().padding(end = 12.dp),
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(end = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
           ) {

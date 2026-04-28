@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.delay
 import voice.core.data.BookId
 import voice.core.ui.VoiceTheme
@@ -49,7 +48,7 @@ internal fun BookOverviewTopBar(
       showFolderPickerIcon = viewState.showFolderPickerIcon,
       searchViewState = viewState.searchViewState,
     )
-    var showLoading by remember { mutableStateOf(true) }
+    var showLoading by remember { mutableStateOf(false) }
     LaunchedEffect(viewState.isLoading) {
       if (viewState.isLoading) {
         delay(3.seconds)
@@ -72,7 +71,7 @@ private fun BookOverviewTopBarPreview() {
   VoiceTheme {
     BookOverviewTopBar(
       viewState = BookOverviewViewState(
-        books = persistentMapOf(),
+        books = emptyMap(),
         layoutMode = BookOverviewLayoutMode.List,
         playButtonState = BookOverviewViewState.PlayButtonState.Paused,
         showAddBookHint = true,

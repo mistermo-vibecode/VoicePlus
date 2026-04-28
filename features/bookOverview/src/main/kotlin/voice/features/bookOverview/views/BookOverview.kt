@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -29,13 +30,11 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
-import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.launch
 import voice.core.common.rootGraphAs
 import voice.core.data.BookId
 import voice.core.ui.PlayButton
 import voice.core.ui.VoiceTheme
-import voice.core.ui.rememberScoped
 import voice.features.bookOverview.bottomSheet.BottomSheetContent
 import voice.features.bookOverview.bottomSheet.BottomSheetItem
 import voice.features.bookOverview.deleteBook.DeleteBookDialog
@@ -65,7 +64,7 @@ interface BookOverviewProvider {
 
 @Composable
 fun BookOverviewScreen(modifier: Modifier = Modifier) {
-  val bookGraph = rememberScoped {
+  val bookGraph = retain<BookOverviewGraph> {
     rootGraphAs<BookOverviewGraph.Factory.Provider>()
       .bookOverviewGraphProviderFactory.create()
   }
@@ -281,9 +280,23 @@ internal class BookOverviewPreviewParameterProvider : PreviewParameterProvider<B
 
   override val values = sequenceOf(
     BookOverviewViewState(
-      books = persistentMapOf(
-        BookOverviewCategory.CURRENT to buildList { repeat(10) { add(book()) } },
-        BookOverviewCategory.FINISHED to listOf(book(), book()),
+      books = mapOf(
+        BookOverviewCategory.CURRENT to buildMap {
+          repeat(10) {
+            put(
+              BookId(UUID.randomUUID().toString()),
+              mutableStateOf(book()),
+            )
+          }
+        },
+        BookOverviewCategory.FINISHED to buildMap {
+          repeat(2) {
+            put(
+              BookId(UUID.randomUUID().toString()),
+              mutableStateOf(book()),
+            )
+          }
+        },
       ),
       layoutMode = BookOverviewLayoutMode.List,
       playButtonState = BookOverviewViewState.PlayButtonState.Paused,

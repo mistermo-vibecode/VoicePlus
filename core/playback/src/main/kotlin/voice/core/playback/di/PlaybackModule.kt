@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
@@ -13,9 +14,12 @@ import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaLibraryService
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import voice.core.featureflag.FeatureFlag
+import voice.core.featureflag.Media3AudioOffloadFeatureFlagQualifier
 import voice.core.playback.misc.VolumeGain
 import voice.core.playback.notification.MainActivityIntentProvider
 import voice.core.playback.player.DurationInconsistenciesUpdater
@@ -32,7 +36,7 @@ import voice.core.strings.R as StringsR
 interface PlaybackModule {
 
   @Provides
-  @PlaybackScope
+  @SingleIn(PlaybackScope::class)
   fun mediaSourceFactory(context: Context): MediaSource.Factory {
     val dataSourceFactory = DefaultDataSource.Factory(context)
     val extractorsFactory = DefaultExtractorsFactory()
@@ -41,7 +45,7 @@ interface PlaybackModule {
   }
 
   @Provides
-  @PlaybackScope
+  @SingleIn(PlaybackScope::class)
   fun player(
     context: Context,
     onlyAudioRenderersFactory: OnlyAudioRenderersFactory,
@@ -50,6 +54,7 @@ interface PlaybackModule {
     positionUpdater: PositionUpdater,
     volumeGain: VolumeGain,
     durationInconsistenciesUpdater: DurationInconsistenciesUpdater,
+    @Media3AudioOffloadFeatureFlagQualifier media3AudioOffloadFeatureFlag: FeatureFlag<Boolean>,
   ): Player {
     val audioAttributes = AudioAttributes.Builder()
       .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
@@ -62,6 +67,18 @@ interface PlaybackModule {
       .setWakeMode(C.WAKE_MODE_LOCAL)
       .build()
       .also { player ->
+        if (media3AudioOffloadFeatureFlag.get()) {
+          player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .setAudioOffloadPreferences(
+              TrackSelectionParameters.AudioOffloadPreferences.Builder()
+                .setAudioOffloadMode(TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
+                .setIsGaplessSupportRequired(true)
+                .setIsSpeedChangeSupportRequired(true)
+                .build(),
+            )
+            .build()
+        }
         playStateDelegatingListener.attachTo(player)
         positionUpdater.attachTo(player)
         durationInconsistenciesUpdater.attachTo(player)
@@ -72,11 +89,11 @@ interface PlaybackModule {
   }
 
   @Provides
-  @PlaybackScope
+  @SingleIn(PlaybackScope::class)
   fun scope(): CoroutineScope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
 
   @Provides
-  @PlaybackScope
+  @SingleIn(PlaybackScope::class)
   fun session(
     service: PlaybackService,
     player: VoicePlayer,

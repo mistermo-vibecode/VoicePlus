@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
+import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.durationMs
 import voice.core.data.markForPosition
@@ -26,10 +27,14 @@ import voice.core.data.repo.BookmarkRepo
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.SleepTimerPreferenceStore
+import voice.core.featureflag.ExperimentalPlaybackPersistenceQualifier
+import voice.core.featureflag.FeatureFlag
 import voice.core.logging.api.Logger
+import voice.core.playback.CurrentBookResolver
 import voice.core.playback.PlayerController
 import voice.core.playback.misc.Decibel
 import voice.core.playback.misc.VolumeGain
+import voice.core.playback.overlay
 import voice.core.playback.playstate.PlayStateManager
 import voice.core.sleeptimer.SleepTimer
 import voice.core.sleeptimer.SleepTimerMode
@@ -48,6 +53,7 @@ import kotlin.time.Duration.Companion.minutes
 @AssistedInject
 class BookPlayViewModel(
   private val bookRepository: BookRepository,
+  private val currentBookResolver: CurrentBookResolver,
   private val player: PlayerController,
   private val sleepTimer: SleepTimer,
   private val playStateManager: PlayStateManager,
@@ -61,6 +67,8 @@ class BookPlayViewModel(
   dispatcherProvider: DispatcherProvider,
   @SleepTimerPreferenceStore
   private val sleepTimerPreferenceStore: DataStore<SleepTimerPreference>,
+  @ExperimentalPlaybackPersistenceQualifier
+  private val experimentalPlaybackPersistenceFeatureFlag: FeatureFlag<Boolean>,
   @Assisted
   private val bookId: BookId,
 ) {
@@ -75,29 +83,50 @@ class BookPlayViewModel(
 
   @Composable
   fun viewState(): BookPlayViewState? {
-    val book = remember { bookRepository.flow(bookId).filterNotNull() }.collectAsState(initial = null).value
-      ?: return null
+    val persistedBook = remember(bookId) {
+      bookRepository.flow(bookId).filterNotNull()
+    }.collectAsState(initial = null).value ?: return null
 
-    val playState by remember {
+    val experimentalPlaybackPersistence = experimentalPlaybackPersistenceFeatureFlag.get()
+    val livePlaybackState = if (experimentalPlaybackPersistence) {
+      remember(bookId) { player.livePlaybackStateFlow(bookId) }
+        .collectAsState(null).value
+    } else {
+      null
+    }
+    val managerPlayState by remember {
       playStateManager.flow
     }.collectAsState()
 
+    val book = if (livePlaybackState != null) {
+      persistedBook.overlay(livePlaybackState)
+    } else {
+      persistedBook
+    }
+    val isPlaying = livePlaybackState?.isPlaying ?: (managerPlayState == PlayStateManager.PlayState.Playing)
+
     val currentStoreBookId by remember { currentBookStoreId.data }.collectAsState(initial = null)
     val playbackControlsEnabled = currentStoreBookId == bookId
-
-    val sleepTime = remember { sleepTimer.state }.collectAsState().value
     val characterCount by remember { characterRepo.characterCount(bookId) }.collectAsState(initial = 0)
 
     val currentMark = book.currentChapter.markForPosition(book.content.positionInChapter)
+    val positionInCurrentMark = if (isPlaying && currentMark.durationMs > 0) {
+      val relativePosition = book.content.positionInChapter - currentMark.startMs
+      relativePosition.coerceIn(0L, currentMark.durationMs)
+    } else {
+      book.content.positionInChapter - currentMark.startMs
+    }
+
+    val sleepTime = remember { sleepTimer.state }.collectAsState().value
     val hasMoreThanOneChapter = book.chapters.sumOf { it.chapterMarks.count() } > 1
     return BookPlayViewState(
       sleepTimerState = sleepTime.toViewState(),
-      playing = playState == PlayStateManager.PlayState.Playing && playbackControlsEnabled,
+      playing = isPlaying && playbackControlsEnabled,
       title = book.content.name,
       showPreviousNextButtons = hasMoreThanOneChapter,
       chapterName = currentMark.name.takeIf { hasMoreThanOneChapter },
       duration = currentMark.durationMs.milliseconds,
-      playedTime = (book.content.positionInChapter - currentMark.startMs).milliseconds,
+      playedTime = positionInCurrentMark.milliseconds,
       playbackControlsEnabled = playbackControlsEnabled,
       cover = book.content.cover?.let(::ImmutableFile),
       skipSilence = book.content.skipSilence,
@@ -152,8 +181,8 @@ class BookPlayViewModel(
 
   fun onAcceptSleepTime(time: Int) {
     updateSleepTimeViewState {
+      val book = currentBook() ?: return@updateSleepTimeViewState null
       scope.launch {
-        val book = bookRepository.get(bookId) ?: return@launch
         bookmarkRepository.addBookmarkAtBookPosition(
           book = book,
           setBySleepTimer = true,
@@ -254,7 +283,7 @@ class BookPlayViewModel(
 
   fun onCurrentChapterClick() {
     scope.launch {
-      val book = bookRepository.get(bookId) ?: return@launch
+      val book = currentBook() ?: return@launch
       _dialogState.value = BookPlayDialogViewState.SelectChapterDialog(
         items = book.chapters.flatMapIndexed { chapterIndex, chapter ->
           chapter.chapterMarks.mapIndexed { markIndex, chapterMark ->
@@ -291,19 +320,15 @@ class BookPlayViewModel(
 
   fun onPlaybackSpeedIconClick() {
     scope.launch {
-      val playbackSpeed = bookRepository.get(bookId)?.content?.playbackSpeed
-      if (playbackSpeed != null) {
-        _dialogState.value = BookPlayDialogViewState.SpeedDialog(playbackSpeed)
-      }
+      val playbackSpeed = currentBook()?.content?.playbackSpeed ?: return@launch
+      _dialogState.value = BookPlayDialogViewState.SpeedDialog(playbackSpeed)
     }
   }
 
   fun onVolumeGainIconClick() {
     scope.launch {
-      val content = bookRepository.get(bookId)?.content
-      if (content != null) {
-        _dialogState.value = volumeGainDialogViewState(Decibel(content.gain))
-      }
+      val content = currentBook()?.content ?: return@launch
+      _dialogState.value = volumeGainDialogViewState(Decibel(content.gain))
     }
   }
 
@@ -329,7 +354,7 @@ class BookPlayViewModel(
 
   fun onBookmarkLongClick() {
     scope.launch {
-      val book = bookRepository.get(bookId) ?: return@launch
+      val book = currentBook() ?: return@launch
       bookmarkRepository.addBookmarkAtBookPosition(
         book = book,
         title = null,
@@ -377,6 +402,10 @@ class BookPlayViewModel(
       val skipSilence = book.content.skipSilence
       player.skipSilence(!skipSilence)
     }
+  }
+
+  private suspend fun currentBook(): Book? {
+    return currentBookResolver.book(bookId)
   }
 
   @AssistedFactory

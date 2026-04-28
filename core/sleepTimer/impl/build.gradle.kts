@@ -11,7 +11,6 @@ dependencies {
   implementation(projects.core.initializer)
   implementation(projects.core.logging.api)
 
-  implementation(libs.datastore)
   implementation(libs.androidxCore)
   implementation(libs.seismic)
   implementation(libs.appCompat)

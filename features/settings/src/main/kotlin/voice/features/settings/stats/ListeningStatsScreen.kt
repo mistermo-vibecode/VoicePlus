@@ -47,8 +47,8 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
+import androidx.compose.runtime.retain.retain
 import voice.core.common.rootGraphAs
-import voice.core.ui.rememberScoped
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import voice.core.strings.R as StringsR
@@ -72,7 +72,7 @@ interface ListeningStatsProvider {
 
 @Composable
 fun ListeningStatsScreen() {
-  val viewModel = rememberScoped { rootGraphAs<ListeningStatsGraph>().listeningStatsViewModel }
+  val viewModel = retain { rootGraphAs<ListeningStatsGraph>().listeningStatsViewModel }
   val viewState = viewModel.viewState()
   ListeningStatsScreen(viewState = viewState, onClose = viewModel::onClose)
 }

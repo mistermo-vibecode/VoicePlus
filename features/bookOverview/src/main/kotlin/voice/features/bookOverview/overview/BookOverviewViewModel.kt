@@ -5,19 +5,23 @@ import android.os.Build
 import android.provider.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.Inject
-import kotlinx.collections.immutable.toImmutableMap
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import voice.core.common.comparator.sortedNaturally
+import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.GridMode
 import voice.core.data.repo.BookContentRepo
@@ -27,9 +31,12 @@ import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.FinishedExpandedStore
 import voice.core.data.store.GridModeStore
 import voice.core.data.store.NotStartedExpandedStore
+import voice.core.featureflag.ExperimentalPlaybackPersistenceQualifier
 import voice.core.featureflag.FeatureFlag
 import voice.core.featureflag.FolderPickerInSettingsFeatureFlagQualifier
+import voice.core.playback.LivePlaybackState
 import voice.core.playback.PlayerController
+import voice.core.playback.overlay
 import voice.core.playback.playstate.PlayStateManager
 import voice.core.scanner.DeviceHasStoragePermissionBug
 import voice.core.scanner.MediaScanTrigger
@@ -40,7 +47,7 @@ import voice.features.bookOverview.search.BookSearchViewState
 import voice.navigation.Destination
 import voice.navigation.Navigator
 
-@BookOverviewScope
+@SingleIn(BookOverviewScope::class)
 @Inject
 class BookOverviewViewModel(
   private val repo: BookRepository,
@@ -63,6 +70,8 @@ class BookOverviewViewModel(
   private val notStartedExpandedStore: DataStore<Boolean>,
   @FinishedExpandedStore
   private val finishedExpandedStore: DataStore<Boolean>,
+  @ExperimentalPlaybackPersistenceQualifier
+  private val experimentalPlaybackPersistenceFeatureFlag: FeatureFlag<Boolean>,
 ) {
 
   private val scope = MainScope()
@@ -124,6 +133,14 @@ class BookOverviewViewModel(
     }
 
     val bookSearchViewState = bookSearchViewState(layoutMode)
+    val experimentalPlaybackPersistence = experimentalPlaybackPersistenceFeatureFlag.get()
+    val livePlaybackState: State<LivePlaybackState?> = if (experimentalPlaybackPersistence && currentBookId != null) {
+      remember(currentBookId) {
+        playerController.livePlaybackStateFlow(currentBookId)
+      }.collectAsState(null)
+    } else {
+      remember { mutableStateOf(null) }
+    }
 
     return BookOverviewViewState(
       layoutMode = layoutMode,
@@ -134,12 +151,14 @@ class BookOverviewViewModel(
         .mapValues { (category, books) ->
           books
             .sortedWith(category.comparator)
-            .map { book ->
-              book.toItemViewState()
+            .associate { book ->
+              book.id to book.itemViewState(
+                currentBookId = currentBookId,
+                livePlaybackState = { livePlaybackState.value },
+              )
             }
         }
-        .toSortedMap()
-        .toImmutableMap(),
+        .toSortedMap(),
       playButtonState = if (playState == PlayStateManager.PlayState.Playing) {
         BookOverviewViewState.PlayButtonState.Playing
       } else {
@@ -248,6 +267,27 @@ class BookOverviewViewModel(
             .setData("package:com.android.externalstorage".toUri()),
         ),
       )
+    }
+  }
+}
+
+@Composable
+private fun Book.itemViewState(
+  currentBookId: BookId?,
+  livePlaybackState: () -> LivePlaybackState?,
+): State<BookOverviewItemViewState> {
+  if (id != currentBookId) {
+    return rememberUpdatedState(toItemViewState())
+  }
+  val currentPlaybackState by rememberUpdatedState(livePlaybackState)
+  return remember(this, currentBookId) {
+    derivedStateOf {
+      val livePlayback = currentPlaybackState()
+      if (livePlayback != null) {
+        overlay(livePlayback)
+      } else {
+        this
+      }.toItemViewState()
     }
   }
 }

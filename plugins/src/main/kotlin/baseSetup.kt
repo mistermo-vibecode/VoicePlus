@@ -14,9 +14,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 fun Project.baseSetup() {
   val libs: VersionCatalog = extensions.getByType(VersionCatalogsExtension::class.java).named("libs")
+  val jvmBytecodeVersion = libs.findVersion("jvm-bytecode").get().requiredVersion.toInt()
+  val jvmToolchainVersion = libs.findVersion("jvm-toolchain").get().requiredVersion.toInt()
   tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
-      jvmTarget.set(JvmTarget.JVM_11)
+      jvmTarget.set(JvmTarget.fromTarget(jvmBytecodeVersion.toString()))
       freeCompilerArgs.addAll(
         "-Xannotation-default-target=param-property",
         "-Xreturn-value-checker=full",
@@ -40,16 +42,15 @@ fun Project.baseSetup() {
   }
   extensions.configure<KotlinProjectExtension> {
     jvmToolchain {
-      languageVersion.set(JavaLanguageVersion.of(21))
+      languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion))
     }
   }
   configureRobolectricSdk(this)
   extensions.configure<CommonExtension> {
     namespace = "voice." + path.removePrefix(":").replace(':', '.')
     compileOptions.apply {
-      isCoreLibraryDesugaringEnabled = true
-      sourceCompatibility = JavaVersion.VERSION_11
-      targetCompatibility = JavaVersion.VERSION_11
+      sourceCompatibility = JavaVersion.toVersion(jvmBytecodeVersion)
+      targetCompatibility = JavaVersion.toVersion(jvmBytecodeVersion)
     }
     defaultConfig.apply {
       if (this is ApplicationDefaultConfig) {
@@ -64,9 +65,9 @@ fun Project.baseSetup() {
       animationsDisabled = true
       unitTests.isIncludeAndroidResources = true
     }
+    lint.lintConfig = project.layout.settingsDirectory.file("lint.xml").asFile
   }
   dependencies.run {
-    add("coreLibraryDesugaring", libs.findLibrary("desugar").get())
     add("implementation", platform(libs.findLibrary("compose-bom").get()))
     add("implementation", libs.findLibrary("coroutines.core").get())
     add("implementation", libs.findLibrary("coroutines.android").get())

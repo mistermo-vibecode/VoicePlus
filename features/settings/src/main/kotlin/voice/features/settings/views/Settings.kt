@@ -14,11 +14,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.retain.retain
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -30,8 +36,8 @@ import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
 import voice.core.ui.VoiceTheme
-import voice.core.ui.rememberScoped
 import voice.features.settings.SettingsListener
+import voice.features.settings.SettingsViewEffect
 import voice.features.settings.SettingsViewModel
 import voice.features.settings.SettingsViewState
 import voice.features.settings.views.sleeptimer.AutoSleepTimerCard
@@ -55,10 +61,14 @@ private fun SettingsPreview() {
 private fun Settings(
   viewState: SettingsViewState,
   listener: SettingsListener,
+  snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
   val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+    snackbarHost = {
+      SnackbarHost(hostState = snackbarHostState)
+    },
     topBar = {
       TopAppBar(
         scrollBehavior = scrollBehavior,
@@ -233,9 +243,20 @@ interface SettingsProvider {
 
 @Composable
 fun Settings() {
-  val viewModel = rememberScoped { rootGraphAs<SettingsGraph>().settingsViewModel }
+  val viewModel = retain<SettingsViewModel> { rootGraphAs<SettingsGraph>().settingsViewModel }
+  val snackbarHostState = remember { SnackbarHostState() }
   val viewState = viewModel.viewState()
-  Settings(viewState, viewModel)
+  val currentDeveloperMenuUnlockedMessage = rememberUpdatedState("Developer Menu unlocked")
+  LaunchedEffect(viewModel) {
+    viewModel.viewEffects.collect { viewEffect ->
+      when (viewEffect) {
+        SettingsViewEffect.DeveloperMenuUnlocked -> {
+          snackbarHostState.showSnackbar(currentDeveloperMenuUnlockedMessage.value)
+        }
+      }
+    }
+  }
+  Settings(viewState, viewModel, snackbarHostState)
 }
 
 @Composable

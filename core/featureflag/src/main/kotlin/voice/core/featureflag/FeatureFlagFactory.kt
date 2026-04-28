@@ -7,15 +7,21 @@ class FeatureFlagFactory {
 
   fun boolean(
     key: String,
+    description: String,
     defaultValue: Boolean = false,
-  ): FeatureFlag<Boolean> = object : FeatureFlag<Boolean> {
-    override fun get() = defaultValue
-  }
+  ): FeatureFlag<Boolean> = MemoryFeatureFlag(
+    initialValue = defaultValue,
+    key = key,
+    description = description,
+  )
 
   fun string(
     key: String,
+    description: String,
     defaultValue: String,
-  ): FeatureFlag<String> = object : FeatureFlag<String> {
-    override fun get() = defaultValue
-  }
+  ): FeatureFlag<String> = MemoryFeatureFlag(
+    initialValue = defaultValue,
+    key = key,
+    description = description,
+  )
 }

@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
 
         NavDisplay(
           backStack = backStack,
-          sceneStrategy = dialogStrategy,
+          sceneStrategies = listOf(dialogStrategy),
           onBack = {
             if (backStack.size > 1) {
               backStack.removeLastOrNull()

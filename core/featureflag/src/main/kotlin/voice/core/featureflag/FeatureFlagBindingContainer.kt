@@ -12,20 +12,53 @@ interface FeatureFlagBindingContainer {
   @Provides
   @SingleIn(AppScope::class)
   @ReviewEnabledFeatureFlagQualifier
-  fun reviewEnabledFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<Boolean> = factory.boolean("review_enabled", defaultValue = false)
+  fun reviewEnabledFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<Boolean> {
+    return factory.boolean(
+      key = "review_enabled",
+      description = "Shows the in-app review prompt when the review conditions are met.",
+      defaultValue = false,
+    )
+  }
 
   @Provides
   @SingleIn(AppScope::class)
   @UserAgentFeatureFlagQualifier
   fun userAgentFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<String> {
-    return factory.string(key = "user_agent", defaultValue = "Mozilla/5.0")
+    return factory.string(
+      key = "user_agent",
+      description = "Overrides the HTTP user agent used for cover downloads.",
+      defaultValue = "Mozilla/5.0",
+    )
   }
 
   @Provides
   @SingleIn(AppScope::class)
   @FolderPickerInSettingsFeatureFlagQualifier
   fun folderPickerInSettingsFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<Boolean> {
-    return factory.boolean(key = "folder_picker_in_settings")
+    return factory.boolean(
+      key = "folder_picker_in_settings",
+      description = "Shows the folder picker entry directly in settings.",
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @ExperimentalPlaybackPersistenceQualifier
+  fun experimentalPlaybackPersistenceQualifier(factory: FeatureFlagFactory): FeatureFlag<Boolean> {
+    return factory.boolean(
+      key = "experimental_playback_persistence",
+      description = "Uses the experimental playback persistence implementation.",
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @Media3AudioOffloadFeatureFlagQualifier
+  fun media3AudioOffloadFeatureFlag(factory: FeatureFlagFactory): FeatureFlag<Boolean> {
+    return factory.boolean(
+      key = "media3_audio_offload",
+      description = "Uses Media3 audio offload when the device supports it.",
+    )
   }
 }
 
@@ -37,3 +70,9 @@ annotation class UserAgentFeatureFlagQualifier
 
 @Qualifier
 annotation class FolderPickerInSettingsFeatureFlagQualifier
+
+@Qualifier
+annotation class ExperimentalPlaybackPersistenceQualifier
+
+@Qualifier
+annotation class Media3AudioOffloadFeatureFlagQualifier

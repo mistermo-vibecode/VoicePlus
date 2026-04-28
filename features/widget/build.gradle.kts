@@ -19,7 +19,6 @@ dependencies {
   implementation(projects.core.playback)
 
   implementation(libs.appCompat)
-  implementation(libs.datastore)
   implementation(libs.coil)
   implementation(libs.androidxCore)
 

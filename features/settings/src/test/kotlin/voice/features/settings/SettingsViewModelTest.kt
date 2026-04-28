@@ -5,6 +5,7 @@ import app.cash.molecule.RecompositionMode
 import app.cash.molecule.launchMolecule
 import app.cash.turbine.test
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -18,6 +19,7 @@ import org.junit.Test
 import voice.core.common.AppInfoProvider
 import voice.core.common.DispatcherProvider
 import voice.core.data.GridMode
+import voice.core.data.MediaButtonClickAction
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.featureflag.MemoryFeatureFlag
 import voice.core.ui.GridCount
@@ -41,6 +43,8 @@ class SettingsViewModelTest {
     every { useGridAsDefault() } returns true
   }
   private val folderPickerFeatureFlag = MemoryFeatureFlag(false)
+  private val mediaButtonDoubleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_FORWARD)
+  private val mediaButtonTripleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_BACKWARD)
 
   private val viewModel = SettingsViewModel(
     useDarkThemeStore = useDarkThemeStore,
@@ -52,6 +56,8 @@ class SettingsViewModelTest {
     sleepTimerPreferenceStore = sleepTimerPreferenceStore,
     gridCount = gridCount,
     folderPickerInSettingsFeatureFlag = folderPickerFeatureFlag,
+    mediaButtonDoubleClickHandlerStore = mediaButtonDoubleClickHandlerStore,
+    mediaButtonTripleClickHandlerStore = mediaButtonTripleClickHandlerStore,
     dispatcherProvider = DispatcherProvider(scope.coroutineContext, scope.coroutineContext, scope.coroutineContext),
   )
 

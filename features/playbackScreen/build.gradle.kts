@@ -10,15 +10,14 @@ dependencies {
   implementation(projects.core.strings)
   implementation(projects.core.playback)
   implementation(projects.core.data.api)
+  implementation(projects.core.featureflag)
   implementation(projects.core.ui)
   implementation(projects.core.sleepTimer.api)
   implementation(projects.features.sleepTimer)
 
-  implementation(libs.datastore)
   implementation(libs.coil)
   implementation(libs.androidxCore)
-  implementation(libs.androidxCore)
-  implementation(libs.material)
 
+  testImplementation(libs.molecule)
   testImplementation(libs.turbine)
 }

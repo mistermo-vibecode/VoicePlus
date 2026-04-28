@@ -29,8 +29,8 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
+import androidx.compose.runtime.retain.retain
 import voice.core.common.rootGraphAs
-import voice.core.ui.rememberScoped
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import voice.core.strings.R as StringsR
@@ -54,7 +54,7 @@ interface HiddenBooksProvider {
 
 @Composable
 fun HiddenBooksScreen() {
-  val viewModel = rememberScoped { rootGraphAs<HiddenBooksGraph>().hiddenBooksViewModel }
+  val viewModel = retain { rootGraphAs<HiddenBooksGraph>().hiddenBooksViewModel }
   val viewState = viewModel.viewState()
   HiddenBooksScreen(
     viewState = viewState,

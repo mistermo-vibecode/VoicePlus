@@ -16,27 +16,17 @@ pluginManagement {
 dependencyResolutionManagement {
   repositories {
     google()
-
-    exclusiveContent {
-      forRepository {
-        maven(url = "https://jitpack.io")
-      }
-      filter {
-        includeGroupByRegex("com.github.PaulWoitaschek.*")
-      }
-    }
-
     mavenCentral()
   }
 }
 
 plugins {
-  id("com.gradle.develocity") version "4.3.2"
+  id("com.gradle.develocity") version "4.4.1"
   id("org.gradle.toolchains.foojay-resolver-convention") version ("1.0.0")
-  id("org.jetbrains.kotlin.android") version "2.3.0" apply false
-  id("org.jetbrains.kotlin.jvm") version "2.3.0" apply false
-  id("com.android.application") version "9.0.0" apply false
-  id("com.android.library") version "9.0.0" apply false
+  id("org.jetbrains.kotlin.android") version "2.3.21" apply false
+  id("org.jetbrains.kotlin.jvm") version "2.3.21" apply false
+  id("com.android.application") version "9.2.0" apply false
+  id("com.android.library") version "9.2.0" apply false
 }
 
 develocity {

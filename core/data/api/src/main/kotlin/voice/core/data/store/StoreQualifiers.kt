@@ -40,6 +40,7 @@ public annotation class NotStartedExpandedStore
 
 @Qualifier
 public annotation class FinishedExpandedStore
+
 @Qualifier
 public annotation class MediaButtonDoubleClickHandlerStore
 

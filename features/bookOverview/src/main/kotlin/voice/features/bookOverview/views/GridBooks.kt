@@ -25,6 +25,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +37,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import kotlinx.collections.immutable.ImmutableMap
 import voice.core.data.BookId
 import voice.features.bookOverview.overview.BookOverviewCategory
 import voice.features.bookOverview.overview.BookOverviewItemViewState
@@ -46,7 +46,7 @@ import voice.core.ui.R as UiR
 
 @Composable
 internal fun GridBooks(
-  books: ImmutableMap<BookOverviewCategory, List<BookOverviewItemViewState>>,
+  books: Map<BookOverviewCategory, Map<BookId, State<BookOverviewItemViewState>>>,
   categoryExpanded: (BookOverviewCategory) -> Boolean,
   onCategoryToggle: (BookOverviewCategory) -> Unit,
   onBookClick: (BookId) -> Unit,
@@ -90,12 +90,12 @@ internal fun GridBooks(
       }
       if (expanded) {
         items(
-          items = sectionBooks,
-          key = { it.id.value },
+          items = sectionBooks.toList(),
+          key = { (bookId, _) -> bookId.value },
           contentType = { "item" },
-        ) { book ->
+        ) { (_, bookState) ->
           GridBook(
-            book = book,
+            book = bookState.value,
             onBookClick = onBookClick,
             onBookLongClick = onBookLongClick,
           )

@@ -5,6 +5,7 @@ plugins {
 dependencies {
   implementation(libs.androidPluginForGradle)
   implementation(libs.kotlin.pluginForGradle)
+  implementation(libs.compose.compiler.gradle.plugin)
   implementation(libs.ktlint.gradlePlugin)
 }
 
@@ -31,6 +32,6 @@ gradlePlugin {
 
 kotlin {
   jvmToolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
+    languageVersion.set(JavaLanguageVersion.of(libs.versions.jvm.toolchain.get().toInt()))
   }
 }

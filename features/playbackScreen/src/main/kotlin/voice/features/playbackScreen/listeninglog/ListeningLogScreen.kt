@@ -45,8 +45,8 @@ import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
+import androidx.compose.runtime.retain.retain
 import voice.core.data.BookId
-import voice.core.ui.rememberScoped
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import voice.core.strings.R as StringsR
@@ -70,7 +70,7 @@ interface ListeningLogProvider {
 
 @Composable
 fun ListeningLogScreen(bookId: BookId) {
-  val viewModel = rememberScoped(bookId.value) {
+  val viewModel = retain(bookId.value) {
     rootGraphAs<ListeningLogGraph>().listeningLogViewModelFactory.create(bookId)
   }
   val viewState = viewModel.viewState()
