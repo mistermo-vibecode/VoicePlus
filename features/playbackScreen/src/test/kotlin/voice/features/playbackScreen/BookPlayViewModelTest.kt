@@ -300,7 +300,7 @@ class BookPlayViewModelTest {
       viewModel.viewState()
     }.test {
       awaitItem() shouldBe null
-      awaitItem()  // intermediate: book loaded, currentStoreBookId not yet emitted
+      awaitItem() // intermediate: book loaded, currentStoreBookId not yet emitted
       val state = awaitItem()!!
       state.playing shouldBe true
       state.playedTime shouldBe 30.seconds
