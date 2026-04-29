@@ -33,12 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.zacsweers.metro.Inject
-import java.util.Locale
 import voice.core.common.rootGraph
 import voice.core.ui.VoiceTheme
 import voice.features.widget.R
 import voice.features.widget.WidgetGraph
 import voice.features.widget.WidgetUpdater
+import java.util.Locale
 import kotlin.math.roundToInt
 
 class WidgetConfigActivity : ComponentActivity() {
