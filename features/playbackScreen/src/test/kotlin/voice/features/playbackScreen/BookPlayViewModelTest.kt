@@ -64,7 +64,7 @@ class BookPlayViewModelTest {
       stateFlow.value = when (val mode = firstArg<SleepTimerMode>()) {
         is TimedWithDuration -> SleepTimerState.Enabled.WithDuration(mode.duration)
         SleepTimerMode.TimedWithDefault -> SleepTimerState.Enabled.WithDuration(runBlocking { sleepTimerDataStore.data.first() }.duration)
-        SleepTimerMode.EndOfChapter -> SleepTimerState.Enabled.WithEndOfChapter
+        is SleepTimerMode.EndOfChapter -> SleepTimerState.Enabled.WithEndOfChapter(mode.chapters)
       }
     }
     every {
@@ -87,9 +87,7 @@ class BookPlayViewModelTest {
       every { flow(book.id) } returns MutableStateFlow(book)
     },
     currentBookResolver = currentBookResolver,
-    player = player.apply {
-      every { pauseIfCurrentBookDifferentFrom(book.id) } just Runs
-    },
+    player = player,
     sleepTimer = sleepTimer,
     playStateManager = playStateManager,
     currentBookStoreId = currentBookStoreId,
@@ -302,6 +300,7 @@ class BookPlayViewModelTest {
       viewModel.viewState()
     }.test {
       awaitItem() shouldBe null
+      awaitItem()  // intermediate: book loaded, currentStoreBookId not yet emitted
       val state = awaitItem()!!
       state.playing shouldBe true
       state.playedTime shouldBe 30.seconds
@@ -321,7 +320,6 @@ class BookPlayViewModelTest {
       },
       currentBookResolver = currentBookResolver,
       player = mockk {
-        every { pauseIfCurrentBookDifferentFrom(book.id) } just Runs
         every { livePlaybackStateFlow(book.id) } returns livePlaybackFlow
       },
       sleepTimer = sleepTimer,
@@ -329,9 +327,12 @@ class BookPlayViewModelTest {
         every { flow } returns playStateFlow
         every { playState } returns playStateFlow.value
       },
-      currentBookStoreId = MemoryDataStore(null),
+      currentBookStoreId = MemoryDataStore(book.id),
       navigator = mockk(),
       bookmarkRepository = mockk(),
+      characterRepo = mockk {
+        every { characterCount(any()) } returns flowOf(0)
+      },
       volumeGainFormatter = mockk(),
       batteryOptimization = mockk(),
       sleepTimerPreferenceStore = sleepTimerDataStore,

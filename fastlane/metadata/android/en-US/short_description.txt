@@ -1,1 +1,1 @@
-Audiobook player with listening logs, statistics, and no tracking.
+Offline audiobook player with some quality of life features.

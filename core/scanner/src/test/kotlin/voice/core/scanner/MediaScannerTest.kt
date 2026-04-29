@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -208,6 +209,7 @@ class MediaScannerTest {
         fileFactory = FileBasedDocumentFactory,
       ),
       deviceHasPermissionBug = mockk(),
+      excludedBooksStore = mockk { every { data } returns kotlinx.coroutines.flow.MutableStateFlow(emptySet()) },
     )
 
     val bookRepo = BookRepositoryImpl(chapterRepo, bookContentRepo)

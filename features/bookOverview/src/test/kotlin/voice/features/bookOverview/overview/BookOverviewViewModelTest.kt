@@ -69,6 +69,8 @@ class BookOverviewViewModelTest {
         every { hasBug } returns MutableStateFlow(false)
       },
       folderPickerInSettingsFeatureFlag = MemoryFeatureFlag(false),
+      notStartedExpandedStore = mockk { every { data } returns MutableStateFlow(true) },
+      finishedExpandedStore = mockk { every { data } returns MutableStateFlow(true) },
       experimentalPlaybackPersistenceFeatureFlag = MemoryFeatureFlag(true),
     )
 

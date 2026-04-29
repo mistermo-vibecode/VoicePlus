@@ -1,60 +1,41 @@
-VoicePlus is a local audiobook player for Android. It plays audio files stored on your device, keeps track of where you left off, and adds a set of listening tools not found in most audiobook apps. There are no accounts, no cloud sync, no ads, and no analytics.
+Its an offline audiobook player. With some quality of life features such as: character lists, listining statistics, listening log, media button customisation, smart sleep timer and more. 
+
+Built on Voice by Paul Woitaschek (go try that first, it's polished and actively maintained). VoicePlus adds a few extras and strips the telemetry.
 
 
-VOICEPLUS FEATURES
+WHAT'S DIFFERENT FROM VOICE
 
-- Listening Log: every listening session is recorded locally so you can see when and how long you listened
-- Listening Statistics: charts and summaries of your listening history, all computed on-device
-- Character List: attach a list of characters to any book for quick reference while listening
+- Listening Log: every session recorded locally so you can see when and how long you listened
+- Listening Statistics: charts and summaries of your history, all computed on-device
+- Character List: attach a cast list to any book for quick reference while listening
 - Hidden Books: hide books from your library without deleting them
-- Collapsible library sections: organize your library with expandable groups
-- Widget enhancements: updated home screen widget with more playback information
-- Customizable media button actions: configure what double-tap and triple-tap on your headset button does
-- Sleep timer enhancements: extended options including end-of-chapter detection
+- Resizable widget with configurable opacity and text scale
+- Customizable media button actions (double-press and triple-press)
+- Sleep timer auto-reset on interaction, with N-chapter countdown
+- Firebase removed entirely. No analytics, no crash reporting, no remote config
 
 
-CORE FEATURES
+THE BASICS (inherited from Voice, credit to Paul)
 
-- Add audiobook folders from local storage using Android's file picker
-- Each subfolder is treated as one book, keeping your library clean
-- Remembers your position in every book automatically
+- Local files only. No accounts, no cloud sync
+- Remembers your position in every book
 - Adjustable playback speed
-- Sleep timer: stops playback after a set time or at the end of a chapter
+- Sleep timer with end-of-chapter detection
 - Bookmarks
-- Android Auto support
-- Material You design with light and dark themes
-- Chapter navigation
-- Cover art: set manually or search online via DuckDuckGo (user-initiated only)
+- Android Auto
+- Material You design, light and dark themes
+- Cover art search via DuckDuckGo (only when you trigger it)
 
 
 PRIVACY
 
-VoicePlus does not collect, transmit, or store any data about you outside your device. There are no analytics SDKs, no crash-reporting services, no advertising networks, and no Google or Firebase services in this app.
-
-The only network activity is a cover art image search, and only when you explicitly open the "Search for cover online" screen and trigger it yourself. The search query (book title and author) is sent to DuckDuckGo. DuckDuckGo does not track searches or build user profiles. No other network requests are made.
-
-All listening data (history, statistics, characters, bookmarks, preferences) is stored in a local database on your device and never leaves it.
+Nothing leaves your device. The only network activity is the optional cover art search, and only when you open that screen and ask for it. No analytics. No crash reporters. Nothing running in the background.
 
 Privacy policy: https://github.com/mistermo-vibecode/VoicePlus/blob/main/PRIVACY.md
 
 
-PERMISSIONS EXPLAINED
-
-INTERNET and ACCESS_NETWORK_STATE: used only for the optional cover art search via DuckDuckGo. No background network access occurs.
-
-FOREGROUND_SERVICE and FOREGROUND_SERVICE_MEDIA_PLAYBACK: required by Android to keep the audio playback service running when the app is in the background.
-
-WAKE_LOCK: prevents the CPU from sleeping during active playback.
-
-REQUEST_IGNORE_BATTERY_OPTIMIZATIONS: lets you exempt VoicePlus from battery optimization so long listening sessions are not interrupted. You choose whether to grant this.
-
-Storage access is handled via Android's Storage Access Framework. You grant access to specific folders through the system file picker. No broad storage permission is requested.
-
-The AD_ID (advertising identifier) permission is explicitly removed. VoicePlus has no advertising component.
-
-
 OPEN SOURCE
 
-VoicePlus is free and open source software, licensed under the GNU General Public License v3.0. Source code is available at https://github.com/mistermo-vibecode/VoicePlus
+GPL v3. Source at https://github.com/mistermo-vibecode/VoicePlus
 
-VoicePlus is built on Voice Audiobook Player by Paul Woitaschek (https://github.com/PaulWoitaschek/Voice), licensed under GPL-3.0.
+Built on Voice by Paul Woitaschek: https://github.com/PaulWoitaschek/Voice
