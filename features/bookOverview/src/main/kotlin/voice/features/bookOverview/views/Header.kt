@@ -63,7 +63,7 @@ internal fun Header(
         )
         if (!expanded && bookCount > 0) {
           Text(
-            text = " (${bookCount})",
+            text = " ($bookCount)",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
           )

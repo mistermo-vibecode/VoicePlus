@@ -115,7 +115,10 @@ class ListeningLogViewModel(
     return result
   }
 
-  private fun Book?.chapterName(id: ChapterId, positionMs: Long): String {
+  private fun Book?.chapterName(
+    id: ChapterId,
+    positionMs: Long,
+  ): String {
     if (this == null) return "Unknown Chapter"
     val index = chapters.indexOfFirst { it.id == id }
     if (index == -1) return "Unknown Chapter"
@@ -128,7 +131,10 @@ class ListeningLogViewModel(
     return if (fallback.isNullOrBlank()) "Chapter ${index + 1}" else fallback
   }
 
-  private fun remainingLabel(totalDurationMs: Long, positionMs: Long): String {
+  private fun remainingLabel(
+    totalDurationMs: Long,
+    positionMs: Long,
+  ): String {
     val remainingMs = (totalDurationMs - positionMs).coerceAtLeast(0L)
     val hours = TimeUnit.MILLISECONDS.toHours(remainingMs)
     val minutes = TimeUnit.MILLISECONDS.toMinutes(remainingMs) % 60

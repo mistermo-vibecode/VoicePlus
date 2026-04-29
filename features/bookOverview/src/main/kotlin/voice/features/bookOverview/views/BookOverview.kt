@@ -180,7 +180,6 @@ internal fun BookOverview(
   onCategoryToggle: (BookOverviewCategory) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-
   val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
   Scaffold(
     modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),

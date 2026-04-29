@@ -50,9 +50,7 @@ interface FeatureFlagBindingContainer {
   @Provides
   @SingleIn(AppScope::class)
   @ExperimentalPlaybackPersistenceQualifier
-  fun experimentalPlaybackPersistenceFeatureFlag(
-    @ExperimentalPlaybackPersistenceStore store: DataStore<Boolean>,
-  ): FeatureFlag<Boolean> {
+  fun experimentalPlaybackPersistenceFeatureFlag(@ExperimentalPlaybackPersistenceStore store: DataStore<Boolean>): FeatureFlag<Boolean> {
     return object : FeatureFlag<Boolean> {
       override val key: String = "experimental_playback_persistence"
       override val description: String = "Uses the experimental playback persistence implementation."

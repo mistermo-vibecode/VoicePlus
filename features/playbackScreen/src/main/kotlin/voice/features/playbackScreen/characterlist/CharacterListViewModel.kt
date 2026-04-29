@@ -40,7 +40,10 @@ class CharacterListViewModel(
     position = position,
   )
 
-  fun addCharacter(name: String, description: String) {
+  fun addCharacter(
+    name: String,
+    description: String,
+  ) {
     if (name.isBlank()) return
     scope.launch {
       val existing = characterRepo.characters(bookId).firstOrNull() ?: emptyList()
@@ -59,7 +62,12 @@ class CharacterListViewModel(
     }
   }
 
-  fun updateCharacter(id: Long, name: String, description: String, position: Int) {
+  fun updateCharacter(
+    id: Long,
+    name: String,
+    description: String,
+    position: Int,
+  ) {
     if (name.isBlank()) return
     scope.launch {
       val allChars = characterRepo.characters(bookId).firstOrNull() ?: return@launch
@@ -97,9 +105,7 @@ class CharacterListViewModel(
   }
 }
 
-data class CharacterListViewState(
-  val characters: List<CharacterItemViewState>,
-)
+data class CharacterListViewState(val characters: List<CharacterItemViewState>)
 
 data class CharacterItemViewState(
   val id: Long,

@@ -209,10 +209,12 @@ class BookPlayViewModel(
         update(current.viewState)
       } else {
         val pref = sleepTimerPreferenceStore.data.first()
-        update(SleepTimerViewState(
-          customSleepTime = pref.duration.inWholeMinutes.toInt(),
-          chapterCount = pref.chaptersCount,
-        ))
+        update(
+          SleepTimerViewState(
+            customSleepTime = pref.duration.inWholeMinutes.toInt(),
+            chapterCount = pref.chaptersCount,
+          ),
+        )
       }
       _dialogState.value = updated?.let(BookPlayDialogViewState::SleepTimer)
     }

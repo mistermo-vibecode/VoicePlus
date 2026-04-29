@@ -2,6 +2,8 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![F-Droid](https://img.shields.io/f-droid/v/com.github.mistermo_vibecode.voiceplus.svg?logo=f-droid)](https://f-droid.org/packages/com.github.mistermo_vibecode.voiceplus/)
+[![Downloads](https://img.shields.io/github/downloads/Mistermo-vibecode/VoicePlus/total.svg)](https://github.com/Mistermo-vibecode/VoicePlus/releases)
+[![CI](https://github.com/Mistermo-vibecode/VoicePlus/actions/workflows/ci.yml/badge.svg)](https://github.com/Mistermo-vibecode/VoicePlus/actions/workflows/ci.yml)
 
 **A privacy-focused Android audiobook player with enhanced listening tools.**
 
@@ -14,7 +16,7 @@
 <!-- F-Droid badge and link — fill in once listed -->
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](#)
 
-_F-Droid listing pending. Check the [Releases](https://github.com/Mistermo/VoicePlus/releases) page for direct APK downloads._
+[Releases](https://github.com/Mistermo-vibecode/VoicePlus/releases) page for direct APK downloads._
 
 ---
 

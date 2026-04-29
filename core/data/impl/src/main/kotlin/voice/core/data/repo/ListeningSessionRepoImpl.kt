@@ -9,9 +9,7 @@ import voice.core.data.repo.internals.dao.ListeningSessionDao
 
 @ContributesBinding(AppScope::class)
 public class ListeningSessionRepoImpl
-internal constructor(
-  private val dao: ListeningSessionDao,
-) : ListeningSessionRepo {
+internal constructor(private val dao: ListeningSessionDao) : ListeningSessionRepo {
 
   override suspend fun addSession(session: ListeningSession) {
     dao.insert(session)

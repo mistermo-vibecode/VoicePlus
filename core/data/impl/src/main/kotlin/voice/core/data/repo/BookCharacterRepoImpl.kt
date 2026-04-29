@@ -9,9 +9,7 @@ import voice.core.data.repo.internals.dao.BookCharacterDao
 
 @ContributesBinding(AppScope::class)
 public class BookCharacterRepoImpl
-internal constructor(
-  private val dao: BookCharacterDao,
-) : BookCharacterRepo {
+internal constructor(private val dao: BookCharacterDao) : BookCharacterRepo {
 
   override suspend fun upsert(character: BookCharacter) {
     if (character.id == 0L) {
@@ -21,11 +19,9 @@ internal constructor(
     }
   }
 
-  override fun characters(bookId: BookId): Flow<List<BookCharacter>> =
-    dao.charactersForBook(bookId)
+  override fun characters(bookId: BookId): Flow<List<BookCharacter>> = dao.charactersForBook(bookId)
 
-  override fun characterCount(bookId: BookId): Flow<Int> =
-    dao.countForBook(bookId)
+  override fun characterCount(bookId: BookId): Flow<Int> = dao.countForBook(bookId)
 
   override suspend fun delete(id: Long) {
     dao.delete(id)

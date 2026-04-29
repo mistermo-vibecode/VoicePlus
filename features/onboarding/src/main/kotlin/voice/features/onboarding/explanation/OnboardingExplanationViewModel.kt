@@ -6,9 +6,7 @@ import voice.navigation.Navigator
 import voice.navigation.Origin
 
 @Inject
-class OnboardingExplanationViewModel(
-  private val navigator: Navigator,
-) {
+class OnboardingExplanationViewModel(private val navigator: Navigator) {
 
   fun onContinue() {
     navigator.goTo(Destination.AddContent(origin = Origin.Onboarding))
