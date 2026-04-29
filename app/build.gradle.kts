@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 import com.android.build.api.dsl.ManagedVirtualDevice
+import java.util.Properties
 
 plugins {
   id("voice.app")
@@ -8,6 +9,12 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.metro)
   alias(libs.plugins.aboutlibraries)
+}
+
+val keystoreProps = Properties()
+val keystorePropsFile = rootProject.file("signing/keystore.properties")
+if (keystorePropsFile.exists()) {
+  keystorePropsFile.inputStream().use { keystoreProps.load(it) }
 }
 
 android {
@@ -42,10 +49,24 @@ android {
     }
   }
 
+  if (keystorePropsFile.exists()) {
+    signingConfigs {
+      create("release") {
+        storeFile = rootProject.file(keystoreProps.getProperty("storeFile") as String)
+        storePassword = keystoreProps.getProperty("storePassword") as String
+        keyAlias = keystoreProps.getProperty("keyAlias") as String
+        keyPassword = keystoreProps.getProperty("keyPassword") as String
+      }
+    }
+  }
+
   buildTypes {
     getByName("release") {
       isMinifyEnabled = true
       isShrinkResources = true
+      if (keystorePropsFile.exists()) {
+        signingConfig = signingConfigs.getByName("release")
+      }
     }
     getByName("debug") {
       isMinifyEnabled = false

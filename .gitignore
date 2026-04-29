@@ -3,6 +3,7 @@ app/src/androidTest/kotlin/voice/app/VoicePlusStressTest.kt
 
 *.iml
 *.apk
+*.stackdump
 .DS_Store
 captures
 audiobook/build
