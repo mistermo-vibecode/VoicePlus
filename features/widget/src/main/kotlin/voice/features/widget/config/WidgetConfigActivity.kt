@@ -1,5 +1,6 @@
 package voice.features.widget.config
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Intent
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.zacsweers.metro.Inject
+import java.util.Locale
 import voice.core.common.rootGraph
 import voice.core.ui.VoiceTheme
 import voice.features.widget.R
@@ -47,6 +49,7 @@ class WidgetConfigActivity : ComponentActivity() {
 
   @Inject lateinit var widgetUpdater: WidgetUpdater
 
+  @SuppressLint("InflateParams")
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setResult(Activity.RESULT_CANCELED)
@@ -110,7 +113,7 @@ class WidgetConfigActivity : ComponentActivity() {
             }
 
             Column {
-              Text("Text size: ${String.format("%.1f", scale)}x", style = MaterialTheme.typography.titleMedium)
+              Text("Text size: ${String.format(Locale.ROOT, "%.1f", scale)}x", style = MaterialTheme.typography.titleMedium)
               Slider(value = scale, onValueChange = { scale = it }, valueRange = 0.5f..2f)
             }
 

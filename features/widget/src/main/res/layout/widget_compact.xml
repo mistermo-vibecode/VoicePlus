@@ -4,7 +4,7 @@
   android:id="@+id/wholeWidget"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  tools:ignore="Overdraw">
+  tools:ignore="Overdraw,UseCompoundDrawables">
 
   <!-- Background injected here so it can be tinted transparently -->
   <ImageView
@@ -12,7 +12,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:src="@drawable/widget_background"
-    android:scaleType="fitXY" />
+    android:scaleType="fitXY"
+    android:contentDescription="" />
 
   <LinearLayout
     android:layout_width="match_parent"

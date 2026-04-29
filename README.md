@@ -35,7 +35,7 @@ But you can try both. If the features below add value to your listining experien
 
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="60">](https://f-droid.org/packages/com.github.mistermo_vibecode.voiceplus/)
 
-Or grab an APK from the [Releases](https://github.com/Mistermo-vibecode/VoicePlus/releases) page.
+Or grab and sideload the APK from the [Releases](https://github.com/Mistermo-vibecode/VoicePlus/releases) page.
 
 ---
 

@@ -1,0 +1,1 @@
+Widget overhaul: resizable widget with live preview, per-instance opacity and text scale. Sleep timer auto-reset on interaction. Quick bookmark via media button. Various fixes and upstream sync.
