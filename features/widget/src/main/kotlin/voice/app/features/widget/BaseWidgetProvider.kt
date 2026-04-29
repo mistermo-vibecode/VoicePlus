@@ -9,11 +9,15 @@ import dev.zacsweers.metro.Inject
 import voice.core.common.rootGraph
 import voice.features.widget.WidgetGraph
 import voice.features.widget.WidgetUpdater
+import voice.features.widget.config.WidgetConfigStore
 
 class BaseWidgetProvider : AppWidgetProvider() {
 
   @Inject
   lateinit var widgetUpdater: WidgetUpdater
+
+  @Inject
+  lateinit var widgetConfigStore: WidgetConfigStore
 
   override fun onReceive(
     context: Context,
@@ -38,5 +42,12 @@ class BaseWidgetProvider : AppWidgetProvider() {
     newOptions: Bundle,
   ) {
     widgetUpdater.update()
+  }
+
+  override fun onDeleted(
+    context: Context,
+    appWidgetIds: IntArray,
+  ) {
+    appWidgetIds.forEach { widgetConfigStore.clear(it) }
   }
 }

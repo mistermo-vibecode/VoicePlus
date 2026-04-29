@@ -75,7 +75,10 @@ class SleepTimerImpl internal constructor(
   override fun reset() {
     val mode = lastMode ?: return
     if (!_state.value.enabled) return
-    enable(mode)
+    scope.launch {
+      if (!sleepTimerPreferenceStore.data.first().autoResetEnabled) return@launch
+      enable(mode)
+    }
   }
 
   private suspend fun startCountdown(duration: Duration) {
@@ -85,12 +88,13 @@ class SleepTimerImpl internal constructor(
     playerController.setVolume(1F)
 
     val fadeOutDuration = fadeOutStore.data.first()
+    val autoResetEnabled = sleepTimerPreferenceStore.data.first().autoResetEnabled
     var interval = 500.milliseconds
 
     while (left > Duration.ZERO) {
       val wasPaused = playStateManager.playState != Playing
       suspendUntilPlaying()
-      if (wasPaused) {
+      if (wasPaused && autoResetEnabled) {
         Logger.i("Playback resumed from pause — resetting sleep timer to $duration")
         left = duration
         _state.value = SleepTimerState.Enabled.WithDuration(left)

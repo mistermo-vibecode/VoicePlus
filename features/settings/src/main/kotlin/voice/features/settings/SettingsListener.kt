@@ -30,6 +30,10 @@ interface SettingsListener {
   fun setMediaButtonTripleClickAction(action: MediaButtonClickAction)
 
   fun setExperimentalPlaybackPersistence(enabled: Boolean)
+  fun onExperimentalPlaybackPersistenceInfoClick()
+
+  fun setSleepTimerAutoReset(enabled: Boolean)
+  fun onSleepTimerAutoResetInfoClick()
 
   companion object {
     fun noop() = object : SettingsListener {
@@ -58,6 +62,10 @@ interface SettingsListener {
       override fun setMediaButtonTripleClickAction(action: MediaButtonClickAction) {}
 
       override fun setExperimentalPlaybackPersistence(enabled: Boolean) {}
+      override fun onExperimentalPlaybackPersistenceInfoClick() {}
+
+      override fun setSleepTimerAutoReset(enabled: Boolean) {}
+      override fun onSleepTimerAutoResetInfoClick() {}
     }
   }
 }

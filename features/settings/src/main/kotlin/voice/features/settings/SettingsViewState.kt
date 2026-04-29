@@ -18,6 +18,7 @@ data class SettingsViewState(
   val mediaButtonDoubleClickAction: MediaButtonClickAction,
   val mediaButtonTripleClickAction: MediaButtonClickAction,
   val experimentalPlaybackPersistenceEnabled: Boolean,
+  val sleepTimerAutoResetEnabled: Boolean,
 ) {
 
   enum class Dialog {
@@ -26,6 +27,8 @@ data class SettingsViewState(
     AutoSleepTimerDuration,
     MediaButtonDoubleClickAction,
     MediaButtonTripleAction,
+    SleepTimerAutoResetInfo,
+    ExperimentalPlaybackPersistenceInfo,
   }
 
   companion object {
@@ -43,6 +46,7 @@ data class SettingsViewState(
         mediaButtonDoubleClickAction = MediaButtonClickAction.SKIP_FORWARD,
         mediaButtonTripleClickAction = MediaButtonClickAction.SKIP_BACKWARD,
         experimentalPlaybackPersistenceEnabled = false,
+        sleepTimerAutoResetEnabled = true,
       )
     }
   }

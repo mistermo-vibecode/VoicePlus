@@ -8,6 +8,7 @@
   android:minResizeWidth="48dp"
   android:minResizeHeight="48dp"
   android:resizeMode="horizontal|vertical"
+  android:previewLayout="@layout/widget_preview"
   android:widgetFeatures="reconfigurable"
   android:configure="voice.features.widget.config.WidgetConfigActivity"
   tools:ignore="UnusedAttribute" />

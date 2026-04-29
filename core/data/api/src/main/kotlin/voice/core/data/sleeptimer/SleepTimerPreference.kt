@@ -24,6 +24,10 @@ public data class SleepTimerPreference(
    * Number of chapters for "End of Chapter" mode
    */
   val chaptersCount: Int = 1,
+  /**
+   * If true, the running sleep timer resets when the user changes volume or resumes after pausing.
+   */
+  val autoResetEnabled: Boolean = true,
 ) {
 
   public companion object {
@@ -33,6 +37,7 @@ public data class SleepTimerPreference(
       autoSleepEndTime = LocalTime.of(6, 0),
       duration = 20.minutes,
       chaptersCount = 1,
+      autoResetEnabled = true,
     )
   }
 }

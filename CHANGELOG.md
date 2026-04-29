@@ -1,114 +1,90 @@
-# VoicePlus History & Changelog
+# VoicePlus Changelog
 
-This document tracks all the custom features, enhancements, and granular changes built on top of the original Voice app baseline.
+## v1.20 — Widget Overhaul, Quick Bookmark, Experimental Playback Persistence
 
-## v1.19 — Upstream Sync, Quick Bookmark, Experimental Playback Persistence
-
-### Upstream Voice sync
-- Merged upstream Voice changes through the v26.4-series releases. Brought in: Kotlin 2.3.21, AGP 9.2.0, Compose BOM 2026.04.01, navigation3 1.1.1, metro 0.13.2, media3 1.10.0, plus assorted dep bumps.
-- Brought in upstream's "hide audiobook folders that are no longer persisted" cleanup, the LivePlaybackState/CurrentBookResolver playback infrastructure, several scanner/test additions, and a fix for "use folder name instead of title for books with multiple files".
-- Migrated VoicePlus's custom screens (HiddenBooks, ListeningStats, CharacterList, ListeningLog) from the now-removed `voice.core.ui.rememberScoped` helper to upstream's new `androidx.compose.runtime.retain.retain` API.
-- Skipped: upstream's reintroduction of remote-config / developer menu / signing-flavor system (kept VoicePlus telemetry-free per project policy).
-- See `MERGE_LOG.md` for the full per-file decision log.
+### Widget Overhaul
+- Consolidated to a single resizable widget showing cover, title, chapter, and skip controls.
+- Configuration screen with live preview lets you adjust opacity and text scale per widget instance.
+- Fixed widget icons disappearing in dark mode.
 
 ### Media Button Quick Bookmark
-- **New "Quick bookmark" action:** Added to the media-button double-click and triple-click action settings.
-- **Instant bookmarking:** When assigned, pressing the headset button the configured number of times saves a bookmark at the exact current playback position with no interruption to playback.
-- **Seamlessly integrated:** Works alongside all existing multi-click actions (skip forward/backward, skip chapter, none) — assignable independently to double or triple click.
+- New "Quick bookmark" action assignable to double or triple headset button click — saves a bookmark instantly without interrupting playback.
 
-### Experimental Playback Persistence Toggle
-- **New Settings toggle:** "Experimental playback state" in Settings, off by default.
-- **What it does when on:** Position writes happen every 5 minutes instead of every 1 second; the UI shows live position from the player rather than reading from disk. Trades shorter battery drain for slightly delayed persistence on app kill.
-- **What it does when off (default):** Preserves VoicePlus's v1.18 1-second polling behavior.
-- **Persistent across restarts:** Stored in DataStore.
+### Experimental Playback Persistence
+- New Settings toggle (off by default). When on, position saves every 5 minutes instead of every second, reducing battery drain at the cost of up to 5 minutes of position loss if the app is force-killed.
+
+---
+
+## v1.19 — Dependency & Platform Updates
+
+- Updated Kotlin, AGP, Compose, Media3, and other core dependencies to current stable versions.
+- Improved chapter name detection for books with multiple audio files.
+- Various stability and compatibility improvements.
 
 ---
 
 ## v1.18 — Battery Efficiency Optimization
 
-### Performance & Battery Improvements
-- **Reduced playback position updates:** Position now updates every 1.5 seconds instead of every 400ms (73% fewer writes), significantly reducing battery drain during playback.
-- **Optimized database queries:** Added indexes on listening session queries (bookId, startedAt) for 10-50x faster lookups.
-- **Streamlined statistics computation:** Real-time stats calculations now debounce updates, reducing CPU load by 70-90%.
-- **Improved Matroska parsing:** Replaced per-byte buffer allocations with 4KB internal buffer, reducing GC pressure during file scanning.
-- **Consolidated metadata extraction:** Unified duration and metadata retrieval to parse each audio file once instead of twice.
-- **Overall impact:** 25-40% battery improvement during typical playback and scanning operations.
+- **Reduced position save frequency:** Position now saves every 1 second instead of every 400ms, reducing battery drain during playback.
+- **Optimized database queries:** Added indexes on listening session queries for faster statistics lookups.
+- **Streamlined statistics computation:** Stats calculations debounce updates, reducing CPU load.
+- **Consolidated metadata extraction:** Audio files are now parsed once per scan instead of twice.
 
 ---
 
 ## v1.17 — N-Chapter Sleep Timer
 
-### Multi-Chapter Sleep Timer
-- **Selectable chapter count:** The "End of Chapter" sleep timer row now has `−` / `+` buttons (matching the custom-minutes row) to choose how many chapters to play before pausing.
-- **Inclusive count:** The selected number includes the currently-playing chapter, e.g. setting `3` plays the current chapter and the next two, then pauses at the end of the third.
-- **Persisted preference:** The chosen count is stored in DataStore and restored when the dialog is reopened.
-- **Live countdown badge:** The indicator above the cover art now reads "End of N Chapter(s)" and decrements as each chapter boundary is crossed (e.g. `3 → 2 → 1 → pause`).
-- **Scrubber fix:** Resolved a visual stutter/vibration when dragging the progress scrubber during playback by stabilizing the seeking state.
+- **Selectable chapter count:** The "End of Chapter" sleep timer now lets you choose how many chapters to play before pausing using `−` / `+` buttons.
+- **Inclusive count:** The selected number includes the currently-playing chapter (e.g. `3` plays the current chapter and the next two, then pauses).
+- **Persisted preference:** The chosen count is saved and restored when the dialog is reopened.
+- **Live countdown badge:** The indicator above cover art shows "End of N Chapter(s)" and counts down as each chapter ends.
+- **Scrubber fix:** Resolved a visual stutter when dragging the progress scrubber during playback.
 
 ---
 
-## v1.16 — Sleep Timer Enhancements
+## v1.16 — Sleep Timer Enhancements & Media Button Actions
 
 ### Sleep Timer Auto-Reset
-- **Pause/Resume reset:** Sleep timer now resets to full duration when user pauses and resumes playback
-- **Volume change reset:** Changing device volume during active sleep timer now resets the countdown to full duration
-- **Streamlined versioning:** Moved from 26.x.x versioning to v1.x.x (cleaner semantic versioning)
+- Timer resets to full duration when playback is paused and resumed.
+- Timer resets to full duration when device volume is changed during an active timer.
 
 ### Customizable Media Button Actions
-- **Multi-Click Detection:** Added support for double and triple clicking the headset play/pause button.
-- **Action Mapping:** In Settings, you can now choose what double and triple clicks do:
-  - **Skip Forward/Backward** by your configured seek amount (e.g. 30s).
-  - **Skip Forward/Backward Chapter** to jump between book segments.
-  - **None** to disable multi-click simulation.
-- **Universal Support:** Works both with simple one-button headsets (via simulated timing) and modern headsets that send discrete "Next/Previous" signals.
+- **Double and triple click support** for headset play/pause button.
+- Assignable actions: Skip Forward, Skip Backward, Skip Forward Chapter, Skip Backward Chapter, None.
+- Works with both simple one-button headsets and multi-button headsets.
 
 ---
 
 ## v1.13 — Privacy & Clean Settings
 
-### Tracking & Analytics — Fully Removed
-- **Deleted 7 modules entirely:** `core/analytics/api`, `core/analytics/firebase`, `core/analytics/noop`, `core/logging/crashlytics`, `core/remoteconfig/api`, `core/remoteconfig/firebase`, `core/remoteconfig/noop`
-- **Removed Firebase Analytics** — no screen views, play/pause events, folder events, or sleep timer events are tracked
-- **Removed Firebase Crashlytics** — no crash or log data is sent to any external server
-- **Removed Firebase Remote Config** — the app no longer fetches remote feature flags on startup
-- **Removed FCM token provider** — no Firebase Installation token is generated or sent
-- **Removed analytics consent prompt** from the onboarding flow
-- **Removed analytics toggle** from the Settings screen
-- **Removed `DeveloperMenuUnlockedStore`** and the hidden developer menu (was only used to trigger remote config refresh)
-- **Simplified `FeatureFlagFactory`** — feature flags now return their hardcoded default values directly; no remote override is possible
-- **Net result:** 954 lines removed, 7 modules deleted, zero external network calls made by the app
+### Analytics & Tracking — Fully Removed
+- Removed Firebase Analytics, Crashlytics, and Remote Config entirely.
+- No usage data, crash reports, or remote feature flags — zero external network calls.
+- Removed analytics consent prompt from onboarding and analytics toggle from Settings.
 
-### Settings Screen — Bloat Removed
-Removed five external links that pointed to the original Voice project's GitHub and third-party infrastructure:
-- **Suggest an idea** (linked to Voice GitHub Discussions)
-- **Get support** (linked to Voice GitHub Q&A)
-- **Report a problem** (linked to Voice GitHub Issues)
-- **Help translating Voice** (linked to Weblate)
-- **FAQ** (linked to voice.woitaschek.de)
+### Settings Cleanup
+- Removed external links to the upstream project's GitHub, support channels, translation platform, and FAQ.
 
 ---
 
-## v1.0.0 (The Foundation)
-***Initial rebranding and comprehensive feature overhaul from the original Voice baseline.***
+## v1.0.0 — Foundation
 
-### Advanced Character Lists
-- **Per-Book Roster:** Added a dedicated screen to track characters specific to the book you are currently reading.
-- **Organization:** Added manual drag-and-drop so you can order the cast by importance rather than just chronologically.
-- **Safeguards:** Implemented a deletion confirmation dialog to ensure you never accidentally wipe out a character description.
+### Character Lists
+- Per-book character roster with drag-to-reorder and deletion confirmation.
 
-### Listening Logs & Statistics Dashboard
-- **Session Tracking:** The player now watches in the background and logs exactly when you started listening, when you stopped, and the exact duration of that individual session.
-- **Analytics Dashboard:** Built a comprehensive statistics dashboard that takes all your logged sessions and aggregates them into beautiful charts and historical listening trends.
+### Listening Logs & Statistics
+- Session tracking with start time, end time, and duration logging.
+- Statistics dashboard with charts and historical listening trends.
 
-### Expanded Library Management
-- **Hide Books:** Added a new "Remove from Library" feature.
-- **Hidden Management:** Added a "Hidden Books management" area directly into the Settings menu to restore or permanently delete books you've hidden from your main view.
-- **Persistent Accordions:** The library now remembers which sections you had expanded or collapsed across sessions.
+### Library Management
+- Hide/remove books from the library with a dedicated Hidden Books management screen in Settings.
+- Library sections remember their expanded/collapsed state across sessions.
 
-### Playback & Widget Enhancements
-- **Background Browsing:** You can now actively browse the rest of your library and look at other books without the app automatically pausing your current playback.
-- **Widget Upgrades:** Upgraded the Android home screen widgets to include skip labels and a progress/chapter line indicator.
-- **Metadata Fixes:** Fixed a core bug where chapter names were incorrectly parsed when the `TIT2` tag exactly matched the album title.
+### Playback & Widget
+- Browse the library without interrupting playback.
+- Home screen widget with skip labels and chapter indicator.
+- Fixed chapter name parsing when the `TIT2` tag matched the album title.
 
 ---
-*Base Fork: Rebranded from Voice v26.2.4-5402004*
+
+*Forked from Voice v26.2.4*

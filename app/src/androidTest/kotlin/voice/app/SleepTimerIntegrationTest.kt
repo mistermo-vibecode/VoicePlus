@@ -89,7 +89,7 @@ class SleepTimerIntegrationTest {
     playerController.play()
     playStateManager.flow.first { it == PlayStateManager.PlayState.Playing }
 
-    sleepTimer.enable(SleepTimerMode.EndOfChapter)
+    sleepTimer.enable(SleepTimerMode.EndOfChapter())
 
     // wait for the sleep timer to trigger
     playStateManager.flow.first { it == PlayStateManager.PlayState.Paused }

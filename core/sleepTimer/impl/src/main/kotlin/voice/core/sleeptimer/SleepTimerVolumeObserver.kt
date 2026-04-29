@@ -11,15 +11,16 @@ import dev.zacsweers.metro.ContributesIntoSet
 import voice.core.initializer.AppInitializer
 
 @ContributesIntoSet(AppScope::class)
-class SleepTimerVolumeObserver(
-  private val sleepTimer: SleepTimer,
-) : AppInitializer {
+class SleepTimerVolumeObserver(private val sleepTimer: SleepTimer) : AppInitializer {
 
   override fun onAppStart(application: Application) {
     val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
     application.registerReceiver(
       object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
+        override fun onReceive(
+          context: Context,
+          intent: Intent,
+        ) {
           val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
           if (streamType == AudioManager.STREAM_MUSIC) {
             val currentState = sleepTimer.state.value

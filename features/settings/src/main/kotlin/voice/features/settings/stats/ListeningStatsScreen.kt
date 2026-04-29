@@ -25,6 +25,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.retain.retain
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -47,7 +48,6 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
-import androidx.compose.runtime.retain.retain
 import voice.core.common.rootGraphAs
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
@@ -152,86 +152,93 @@ internal fun ListeningStatsScreen(
 
 @Composable
 private fun SummarySection(viewState: ListeningStatsViewState) {
-  SectionTitle("Summary")
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    StatCard(
-      label = stringResource(StringsR.string.listening_stats_total_lifetime),
-      value = formatDuration(viewState.totalLifetimeMs),
-      modifier = Modifier.weight(1f),
-    )
-    StatCard(
-      label = stringResource(StringsR.string.listening_stats_today),
-      value = formatDuration(viewState.todayMs),
-      modifier = Modifier.weight(1f),
-    )
-  }
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    StatCard(
-      label = stringResource(StringsR.string.listening_stats_this_week),
-      value = formatDuration(viewState.thisWeekMs),
-      modifier = Modifier.weight(1f),
-    )
-    StatCard(
-      label = stringResource(StringsR.string.listening_stats_this_month),
-      value = formatDuration(viewState.thisMonthMs),
-      modifier = Modifier.weight(1f),
-    )
-  }
-  Row(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(8.dp),
-  ) {
-    StatCard(
-      label = stringResource(StringsR.string.listening_stats_books_completed),
-      value = viewState.booksCompleted.toString(),
-      modifier = Modifier.weight(1f),
-    )
-    StatCard(
-      label = stringResource(StringsR.string.listening_stats_books_in_library),
-      value = viewState.booksInLibrary.toString(),
-      modifier = Modifier.weight(1f),
-    )
-  }
-}
-
-@Composable
-private fun AdditionalStatsSection(viewState: ListeningStatsViewState) {
-  SectionTitle("Insights")
-  Card(
-    modifier = Modifier.fillMaxWidth(),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-  ) {
-    Column(modifier = Modifier.padding(16.dp)) {
-      InsightRow(stringResource(StringsR.string.listening_stats_avg_daily), formatDuration(viewState.avgDailyMs))
-      HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-      InsightRow(
-        stringResource(StringsR.string.listening_stats_longest_day),
-        if (viewState.longestDayMs > 0) "${formatDuration(viewState.longestDayMs)} (${viewState.longestDayLabel})" else "—",
+  Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    SectionTitle("Summary")
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      StatCard(
+        label = stringResource(StringsR.string.listening_stats_total_lifetime),
+        value = formatDuration(viewState.totalLifetimeMs),
+        modifier = Modifier.weight(1f),
       )
-      HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-      InsightRow(
-        stringResource(StringsR.string.listening_stats_current_streak),
-        if (viewState.currentStreak > 0) stringResource(StringsR.string.listening_stats_streak_days, viewState.currentStreak) else "—",
+      StatCard(
+        label = stringResource(StringsR.string.listening_stats_today),
+        value = formatDuration(viewState.todayMs),
+        modifier = Modifier.weight(1f),
       )
-      HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-      InsightRow(
-        stringResource(StringsR.string.listening_stats_longest_streak),
-        if (viewState.longestStreak > 0) stringResource(StringsR.string.listening_stats_streak_days, viewState.longestStreak) else "—",
+    }
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      StatCard(
+        label = stringResource(StringsR.string.listening_stats_this_week),
+        value = formatDuration(viewState.thisWeekMs),
+        modifier = Modifier.weight(1f),
       )
-      HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-      InsightRow(stringResource(StringsR.string.listening_stats_best_day_of_week), viewState.bestDayOfWeek ?: "—")
+      StatCard(
+        label = stringResource(StringsR.string.listening_stats_this_month),
+        value = formatDuration(viewState.thisMonthMs),
+        modifier = Modifier.weight(1f),
+      )
+    }
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      StatCard(
+        label = stringResource(StringsR.string.listening_stats_books_completed),
+        value = viewState.booksCompleted.toString(),
+        modifier = Modifier.weight(1f),
+      )
+      StatCard(
+        label = stringResource(StringsR.string.listening_stats_books_in_library),
+        value = viewState.booksInLibrary.toString(),
+        modifier = Modifier.weight(1f),
+      )
     }
   }
 }
 
 @Composable
-private fun InsightRow(label: String, value: String) {
+private fun AdditionalStatsSection(viewState: ListeningStatsViewState) {
+  Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    SectionTitle("Insights")
+    Card(
+      modifier = Modifier.fillMaxWidth(),
+      colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+      Column(modifier = Modifier.padding(16.dp)) {
+        InsightRow(stringResource(StringsR.string.listening_stats_avg_daily), formatDuration(viewState.avgDailyMs))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        InsightRow(
+          stringResource(StringsR.string.listening_stats_longest_day),
+          if (viewState.longestDayMs > 0) "${formatDuration(viewState.longestDayMs)} (${viewState.longestDayLabel})" else "—",
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        InsightRow(
+          stringResource(StringsR.string.listening_stats_current_streak),
+          if (viewState.currentStreak > 0) stringResource(StringsR.string.listening_stats_streak_days, viewState.currentStreak) else "—",
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        InsightRow(
+          stringResource(StringsR.string.listening_stats_longest_streak),
+          if (viewState.longestStreak > 0) stringResource(StringsR.string.listening_stats_streak_days, viewState.longestStreak) else "—",
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        InsightRow(stringResource(StringsR.string.listening_stats_best_day_of_week), viewState.bestDayOfWeek ?: "—")
+      }
+    }
+  }
+}
+
+@Composable
+private fun InsightRow(
+  label: String,
+  value: String,
+) {
   Row(
     modifier = Modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.SpaceBetween,
@@ -299,8 +306,8 @@ private fun SectionTitle(title: String) {
 @Composable
 fun BarChart(
   data: List<ChartDataPoint>,
-  showEveryNthLabel: Int = 1,
   modifier: Modifier = Modifier,
+  showEveryNthLabel: Int = 1,
 ) {
   val barColor = MaterialTheme.colorScheme.primary
   val zeroBarColor = MaterialTheme.colorScheme.surfaceVariant

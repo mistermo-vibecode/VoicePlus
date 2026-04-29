@@ -5,6 +5,7 @@ import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.collections.shouldEndWith
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.Runs
 import io.mockk.coVerify
 import io.mockk.every
@@ -79,7 +80,6 @@ class SleepTimerImplTest {
       playerController,
       fadeOutStore,
       dispatcherProvider,
-      tracker = mockk(relaxed = true),
     )
   }
 
@@ -99,10 +99,10 @@ class SleepTimerImplTest {
 
   @Test
   fun `enable with EndOfChapter sets state`() = testScope.runTest {
-    sleepTimer.enable(SleepTimerMode.EndOfChapter)
+    sleepTimer.enable(SleepTimerMode.EndOfChapter())
 
     advanceTimeBy(1)
-    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(1)
   }
 
   @Test
@@ -113,6 +113,43 @@ class SleepTimerImplTest {
     sleepTimer.disable()
 
     sleepTimer.state.value shouldBe SleepTimerState.Disabled
+  }
+
+  @Test
+  fun `reset is no-op when autoResetEnabled is false`() = testScope.runTest {
+    sleepTimerPreferenceStore.updateData { it.copy(autoResetEnabled = false) }
+    sleepTimer.enable(SleepTimerMode.TimedWithDuration(10.seconds))
+    advanceTimeBy(3.seconds)
+
+    val stateBefore = sleepTimer.state.value
+    stateBefore.shouldBeInstanceOf<SleepTimerState.Enabled.WithDuration>()
+
+    sleepTimer.reset()
+    advanceTimeBy(1.seconds)
+
+    val stateAfter = sleepTimer.state.value
+    stateAfter.shouldBeInstanceOf<SleepTimerState.Enabled.WithDuration>()
+    // countdown continued — remaining time decreased, it was NOT reset to full
+    (stateAfter.leftDuration < stateBefore.leftDuration) shouldBe true
+  }
+
+  @Test
+  fun `reset restarts countdown when autoResetEnabled is true`() = testScope.runTest {
+    sleepTimerPreferenceStore.updateData { it.copy(autoResetEnabled = true) }
+    sleepTimer.enable(SleepTimerMode.TimedWithDuration(10.seconds))
+    advanceTimeBy(3.seconds)
+
+    val stateBefore = sleepTimer.state.value
+    stateBefore.shouldBeInstanceOf<SleepTimerState.Enabled.WithDuration>()
+
+    sleepTimer.reset()
+    runCurrent() // drain the reset coroutine so enable() fires before advancing time
+    advanceTimeBy(1.seconds)
+
+    val stateAfter = sleepTimer.state.value
+    stateAfter.shouldBeInstanceOf<SleepTimerState.Enabled.WithDuration>()
+    // countdown restarted — remaining time is greater than it was before reset
+    (stateAfter.leftDuration > stateBefore.leftDuration) shouldBe true
   }
 
   @Test

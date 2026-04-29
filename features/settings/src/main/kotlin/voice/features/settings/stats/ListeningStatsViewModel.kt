@@ -5,8 +5,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import dev.zacsweers.metro.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.transformLatest
 import voice.core.data.Book
 import voice.core.data.ListeningSession
 import voice.core.data.repo.BookRepository
@@ -29,10 +30,18 @@ class ListeningStatsViewModel(
   @Composable
   fun viewState(): ListeningStatsViewState {
     val combined by remember {
+      var firstEmitted = false
       combine(sessionRepo.allSessions(), bookRepo.flow()) { sessions, books ->
         computeStats(sessions, books.size, books.count { it.isCompleted() })
+      }.transformLatest { value ->
+        if (!firstEmitted) {
+          firstEmitted = true
+          emit(value)
+        } else {
+          delay(1500L)
+          emit(value)
+        }
       }
-        .debounce(1500L)
     }.collectAsState(initial = null)
     return combined ?: ListeningStatsViewState.Empty
   }
@@ -152,7 +161,10 @@ class ListeningStatsViewModel(
     )
   }
 
-  private fun computeStreaks(sortedDays: List<LocalDate>, today: LocalDate): Pair<Int, Int> {
+  private fun computeStreaks(
+    sortedDays: List<LocalDate>,
+    today: LocalDate,
+  ): Pair<Int, Int> {
     if (sortedDays.isEmpty()) return 0 to 0
     var longest = 1
     var current = 1
@@ -169,7 +181,9 @@ class ListeningStatsViewModel(
         check = check.minusDays(1)
       }
       streak
-    } else 0
+    } else {
+      0
+    }
     return activeStreak to longest
   }
 
@@ -182,7 +196,10 @@ private fun Book.isCompleted(): Boolean {
   return duration > 0 && position >= duration - 5_000L
 }
 
-data class ChartDataPoint(val label: String, val valueMs: Long)
+data class ChartDataPoint(
+  val label: String,
+  val valueMs: Long,
+)
 
 data class ListeningStatsViewState(
   val totalLifetimeMs: Long,

@@ -30,12 +30,11 @@ interface OpenSourceLicensesGraph {
 interface OpenSourceLicensesProvider {
   @Provides
   @IntoSet
-  fun openSourceLicensesNavEntryProvider(): NavEntryProvider<*> =
-    NavEntryProvider<Destination.OpenSourceLicenses> { key ->
-      NavEntry(key) {
-        OpenSourceLicensesScreen()
-      }
+  fun openSourceLicensesNavEntryProvider(): NavEntryProvider<*> = NavEntryProvider<Destination.OpenSourceLicenses> { key ->
+    NavEntry(key) {
+      OpenSourceLicensesScreen()
     }
+  }
 }
 
 @Composable

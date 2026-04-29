@@ -1,3 +1,6 @@
+# VoicePlus stress test — local only, never commit
+app/src/androidTest/kotlin/voice/app/VoicePlusStressTest.kt
+
 *.iml
 *.apk
 .DS_Store

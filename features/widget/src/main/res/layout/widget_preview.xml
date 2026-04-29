@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:tools="http://schemas.android.com/tools"
   android:id="@+id/wholeWidget"
   android:layout_width="match_parent"
-  android:layout_height="match_parent"
-  tools:ignore="Overdraw">
+  android:layout_height="match_parent">
 
-  <!-- Background injected here so it can be tinted transparently -->
   <ImageView
     android:id="@+id/widgetBackground"
     android:layout_width="match_parent"
@@ -24,7 +21,8 @@
       android:layout_width="wrap_content"
       android:layout_height="match_parent"
       android:adjustViewBounds="true"
-      android:contentDescription="@string/content_cover" />
+      android:contentDescription="@string/content_cover"
+      android:src="@drawable/album_art" />
 
     <LinearLayout
       android:layout_width="0dp"
@@ -39,8 +37,7 @@
         android:layout_marginLeft="8dp"
         android:layout_marginRight="8dp"
         android:gravity="center_vertical|center_horizontal"
-        android:orientation="vertical"
-        tools:ignore="NestedWeights">
+        android:orientation="vertical">
 
         <TextView
           android:id="@+id/title"
@@ -48,9 +45,9 @@
           android:layout_height="wrap_content"
           android:ellipsize="end"
           android:maxLines="1"
+          android:text="The Count of Monte Cristo"
           android:textColor="@color/widget_text_primary"
-          android:textSize="@dimen/list_text_primary_size"
-          tools:text="Audiobook title" />
+          android:textSize="14sp" />
 
         <TextView
           android:id="@+id/summary"
@@ -58,9 +55,9 @@
           android:layout_height="wrap_content"
           android:ellipsize="end"
           android:maxLines="1"
+          android:text="Chapter 05 - Marseille"
           android:textColor="@color/widget_text_secondary"
-          android:textSize="@dimen/list_text_secondary_size"
-          tools:text="Current chapter" />
+          android:textSize="12sp" />
       </LinearLayout>
 
       <LinearLayout
@@ -73,59 +70,76 @@
         android:orientation="horizontal"
         android:showDividers="middle">
 
-        <LinearLayout 
-            android:id="@+id/rewindContainer"
-            android:orientation="vertical" 
-            android:gravity="center" 
-            android:layout_width="wrap_content" 
-            android:layout_height="wrap_content">
+        <LinearLayout
+          android:id="@+id/rewindContainer"
+          android:orientation="vertical"
+          android:gravity="center"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content">
           <ImageView
             android:id="@+id/rewind"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:contentDescription="@string/widget_skip_back_a11y"
-            android:padding="8dp"
+            android:paddingTop="8dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
             android:src="@drawable/ic_rewind_white_36dp" />
           <TextView
             android:id="@+id/rewindText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="30s"
             android:textColor="@color/widget_text_secondary"
-            android:textSize="11sp"
-            tools:text="30s" />
+            android:textSize="11sp" />
         </LinearLayout>
 
-        <ImageView
-          android:id="@+id/playPause"
+        <LinearLayout
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
-          android:background="@android:color/transparent"
-          android:contentDescription="@string/play_pause"
-          android:padding="8dp"
-          android:src="@drawable/ic_play_white_36dp" />
+          android:orientation="vertical"
+          android:gravity="center">
+          <ImageView
+            android:id="@+id/playPause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/play_pause"
+            android:padding="8dp"
+            android:src="@drawable/ic_play_white_36dp" />
+          <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:visibility="invisible" />
+        </LinearLayout>
 
-        <LinearLayout 
-            android:id="@+id/fastForwardContainer"
-            android:orientation="vertical" 
-            android:gravity="center" 
-            android:layout_width="wrap_content" 
-            android:layout_height="wrap_content">
+        <LinearLayout
+          android:id="@+id/fastForwardContainer"
+          android:orientation="vertical"
+          android:gravity="center"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content">
           <ImageView
             android:id="@+id/fastForward"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:contentDescription="@string/widget_skip_forward_a11y"
-            android:padding="8dp"
+            android:paddingTop="8dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
             android:src="@drawable/ic_fast_forward_white_36dp" />
           <TextView
             android:id="@+id/fastForwardText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="30s"
             android:textColor="@color/widget_text_secondary"
-            android:textSize="11sp"
-            tools:text="30s" />
+            android:textSize="11sp" />
         </LinearLayout>
 
       </LinearLayout>

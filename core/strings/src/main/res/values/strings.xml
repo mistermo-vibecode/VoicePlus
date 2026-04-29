@@ -11,9 +11,7 @@
     <string name="widget_skip_forward">Skip forward %d seconds</string>
     <string name="widget_skip_back_a11y">Skip back</string>
     <string name="widget_skip_forward_a11y">Skip forward</string>
-    <string name="widget_compact_description">Audiobook title, cover, and skip buttons (no chapter line).</string>
-    <string name="widget_chapter_label">VoicePlus (chapter)</string>
-    <string name="widget_chapter_description">Same as the compact widget, plus the current chapter or section name.</string>
+    <string name="widget_compact_description">Shows cover, title, current chapter, and skip controls. Resize to your preference.</string>
     <string name="previous_track">Previous track</string>
     <string name="next_track">Next track</string>
     <string name="skip_silence">Skip Silence</string>
@@ -210,5 +208,8 @@
     <string name="media_button_action_skip_backward_chapter">Skip backward chapter</string>
     <string name="media_button_action_quick_bookmark">Quick bookmark</string>
     <string name="pref_experimental_playback_persistence">Experimental playback state</string>
-    <string name="pref_experimental_playback_persistence_summary">Persists playback position less frequently and shows live position from the player. Reduces battery drain further; may delay the saved position briefly if the app is killed.</string>
+    <string name="pref_experimental_playback_persistence_info">Persists playback position less frequently and shows live position from the player. Reduces battery drain further; may delay the saved position briefly if the app is killed.</string>
+    <string name="pref_sleep_timer_auto_reset">Auto-reset sleep timer</string>
+    <string name="pref_sleep_timer_auto_reset_info">When enabled, the sleep timer resets to its full duration if it detects you\'re still awake — for example, when you change the volume or pause and resume playback.</string>
+    <string name="pref_sleep_timer_info">More info</string>
 </resources>

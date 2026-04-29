@@ -1,16 +1,19 @@
 package voice.features.settings.views
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.Gavel
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Science
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -19,6 +22,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -41,8 +45,8 @@ import voice.features.settings.SettingsListener
 import voice.features.settings.SettingsViewEffect
 import voice.features.settings.SettingsViewModel
 import voice.features.settings.SettingsViewState
-import voice.features.settings.views.sleeptimer.AutoSleepTimerCard
 import voice.features.settings.views.sleeptimer.AutoSleepTimerDurationDialog
+import voice.features.settings.views.sleeptimer.SleepTimerCard
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import voice.core.strings.R as StringsR
@@ -140,6 +144,21 @@ private fun Settings(
       }
 
       item {
+        ListItem(
+          modifier = Modifier.clickable { listener.openListeningStats() },
+          leadingContent = {
+            Icon(
+              imageVector = Icons.Outlined.BarChart,
+              contentDescription = stringResource(StringsR.string.listening_stats),
+            )
+          },
+          headlineContent = {
+            Text(stringResource(StringsR.string.listening_stats))
+          },
+        )
+      }
+
+      item {
         SeekTimeRow(viewState.seekTimeInSeconds) {
           listener.onSeekAmountRowClick()
         }
@@ -151,9 +170,6 @@ private fun Settings(
         }
       }
 
-      item {
-        AutoSleepTimerCard(viewState.autoSleepTimer, listener)
-      }
       item {
         MediaButtonActionRow(
           title = stringResource(StringsR.string.pref_media_button_double_click),
@@ -170,39 +186,10 @@ private fun Settings(
       }
 
       item {
-        ListItem(
-          modifier = Modifier.clickable {
-            listener.setExperimentalPlaybackPersistence(!viewState.experimentalPlaybackPersistenceEnabled)
-          },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.Science,
-              contentDescription = stringResource(StringsR.string.pref_experimental_playback_persistence),
-            )
-          },
-          headlineContent = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence)) },
-          supportingContent = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence_summary)) },
-          trailingContent = {
-            Switch(
-              checked = viewState.experimentalPlaybackPersistenceEnabled,
-              onCheckedChange = { listener.setExperimentalPlaybackPersistence(it) },
-            )
-          },
-        )
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openListeningStats() },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.BarChart,
-              contentDescription = stringResource(StringsR.string.listening_stats),
-            )
-          },
-          headlineContent = {
-            Text(stringResource(StringsR.string.listening_stats))
-          },
+        SleepTimerCard(
+          autoSleepTimer = viewState.autoSleepTimer,
+          autoResetEnabled = viewState.sleepTimerAutoResetEnabled,
+          listener = listener,
         )
       }
 
@@ -232,6 +219,35 @@ private fun Settings(
           },
           headlineContent = {
             Text(stringResource(StringsR.string.open_source_licenses))
+          },
+        )
+      }
+
+      item {
+        ListItem(
+          modifier = Modifier.clickable {
+            listener.setExperimentalPlaybackPersistence(!viewState.experimentalPlaybackPersistenceEnabled)
+          },
+          leadingContent = {
+            Icon(
+              imageVector = Icons.Outlined.Science,
+              contentDescription = stringResource(StringsR.string.pref_experimental_playback_persistence),
+            )
+          },
+          headlineContent = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence)) },
+          trailingContent = {
+            Row {
+              IconButton(onClick = listener::onExperimentalPlaybackPersistenceInfoClick) {
+                Icon(
+                  imageVector = Icons.Outlined.Info,
+                  contentDescription = stringResource(StringsR.string.pref_sleep_timer_info),
+                )
+              }
+              Switch(
+                checked = viewState.experimentalPlaybackPersistenceEnabled,
+                onCheckedChange = { listener.setExperimentalPlaybackPersistence(it) },
+              )
+            }
           },
         )
       }
@@ -333,6 +349,30 @@ private fun Dialog(
           listener.dismissDialog()
         },
         onDismiss = listener::dismissDialog,
+      )
+    }
+    SettingsViewState.Dialog.SleepTimerAutoResetInfo -> {
+      AlertDialog(
+        onDismissRequest = listener::dismissDialog,
+        title = { Text(stringResource(StringsR.string.pref_sleep_timer_auto_reset)) },
+        text = { Text(stringResource(StringsR.string.pref_sleep_timer_auto_reset_info)) },
+        confirmButton = {
+          TextButton(onClick = listener::dismissDialog) {
+            Text(stringResource(StringsR.string.close))
+          }
+        },
+      )
+    }
+    SettingsViewState.Dialog.ExperimentalPlaybackPersistenceInfo -> {
+      AlertDialog(
+        onDismissRequest = listener::dismissDialog,
+        title = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence)) },
+        text = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence_info)) },
+        confirmButton = {
+          TextButton(onClick = listener::dismissDialog) {
+            Text(stringResource(StringsR.string.close))
+          }
+        },
       )
     }
   }

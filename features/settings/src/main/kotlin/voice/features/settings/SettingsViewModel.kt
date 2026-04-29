@@ -109,6 +109,7 @@ class SettingsViewModel(
       mediaButtonDoubleClickAction = mediaButtonDoubleClickAction,
       mediaButtonTripleClickAction = mediaButtonTripleClickAction,
       experimentalPlaybackPersistenceEnabled = experimentalPlaybackPersistenceEnabled,
+      sleepTimerAutoResetEnabled = autoSleepTimer.autoResetEnabled,
     )
   }
 
@@ -240,5 +241,19 @@ class SettingsViewModel(
     mainScope.launch {
       experimentalPlaybackPersistenceStore.updateData { enabled }
     }
+  }
+
+  override fun onExperimentalPlaybackPersistenceInfoClick() {
+    dialog.value = SettingsViewState.Dialog.ExperimentalPlaybackPersistenceInfo
+  }
+
+  override fun setSleepTimerAutoReset(enabled: Boolean) {
+    mainScope.launch {
+      sleepTimerPreferenceStore.updateData { it.copy(autoResetEnabled = enabled) }
+    }
+  }
+
+  override fun onSleepTimerAutoResetInfoClick() {
+    dialog.value = SettingsViewState.Dialog.SleepTimerAutoResetInfo
   }
 }

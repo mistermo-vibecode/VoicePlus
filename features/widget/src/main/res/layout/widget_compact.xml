@@ -49,8 +49,18 @@
           android:ellipsize="end"
           android:maxLines="1"
           android:textColor="@color/widget_text_primary"
-          android:textSize="@dimen/list_text_primary_size"
+          android:textSize="14sp"
           tools:text="Audiobook title" />
+
+        <TextView
+          android:id="@+id/summary"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:ellipsize="end"
+          android:maxLines="1"
+          android:textColor="@color/widget_text_secondary"
+          android:textSize="12sp"
+          tools:text="Current chapter" />
       </LinearLayout>
 
       <LinearLayout
@@ -75,7 +85,10 @@
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:contentDescription="@string/widget_skip_back_a11y"
-            android:padding="8dp"
+            android:paddingTop="8dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
             android:src="@drawable/ic_rewind_white_36dp" />
           <TextView
             android:id="@+id/rewindText"
@@ -86,14 +99,25 @@
             tools:text="30s" />
         </LinearLayout>
 
-        <ImageView
-          android:id="@+id/playPause"
+        <LinearLayout
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
-          android:background="@android:color/transparent"
-          android:contentDescription="@string/play_pause"
-          android:padding="8dp"
-          android:src="@drawable/ic_play_white_36dp" />
+          android:orientation="vertical"
+          android:gravity="center">
+          <ImageView
+            android:id="@+id/playPause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/play_pause"
+            android:padding="8dp"
+            android:src="@drawable/ic_play_white_36dp" />
+          <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:visibility="invisible" />
+        </LinearLayout>
 
         <LinearLayout 
             android:id="@+id/fastForwardContainer"
@@ -107,7 +131,10 @@
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:contentDescription="@string/widget_skip_forward_a11y"
-            android:padding="8dp"
+            android:paddingTop="8dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="2dp"
             android:src="@drawable/ic_fast_forward_white_36dp" />
           <TextView
             android:id="@+id/fastForwardText"

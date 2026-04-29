@@ -71,4 +71,7 @@ class HiddenBooksViewModel(
 
 data class HiddenBooksViewState(val books: List<HiddenBookItem>)
 
-data class HiddenBookItem(val id: String, val name: String)
+data class HiddenBookItem(
+  val id: String,
+  val name: String,
+)

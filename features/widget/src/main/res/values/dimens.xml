@@ -3,4 +3,5 @@
   <!-- material specs -->
   <dimen name="list_text_primary_size">16sp</dimen>
   <dimen name="list_text_secondary_size">14sp</dimen>
+  <dimen name="widget_skip_label_size">11sp</dimen>
 </resources>
