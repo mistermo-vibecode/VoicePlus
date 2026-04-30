@@ -74,7 +74,9 @@ class BookPlayViewModelTest {
     }
   }
 
-  private val player = mockk<PlayerController>()
+  private val player = mockk<PlayerController> {
+    every { pauseIfCurrentBookDifferentFrom(any()) } just Runs
+  }
   private val playStateManager = mockk<PlayStateManager> {
     every { flow } returns MutableStateFlow(PlayStateManager.PlayState.Paused)
   }
@@ -300,7 +302,6 @@ class BookPlayViewModelTest {
       viewModel.viewState()
     }.test {
       awaitItem() shouldBe null
-      awaitItem() // intermediate: book loaded, currentStoreBookId not yet emitted
       val state = awaitItem()!!
       state.playing shouldBe true
       state.playedTime shouldBe 30.seconds
@@ -320,6 +321,7 @@ class BookPlayViewModelTest {
       },
       currentBookResolver = currentBookResolver,
       player = mockk {
+        every { pauseIfCurrentBookDifferentFrom(any()) } just Runs
         every { livePlaybackStateFlow(book.id) } returns livePlaybackFlow
       },
       sleepTimer = sleepTimer,

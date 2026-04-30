@@ -30,7 +30,6 @@ internal fun ChapterRow(
   onSkipToNext: () -> Unit,
   onSkipToPrevious: () -> Unit,
   onCurrentChapterClick: () -> Unit,
-  enabled: Boolean = true,
 ) {
   Row(
     modifier = Modifier
@@ -39,7 +38,7 @@ internal fun ChapterRow(
     verticalAlignment = Alignment.CenterVertically,
   ) {
     if (nextPreviousVisible) {
-      IconButton(onClick = onSkipToPrevious, enabled = enabled) {
+      IconButton(onClick = onSkipToPrevious) {
         Icon(
           modifier = Modifier.size(36.dp),
           imageVector = Icons.Outlined.ChevronLeft,
@@ -50,7 +49,7 @@ internal fun ChapterRow(
     Row(
       modifier = Modifier
         .weight(1F)
-        .clickable(enabled = enabled, onClick = onCurrentChapterClick)
+        .clickable(onClick = onCurrentChapterClick)
         .padding(vertical = 16.dp),
       horizontalArrangement = Arrangement.Center,
       verticalAlignment = Alignment.CenterVertically,
@@ -73,7 +72,7 @@ internal fun ChapterRow(
       }
     }
     if (nextPreviousVisible) {
-      IconButton(onClick = onSkipToNext, enabled = enabled) {
+      IconButton(onClick = onSkipToNext) {
         Icon(
           modifier = Modifier.size(36.dp),
           imageVector = Icons.Outlined.ChevronRight,

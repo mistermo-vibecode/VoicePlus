@@ -20,7 +20,6 @@ import voice.core.strings.R
 @Composable
 internal fun OverflowMenu(
   skipSilence: Boolean,
-  playbackControlsEnabled: Boolean,
   onSkipSilenceClick: () -> Unit,
   onVolumeBoostClick: () -> Unit,
   onListeningLogClick: () -> Unit,
@@ -43,7 +42,6 @@ internal fun OverflowMenu(
       onDismissRequest = { expanded = false },
     ) {
       DropdownMenuItem(
-        enabled = playbackControlsEnabled,
         onClick = {
           expanded = false
           onSkipSilenceClick()
@@ -54,7 +52,6 @@ internal fun OverflowMenu(
         trailingIcon = {
           Checkbox(
             checked = skipSilence,
-            enabled = playbackControlsEnabled,
             onCheckedChange = {
               expanded = false
               onSkipSilenceClick()
@@ -63,7 +60,6 @@ internal fun OverflowMenu(
         },
       )
       DropdownMenuItem(
-        enabled = playbackControlsEnabled,
         onClick = {
           expanded = false
           onVolumeBoostClick()

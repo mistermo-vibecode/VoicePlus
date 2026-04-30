@@ -13,7 +13,7 @@ public interface ListeningSessionDao {
   @Insert
   public suspend fun insert(session: ListeningSession)
 
-  @Query("SELECT * FROM listening_session WHERE bookId = :bookId ORDER BY startedAt DESC")
+  @Query("SELECT * FROM listening_session WHERE bookId = :bookId ORDER BY startedAt DESC LIMIT 500")
   public fun sessionsForBook(bookId: BookId): Flow<List<ListeningSession>>
 
   @Query("DELETE FROM listening_session WHERE bookId = :bookId")

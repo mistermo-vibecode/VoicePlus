@@ -81,6 +81,13 @@ class BookPlayViewModel(
   private val _dialogState = mutableStateOf<BookPlayDialogViewState?>(null)
   internal val dialogState: State<BookPlayDialogViewState?> get() = _dialogState
 
+  init {
+    scope.launch {
+      player.pauseIfCurrentBookDifferentFrom(bookId)
+      currentBookStoreId.updateData { bookId }
+    }
+  }
+
   @Composable
   fun viewState(): BookPlayViewState? {
     val persistedBook = remember(bookId) {
@@ -105,8 +112,6 @@ class BookPlayViewModel(
     }
     val isPlaying = livePlaybackState?.isPlaying ?: (managerPlayState == PlayStateManager.PlayState.Playing)
 
-    val currentStoreBookId by remember { currentBookStoreId.data }.collectAsState(initial = null)
-    val playbackControlsEnabled = currentStoreBookId == bookId
     val characterCount by remember { characterRepo.characterCount(bookId) }.collectAsState(initial = 0)
 
     val currentMark = book.currentChapter.markForPosition(book.content.positionInChapter)
@@ -121,13 +126,12 @@ class BookPlayViewModel(
     val hasMoreThanOneChapter = book.chapters.sumOf { it.chapterMarks.count() } > 1
     return BookPlayViewState(
       sleepTimerState = sleepTime.toViewState(),
-      playing = isPlaying && playbackControlsEnabled,
+      playing = isPlaying,
       title = book.content.name,
       showPreviousNextButtons = hasMoreThanOneChapter,
       chapterName = currentMark.name.takeIf { hasMoreThanOneChapter },
       duration = currentMark.durationMs.milliseconds,
       playedTime = positionInCurrentMark.milliseconds,
-      playbackControlsEnabled = playbackControlsEnabled,
       cover = book.content.cover?.let(::ImmutableFile),
       skipSilence = book.content.skipSilence,
       characterCount = characterCount,
@@ -203,7 +207,6 @@ class BookPlayViewModel(
 
   private fun updateSleepTimeViewState(update: suspend (SleepTimerViewState) -> SleepTimerViewState?) {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       val current = dialogState.value
       val updated: SleepTimerViewState? = if (current is BookPlayDialogViewState.SleepTimer) {
         update(current.viewState)
@@ -223,7 +226,6 @@ class BookPlayViewModel(
   fun onPlaybackSpeedChanged(speed: Float) {
     _dialogState.value = BookPlayDialogViewState.SpeedDialog(speed)
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       player.setSpeed(speed)
     }
   }
@@ -231,21 +233,18 @@ class BookPlayViewModel(
   fun onVolumeGainChanged(gain: Decibel) {
     _dialogState.value = volumeGainDialogViewState(gain)
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       player.setGain(gain)
     }
   }
 
   fun next() {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       player.next()
     }
   }
 
   fun previous() {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       player.previous()
     }
   }
@@ -267,14 +266,12 @@ class BookPlayViewModel(
 
   fun rewind() {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       player.rewind()
     }
   }
 
   fun fastForward() {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       player.fastForward()
     }
   }
@@ -304,8 +301,7 @@ class BookPlayViewModel(
 
   fun onChapterClick(number: Int) {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
-      val book = bookRepository.get(bookId) ?: return@launch
+      val book = currentBook() ?: return@launch
       var currentIndex = -1
       book.chapters.forEach { chapter ->
         chapter.chapterMarks.forEach { mark ->
@@ -368,7 +364,6 @@ class BookPlayViewModel(
 
   fun seekTo(position: Duration) {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       val book = bookRepository.get(bookId) ?: return@launch
       val currentChapter = book.currentChapter
       val currentMark = currentChapter.markForPosition(book.content.positionInChapter)
@@ -378,7 +373,6 @@ class BookPlayViewModel(
 
   fun toggleSleepTimer() {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       Logger.d("toggleSleepTimer while active=${sleepTimer.state.value}")
       if (sleepTimer.state.value.enabled) {
         sleepTimer.disable()
@@ -399,7 +393,6 @@ class BookPlayViewModel(
 
   fun toggleSkipSilence() {
     scope.launch {
-      if (currentBookStoreId.data.first() != bookId) return@launch
       val book = bookRepository.get(bookId) ?: return@launch
       val skipSilence = book.content.skipSilence
       player.skipSilence(!skipSilence)

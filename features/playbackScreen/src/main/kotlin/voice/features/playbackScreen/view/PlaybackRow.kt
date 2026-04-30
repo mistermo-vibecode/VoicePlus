@@ -17,7 +17,6 @@ internal fun PlaybackRow(
   onPlayClick: () -> Unit,
   onRewindClick: () -> Unit,
   onFastForwardClick: () -> Unit,
-  playbackControlsEnabled: Boolean,
 ) {
   Row(
     modifier = Modifier
@@ -25,11 +24,11 @@ internal fun PlaybackRow(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.Center,
   ) {
-    SkipButton(forward = false, onClick = onRewindClick, enabled = playbackControlsEnabled)
+    SkipButton(forward = false, onClick = onRewindClick)
     Spacer(modifier = Modifier.size(16.dp))
 
     PlayButton(playing = playing, fabSize = 80.dp, iconSize = 36.dp, onPlayClick = onPlayClick)
     Spacer(modifier = Modifier.size(16.dp))
-    SkipButton(forward = true, onClick = onFastForwardClick, enabled = playbackControlsEnabled)
+    SkipButton(forward = true, onClick = onFastForwardClick)
   }
 }

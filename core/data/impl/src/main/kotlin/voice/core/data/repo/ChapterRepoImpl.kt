@@ -14,6 +14,7 @@ public class ChapterRepoImpl(private val dao: ChapterDao) : ChapterRepo {
 
   override suspend fun get(id: ChapterId): Chapter? {
     // this does not use getOrPut because a `null` value should also be cached
+    if (cache.size > 1000) cache.clear()
     if (!cache.containsKey(id)) {
       cache[id] = dao.chapter(id)
     }

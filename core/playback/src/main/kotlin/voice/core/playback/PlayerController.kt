@@ -66,6 +66,16 @@ class PlayerController(
     }
   private val scope = CoroutineScope(Dispatchers.Main.immediate)
 
+  fun pauseIfCurrentBookDifferentFrom(id: BookId) {
+    scope.launch {
+      val controller = awaitConnect() ?: return@launch
+      val currentBookId = controller.currentBookId()
+      if (currentBookId != null && currentBookId != id) {
+        controller.pause()
+      }
+    }
+  }
+
   fun setPosition(
     time: Long,
     id: ChapterId,

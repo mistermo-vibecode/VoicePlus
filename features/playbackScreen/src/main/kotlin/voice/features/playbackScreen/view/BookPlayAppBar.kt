@@ -41,9 +41,8 @@ internal fun BookPlayAppBar(
   onCloseClick: () -> Unit,
   useLandscapeLayout: Boolean,
 ) {
-  val playbackControlsEnabled = viewState.playbackControlsEnabled
   val appBarActions: @Composable RowScope.() -> Unit = {
-    IconButton(onClick = onSleepTimerClick, enabled = playbackControlsEnabled) {
+    IconButton(onClick = onSleepTimerClick) {
       Icon(
         imageVector = if (viewState.sleepTimerState is BookPlayViewState.SleepTimerViewState.Disabled) {
           Icons.Outlined.Bedtime
@@ -57,7 +56,6 @@ internal fun BookPlayAppBar(
       modifier = Modifier
         .size(40.dp)
         .combinedClickable(
-          enabled = playbackControlsEnabled,
           onClick = onBookmarkClick,
           onLongClick = onBookmarkLongClick,
           indication = ripple(bounded = false, radius = 20.dp),
@@ -84,7 +82,7 @@ internal fun BookPlayAppBar(
         )
       }
     }
-    IconButton(onClick = onSpeedChangeClick, enabled = playbackControlsEnabled) {
+    IconButton(onClick = onSpeedChangeClick) {
       Icon(
         imageVector = Icons.Outlined.Speed,
         contentDescription = stringResource(id = R.string.playback_speed),
@@ -92,7 +90,6 @@ internal fun BookPlayAppBar(
     }
     OverflowMenu(
       skipSilence = viewState.skipSilence,
-      playbackControlsEnabled = playbackControlsEnabled,
       onSkipSilenceClick = onSkipSilenceClick,
       onVolumeBoostClick = onVolumeBoostClick,
       onListeningLogClick = onListeningLogClick,

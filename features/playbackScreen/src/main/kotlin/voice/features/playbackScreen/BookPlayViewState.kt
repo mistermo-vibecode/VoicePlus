@@ -15,7 +15,6 @@ data class BookPlayViewState(
   val playedTime: Duration,
   val duration: Duration,
   val playing: Boolean,
-  val playbackControlsEnabled: Boolean,
   val cover: ImmutableFile?,
   val skipSilence: Boolean,
   val characterCount: Int,

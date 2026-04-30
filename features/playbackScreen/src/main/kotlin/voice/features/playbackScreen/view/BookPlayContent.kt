@@ -52,7 +52,6 @@ internal fun BookPlayContent(
             onSkipToNext = onSkipToNext,
             onSkipToPrevious = onSkipToPrevious,
             onCurrentChapterClick = onCurrentChapterClick,
-            enabled = viewState.playbackControlsEnabled,
           )
         }
         Spacer(modifier = Modifier.size(20.dp))
@@ -60,7 +59,6 @@ internal fun BookPlayContent(
           duration = viewState.duration,
           playedTime = viewState.playedTime,
           onSeek = onSeek,
-          enabled = viewState.playbackControlsEnabled,
         )
         Spacer(modifier = Modifier.size(16.dp))
         PlaybackRow(
@@ -68,7 +66,6 @@ internal fun BookPlayContent(
           onPlayClick = onPlayClick,
           onRewindClick = onRewindClick,
           onFastForwardClick = onFastForwardClick,
-          playbackControlsEnabled = viewState.playbackControlsEnabled,
         )
       }
     }
@@ -91,7 +88,6 @@ internal fun BookPlayContent(
           onSkipToNext = onSkipToNext,
           onSkipToPrevious = onSkipToPrevious,
           onCurrentChapterClick = onCurrentChapterClick,
-          enabled = viewState.playbackControlsEnabled,
         )
       }
       Spacer(modifier = Modifier.size(20.dp))
@@ -99,7 +95,6 @@ internal fun BookPlayContent(
         duration = viewState.duration,
         playedTime = viewState.playedTime,
         onSeek = onSeek,
-        enabled = viewState.playbackControlsEnabled,
       )
       Spacer(modifier = Modifier.size(16.dp))
       PlaybackRow(
@@ -107,7 +102,6 @@ internal fun BookPlayContent(
         onPlayClick = onPlayClick,
         onRewindClick = onRewindClick,
         onFastForwardClick = onFastForwardClick,
-        playbackControlsEnabled = viewState.playbackControlsEnabled,
       )
       Spacer(modifier = Modifier.size(24.dp))
     }
