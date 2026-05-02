@@ -22,7 +22,6 @@ import voice.core.data.store.AutoRewindAmountStore
 import voice.core.data.store.DarkThemeStore
 import voice.core.data.store.ExperimentalPlaybackPersistenceStore
 import voice.core.data.store.GridModeStore
-import voice.core.data.store.IgnoreFileTagsStore
 import voice.core.data.store.MediaButtonDoubleClickHandlerStore
 import voice.core.data.store.MediaButtonTripleClickHandlerStore
 import voice.core.data.store.SeekTimeStore
@@ -59,8 +58,6 @@ class SettingsViewModel(
   private val mediaButtonTripleClickHandlerStore: DataStore<MediaButtonClickAction>,
   @ExperimentalPlaybackPersistenceStore
   private val experimentalPlaybackPersistenceStore: DataStore<Boolean>,
-  @IgnoreFileTagsStore
-  private val ignoreFileTagsStore: DataStore<Boolean>,
   dispatcherProvider: DispatcherProvider,
 ) : SettingsListener {
 
@@ -90,7 +87,6 @@ class SettingsViewModel(
     val experimentalPlaybackPersistenceEnabled by remember { experimentalPlaybackPersistenceStore.data }.collectAsState(
       initial = false,
     )
-    val ignoreFileTags by remember { ignoreFileTagsStore.data }.collectAsState(initial = false)
     return SettingsViewState(
       useDarkTheme = useDarkTheme,
       showDarkThemePref = DARK_THEME_SETTABLE,
@@ -114,7 +110,6 @@ class SettingsViewModel(
       mediaButtonTripleClickAction = mediaButtonTripleClickAction,
       experimentalPlaybackPersistenceEnabled = experimentalPlaybackPersistenceEnabled,
       sleepTimerAutoResetEnabled = autoSleepTimer.autoResetEnabled,
-      ignoreFileTags = ignoreFileTags,
     )
   }
 
@@ -260,15 +255,5 @@ class SettingsViewModel(
 
   override fun onSleepTimerAutoResetInfoClick() {
     dialog.value = SettingsViewState.Dialog.SleepTimerAutoResetInfo
-  }
-
-  override fun setIgnoreFileTags(enabled: Boolean) {
-    mainScope.launch {
-      ignoreFileTagsStore.updateData { enabled }
-    }
-  }
-
-  override fun onIgnoreFileTagsInfoClick() {
-    dialog.value = SettingsViewState.Dialog.IgnoreFileTagsInfo
   }
 }

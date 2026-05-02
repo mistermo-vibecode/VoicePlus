@@ -1,16 +1,13 @@
 package voice.core.scanner
 
 import android.net.Uri
-import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.Inject
-import kotlinx.coroutines.flow.first
 import voice.core.data.Book
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.getOrPut
-import voice.core.data.store.IgnoreFileTagsStore
 import voice.core.data.toUri
 import voice.core.documentfile.CachedDocumentFile
 import voice.core.documentfile.CachedDocumentFileFactory
@@ -22,8 +19,6 @@ internal class BookParser(
   private val contentRepo: BookContentRepo,
   private val mediaAnalyzer: MediaAnalyzer,
   private val fileFactory: CachedDocumentFileFactory,
-  @IgnoreFileTagsStore
-  private val ignoreFileTagsStore: DataStore<Boolean>,
 ) {
 
   suspend fun parseAndStore(
@@ -31,14 +26,9 @@ internal class BookParser(
     file: CachedDocumentFile,
   ): BookContent {
     val id = BookId(file.uri)
-    val ignoreFileTags = ignoreFileTagsStore.data.first()
     return contentRepo.getOrPut(id) {
-      val analyzed = if (ignoreFileTags) {
-        null
-      } else {
-        val uri = chapters.first().id.toUri()
-        mediaAnalyzer.analyze(fileFactory.create(uri))
-      }
+      val uri = chapters.first().id.toUri()
+      val analyzed = mediaAnalyzer.analyze(fileFactory.create(uri))
       parse(chapters, id, analyzed, file)
     }
   }

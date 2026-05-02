@@ -35,9 +35,6 @@ interface SettingsListener {
   fun setSleepTimerAutoReset(enabled: Boolean)
   fun onSleepTimerAutoResetInfoClick()
 
-  fun setIgnoreFileTags(enabled: Boolean)
-  fun onIgnoreFileTagsInfoClick()
-
   companion object {
     fun noop() = object : SettingsListener {
       override fun close() {}
@@ -69,9 +66,6 @@ interface SettingsListener {
 
       override fun setSleepTimerAutoReset(enabled: Boolean) {}
       override fun onSleepTimerAutoResetInfoClick() {}
-
-      override fun setIgnoreFileTags(enabled: Boolean) {}
-      override fun onIgnoreFileTagsInfoClick() {}
     }
   }
 }

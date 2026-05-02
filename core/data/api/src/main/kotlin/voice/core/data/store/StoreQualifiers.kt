@@ -49,6 +49,3 @@ public annotation class MediaButtonTripleClickHandlerStore
 
 @Qualifier
 public annotation class ExperimentalPlaybackPersistenceStore
-
-@Qualifier
-public annotation class IgnoreFileTagsStore

@@ -8,7 +8,6 @@ import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Info
@@ -226,33 +225,6 @@ private fun Settings(
 
       item {
         ListItem(
-          modifier = Modifier.clickable { listener.setIgnoreFileTags(!viewState.ignoreFileTags) },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.FolderOpen,
-              contentDescription = stringResource(StringsR.string.pref_ignore_file_tags),
-            )
-          },
-          headlineContent = { Text(stringResource(StringsR.string.pref_ignore_file_tags)) },
-          trailingContent = {
-            Row {
-              IconButton(onClick = listener::onIgnoreFileTagsInfoClick) {
-                Icon(
-                  imageVector = Icons.Outlined.Info,
-                  contentDescription = stringResource(StringsR.string.pref_ignore_file_tags),
-                )
-              }
-              Switch(
-                checked = viewState.ignoreFileTags,
-                onCheckedChange = { listener.setIgnoreFileTags(it) },
-              )
-            }
-          },
-        )
-      }
-
-      item {
-        ListItem(
           modifier = Modifier.clickable {
             listener.setExperimentalPlaybackPersistence(!viewState.experimentalPlaybackPersistenceEnabled)
           },
@@ -396,18 +368,6 @@ private fun Dialog(
         onDismissRequest = listener::dismissDialog,
         title = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence)) },
         text = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence_info)) },
-        confirmButton = {
-          TextButton(onClick = listener::dismissDialog) {
-            Text(stringResource(StringsR.string.close))
-          }
-        },
-      )
-    }
-    SettingsViewState.Dialog.IgnoreFileTagsInfo -> {
-      AlertDialog(
-        onDismissRequest = listener::dismissDialog,
-        title = { Text(stringResource(StringsR.string.pref_ignore_file_tags)) },
-        text = { Text(stringResource(StringsR.string.pref_ignore_file_tags_info)) },
         confirmButton = {
           TextButton(onClick = listener::dismissDialog) {
             Text(stringResource(StringsR.string.close))

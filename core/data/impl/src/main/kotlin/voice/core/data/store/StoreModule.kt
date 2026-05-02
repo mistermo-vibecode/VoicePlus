@@ -208,11 +208,4 @@ public interface StoreModule {
   private fun experimentalPlaybackPersistenceStore(factory: VoiceDataStoreFactory): DataStore<Boolean> {
     return factory.boolean("experimentalPlaybackPersistence", defaultValue = false)
   }
-
-  @Provides
-  @SingleIn(AppScope::class)
-  @IgnoreFileTagsStore
-  private fun ignoreFileTagsStore(factory: VoiceDataStoreFactory): DataStore<Boolean> {
-    return factory.boolean("ignoreFileTags", defaultValue = false)
-  }
 }

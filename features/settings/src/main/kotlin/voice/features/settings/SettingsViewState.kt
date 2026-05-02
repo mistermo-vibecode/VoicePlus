@@ -19,7 +19,6 @@ data class SettingsViewState(
   val mediaButtonTripleClickAction: MediaButtonClickAction,
   val experimentalPlaybackPersistenceEnabled: Boolean,
   val sleepTimerAutoResetEnabled: Boolean,
-  val ignoreFileTags: Boolean,
 ) {
 
   enum class Dialog {
@@ -30,7 +29,6 @@ data class SettingsViewState(
     MediaButtonTripleAction,
     SleepTimerAutoResetInfo,
     ExperimentalPlaybackPersistenceInfo,
-    IgnoreFileTagsInfo,
   }
 
   companion object {
@@ -49,7 +47,6 @@ data class SettingsViewState(
         mediaButtonTripleClickAction = MediaButtonClickAction.SKIP_BACKWARD,
         experimentalPlaybackPersistenceEnabled = false,
         sleepTimerAutoResetEnabled = true,
-        ignoreFileTags = false,
       )
     }
   }

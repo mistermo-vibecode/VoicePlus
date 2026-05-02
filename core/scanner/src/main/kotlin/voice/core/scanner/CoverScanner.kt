@@ -1,14 +1,11 @@
 package voice.core.scanner
 
 import android.content.Context
-import androidx.datastore.core.DataStore
 import androidx.documentfile.provider.DocumentFile
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import voice.core.data.Book
-import voice.core.data.store.IgnoreFileTagsStore
 import voice.core.data.toUri
 import voice.core.logging.api.Logger
 import java.io.IOException
@@ -18,8 +15,6 @@ internal class CoverScanner(
   private val context: Context,
   private val coverSaver: CoverSaver,
   private val coverExtractor: CoverExtractor,
-  @IgnoreFileTagsStore
-  private val ignoreFileTagsStore: DataStore<Boolean>,
 ) {
 
   suspend fun scan(books: List<Book>) {
@@ -37,9 +32,7 @@ internal class CoverScanner(
       return
     }
 
-    if (!ignoreFileTagsStore.data.first()) {
-      scanForEmbeddedCover(book)
-    }
+    scanForEmbeddedCover(book)
   }
 
   private suspend fun findAndSaveCoverFromDisc(book: Book): Boolean = withContext(Dispatchers.IO) {
