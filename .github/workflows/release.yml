@@ -18,13 +18,22 @@ jobs:
 
       - uses: ./.github/actions/build_setup
 
-      - name: Build Libre Release APK (unsigned)
-        run: ./gradlew :app:assembleLibreRelease
+      - name: Decode Keystore
+        run: |
+          mkdir -p signing
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > signing/voiceplus-release.jks
+          echo "storeFile=signing/voiceplus-release.jks" > signing/keystore.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> signing/keystore.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> signing/keystore.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> signing/keystore.properties
+
+      - name: Build Signed Release APK
+        run: ./gradlew :app:assembleLibreRelease --no-configuration-cache
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: app/build/outputs/apk/libre/release/*.apk
+          files: app/build/outputs/apk/libre/release/app-libre-release.apk
           generate_release_notes: true
           draft: true
