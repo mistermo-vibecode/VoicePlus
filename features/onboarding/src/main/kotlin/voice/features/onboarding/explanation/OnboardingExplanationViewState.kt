@@ -1,0 +1,3 @@
+package voice.features.onboarding.explanation
+
+object OnboardingExplanationViewState

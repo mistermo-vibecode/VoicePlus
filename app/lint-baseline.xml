@@ -1,0 +1,832 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.2.0" type="baseline" client="gradle" dependencies="true" name="AGP (9.2.0)" variant="all" version="9.2.0">
+
+    <issue
+        id="VectorRaster"
+        message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
+        errorLine1="  android:width=&quot;248dp&quot;"
+        errorLine2="                 ~~~~~">
+        <location
+            file="src/main/res/drawable/bookshelf_artwork.xml"
+            line="2"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.android.play:review-ktx than 2.0.1 is available: 2.0.2"
+        errorLine1="review = &quot;com.google.android.play:review-ktx:2.0.1&quot;"
+        errorLine2="         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="44"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of dev.zacsweers.metro than 0.13.2 is available: 1.0.0"
+        errorLine1="metro = &quot;0.13.2&quot;"
+        errorLine2="        ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="17"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of dev.zacsweers.metro:runtime than 0.13.2 is available: 1.0.0"
+        errorLine1="metro = &quot;0.13.2&quot;"
+        errorLine2="        ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="17"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz.aboutlibraries.plugin than 11.2.3 is available: 14.0.1"
+        errorLine1="aboutlibraries = &quot;11.2.3&quot;"
+        errorLine2="                 ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.mikepenz:aboutlibraries-compose-m3 than 11.2.3 is available: 14.0.1"
+        errorLine1="aboutlibraries = &quot;11.2.3&quot;"
+        errorLine2="                 ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="RestrictedApi"
+        message="LoadStates.forEach can only be called from within the same library group (referenced groupId=`androidx.paging` from groupId=`voice.features`)"
+        errorLine1="    items.loadState.source.forEach { _, loadState ->"
+        errorLine2="                           ~~~~~~~">
+        <location
+            file="src/main/kotlin/voice/features/cover/SelectCoverFromInternetViewModel.kt"
+            line="96"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="  modifier: Modifier = Modifier,"
+        errorLine2="  ~~~~~~~~">
+        <location
+            file="src/main/kotlin/voice/features/sleepTimer/SleepTimerDialog.kt"
+            line="51"
+            column="3"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;Voçê&quot; is a common misspelling; did you mean &quot;Você&quot;?"
+        errorLine1="    &lt;string name=&quot;onboarding.explanation.subtitle&quot;>Com Voice, pode adicionar livros como ficheiros individuais ou organizar eles em pastas. Voçê decide como!&lt;/string>"
+        errorLine2="                                                                                                                                            ~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="40"
+            column="141"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;bem vindo&quot; is a common misspelling; did you mean &quot;bem-vindo&quot;?"
+        errorLine1="    &lt;string name=&quot;onboarding_welcome_title&quot;>Seja bem vindo ao Voice!&lt;/string>"
+        errorLine2="                                                 ~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt/strings.xml"
+            line="113"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Repeated word &quot;tek&quot; in message: possible typo"
+        errorLine1="    &lt;string name=&quot;onboarding.explanation.subtitle&quot;>Voice\&apos;u kullanarak kitapları tek tek dosyalar halinde ekleyebilir veya klasörler halinde düzenleyebilirsiniz. Sen seç!&lt;/string>"
+        errorLine2="                                                                                 ~~~~~~~">
+        <location
+            file="src/main/res/values-tr/strings.xml"
+            line="124"
+            column="82"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="&quot;bem vindo&quot; is a common misspelling; did you mean &quot;bem-vindo&quot;?"
+        errorLine1="    &lt;string name=&quot;onboarding_welcome_title&quot;>Seja bem vindo ao Voice!&lt;/string>"
+        errorLine2="                                                 ~~~~~~~~~">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="132"
+            column="50"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;seconds&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;widget_skip_back&quot;>Skip back %d seconds&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="10"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;seconds&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;widget_skip_forward&quot;>Skip forward %d seconds&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="11"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;days&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;listening_stats_streak_days&quot;>%d days&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="46"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 28. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <location
+            file="src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="          var alpha by remember { mutableStateOf(configStore.getAlpha(appWidgetId) / 255f) }"
+        errorLine2="                                  ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/voice/features/widget/config/WidgetConfigActivity.kt"
+            line="77"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="          var scale by remember { mutableStateOf(configStore.getTextScale(appWidgetId)) }"
+        errorLine2="                                  ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/kotlin/voice/features/widget/config/WidgetConfigActivity.kt"
+            line="78"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.raw.aboutlibraries` appears to be unused">
+        <location
+            file="src/main/res/raw/aboutlibraries.json"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.copy_primary_text_disabled_material_dark` appears to be unused"
+        errorLine1="  &lt;color name=&quot;copy_primary_text_disabled_material_dark&quot;>#4Dffffff&lt;/color>"
+        errorLine2="         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../features/widget/src/main/res/values/colors.xml"
+            line="4"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.copy_primary_text_default_material_dark` appears to be unused"
+        errorLine1="  &lt;color name=&quot;copy_primary_text_default_material_dark&quot;>#ffffffff&lt;/color>"
+        errorLine2="         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../features/widget/src/main/res/values/colors.xml"
+            line="5"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.copy_background_material_dark` appears to be unused"
+        errorLine1="  &lt;color name=&quot;copy_background_material_dark&quot;>#ff424242&lt;/color>"
+        errorLine2="         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../features/widget/src/main/res/values/colors.xml"
+            line="6"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.copy_secondary_text_disabled_material_dark` appears to be unused"
+        errorLine1="  &lt;color name=&quot;copy_secondary_text_disabled_material_dark&quot;>#36ffffff&lt;/color>"
+        errorLine2="         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../features/widget/src/main/res/values/colors.xml"
+            line="7"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.copy_secondary_text_default_material_dark` appears to be unused"
+        errorLine1="  &lt;color name=&quot;copy_secondary_text_default_material_dark&quot;>#b3ffffff&lt;/color>"
+        errorLine2="         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../features/widget/src/main/res/values/colors.xml"
+            line="8"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.copy_abc_primary_text_material_dark` appears to be unused"
+        errorLine1="&lt;selector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="../features/widget/src/main/res/color/copy_abc_primary_text_material_dark.xml"
+            line="15"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.copy_abc_secondary_text_material_dark` appears to be unused"
+        errorLine1="&lt;selector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="../features/widget/src/main/res/color/copy_abc_secondary_text_material_dark.xml"
+            line="15"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.gradient_launcher_finish` appears to be unused"
+        errorLine1="&lt;gradient xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="../core/ui/src/main/res/color/gradient_launcher_finish.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.gradient_launcher_shadow` appears to be unused"
+        errorLine1="&lt;gradient xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="../core/ui/src/main/res/color/gradient_launcher_shadow.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.mipmap.ic_launcher` appears to be unused"
+        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="src/main/res/mipmap-anydpi-v26/ic_launcher.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_widget_skip_back` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="../features/widget/src/main/res/drawable/ic_widget_skip_back.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_widget_skip_forward` appears to be unused"
+        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="../features/widget/src/main/res/drawable/ic_widget_skip_forward.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.listening_log_session_duration` appears to be unused"
+        errorLine1="    &lt;string name=&quot;listening_log_session_duration&quot;>Duration: %s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="57"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.listening_log_playback_range` appears to be unused"
+        errorLine1="    &lt;string name=&quot;listening_log_playback_range&quot;>%1$s → %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="58"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref_suggest_idea` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref_suggest_idea&quot;>Suggest an idea&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref_report_issue` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref_report_issue&quot;>Report a problem&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref_help_translating` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref_help_translating&quot;>Help translating VoicePlus&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref_get_support` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref_get_support&quot;>Get support&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="92"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.pref_faq` appears to be unused"
+        errorLine1="    &lt;string name=&quot;pref_faq&quot;>FAQ&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="94"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_title&quot;>Old book positions&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="121"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_name` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_name&quot;>Name&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="122"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_root` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_root&quot;>Root folder&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="123"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_position` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_position&quot;>Position&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="124"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_bookmarks` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_bookmarks&quot;>Bookmarks&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="125"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_added_at` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_added_at&quot;>Added at&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="126"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_position_current_file_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_position_current_file_title&quot;>Current file&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="127"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_position_current_file_position` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_position_current_file_position&quot;>Position in file&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="128"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_position_current_chapter_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_position_current_chapter_title&quot;>Current chapter&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="129"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_detail_content_position_current_chapter_position` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_detail_content_position_current_chapter_position&quot;>Position in chapter&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="130"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_delete_dialog_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_delete_dialog_title&quot;>Delete Positions&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="131"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_delete_dialog_content` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_delete_dialog_content&quot;>Once you delete the old positions you won\&apos;t be able to recover your old playback positions.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="132"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_delete_dialog_action_delete` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_delete_dialog_action_delete&quot;>Delete&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="133"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.migration_delete_dialog_action_keep` appears to be unused"
+        errorLine1="    &lt;string name=&quot;migration_delete_dialog_action_keep&quot;>Keep&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="134"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_book_dialog_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_book_dialog_title&quot;>Delete Book&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="136"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_book_dialog_deletion_confirmation` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_book_dialog_deletion_confirmation&quot;>Delete my files&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="137"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.delete_book_dialog_content` appears to be unused"
+        errorLine1="    &lt;string name=&quot;delete_book_dialog_content&quot;>This will delete the files on your device.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="138"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notification_sleep_timer_enable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notification_sleep_timer_enable&quot;>Enable Sleep Timer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="144"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notification_sleep_timer_disable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notification_sleep_timer_disable&quot;>Disable Sleep Timer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="145"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.end_of_chapter` appears to be unused"
+        errorLine1="    &lt;string name=&quot;end_of_chapter&quot;>End of Chapter&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="146"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.onboarding_analytics_consent_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;onboarding_analytics_consent_title&quot;>Help improve VoicePlus&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="165"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.onboarding_analytics_consent_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;onboarding_analytics_consent_description&quot;>Allow us to collect anonymous usage data to help improve the app. You can change this later in settings.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="166"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.onboarding_analytics_consent_button_enable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;onboarding_analytics_consent_button_enable&quot;>Continue with analytics&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="167"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.onboarding_analytics_consent_button_disable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;onboarding_analytics_consent_button_disable&quot;>Continue without analytics&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="168"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.onboarding_analytics_consent_privacy_policy` appears to be unused"
+        errorLine1="    &lt;string name=&quot;onboarding_analytics_consent_privacy_policy&quot;>Privacy Policy&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="169"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_analytics_consent_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_analytics_consent_title&quot;>Analytics&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="170"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_analytics_consent_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_analytics_consent_description&quot;>Allow anonymous usage data collection to help improve the app&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="171"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.review_request_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;review.request.title&quot;>Enjoying VoicePlus?&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="172"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.review_request_content` appears to be unused"
+        errorLine1="    &lt;string name=&quot;review.request.content&quot;>Your feedback matters to us! If you have a moment, rate us and share your experience. It helps us to make improvements and offer a better listening experience.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="173"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.review_request_button_yes` appears to be unused"
+        errorLine1="    &lt;string name=&quot;review.request.button.yes&quot;>Rate Now&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="174"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.review_request_button_no` appears to be unused"
+        errorLine1="    &lt;string name=&quot;review.request.button.no&quot;>No, Thanks&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="175"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.review_feedback_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;review.feedback.title&quot;>We\&apos;re sorry to hear that!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="176"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.review_feedback_content` appears to be unused"
+        errorLine1="    &lt;string name=&quot;review.feedback.content&quot;>Could you tell us what went wrong? We appreciate your feedback and it helps us to improve your experience.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="177"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.review_feedback_button_yes` appears to be unused"
+        errorLine1="    &lt;string name=&quot;review.feedback.button.yes&quot;>Send Feedback&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="178"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.review_feedback_button_no` appears to be unused"
+        errorLine1="    &lt;string name=&quot;review.feedback.button.no&quot;>Cancel&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="179"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.listening_log_remaining` appears to be unused"
+        errorLine1="    &lt;string name=&quot;listening_log_remaining&quot;>%1$dh %2$dm left&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="../core/strings/src/main/res/values/strings.xml"
+            line="200"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="NotShrinkingResources"
+        message="Avoid setting isShrinkResources = false"
+        errorLine1="      isShrinkResources = false"
+        errorLine2="                          ~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="73"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="ContentDescription"
+        message="Empty `contentDescription` attribute on image"
+        errorLine1="    android:contentDescription=&quot;&quot; />"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/widget_compact.xml"
+            line="16"
+            column="5"/>
+    </issue>
+
+</issues>

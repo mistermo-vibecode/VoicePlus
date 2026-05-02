@@ -1,0 +1,5 @@
+* Smart sleep timer toggle added.
+* Media buttons can now add a quick bookmark.
+* Clean up of preferences page and layout.
+* Made widgets a bit cleaner.
+* Lots of fixes and updates.

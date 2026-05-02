@@ -1,0 +1,39 @@
+# VoicePlus identity-divergence rules
+#
+# Files listed here are intentionally different from upstream Voice and should
+# never accept upstream's changes during a `git merge upstream/main`. Marking
+# them with `merge=ours` makes git skip the conflict and keep VoicePlus's version.
+#
+# REQUIRES one-time setup: this attribute relies on a custom merge driver named
+# "ours". Configure it once per clone:
+#
+#   git config merge.ours.driver true
+#
+# (The setup is local to .git/config and isn't checked in. The Bash setup line
+# is also documented in CLAUDE.md.)
+#
+# Files NOT listed here (e.g. app/build.gradle.kts, gradle/libs.versions.toml,
+# AndroidManifest.xml, baseSetup.kt) intentionally remain merge-conflict prone
+# because they MIX VoicePlus identity with real upstream changes (dep bumps,
+# new permissions, build tweaks) that we want to evaluate per merge.
+
+# Project narrative — VoicePlus has its own README, privacy policy, credits
+README.md             merge=ours
+PRIVACY.md            merge=ours
+CREDITS.md            merge=ours
+
+# CI / release workflows — VoicePlus's CI is intentionally minimal compared to
+# upstream's (no Crashlytics deploy, no Play Store, no GitHub Pages, no Copilot
+# setup). Always keep our versions; new upstream workflows won't appear.
+.github/workflows/ci.yml                merge=ours
+.github/workflows/release.yml           merge=ours
+.github/actions/build_setup/action.yml  merge=ours
+
+# Store metadata — VoicePlus has its own English store text in fastlane/metadata
+# AND its own VoicePlus-format metadata under metadata/. Foreign-language
+# fastlane translations live as modify/delete conflicts on every sync (since
+# we deleted the files); resolve those in batch with `git rm` per sync.
+fastlane/metadata/android/en-US/title.txt              merge=ours
+fastlane/metadata/android/en-US/short_description.txt  merge=ours
+fastlane/metadata/android/en-US/full_description.txt   merge=ours
+metadata/                                              merge=ours

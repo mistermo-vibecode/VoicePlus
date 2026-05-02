@@ -1,0 +1,11 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+  <shortcut
+    android:icon="@drawable/ic_shortcut_play"
+    android:shortcutId="playCurrent"
+    android:shortcutShortLabel="@string/play_current">
+    <intent
+      android:action="playCurrent"
+      android:targetClass="voice.app.MainActivity"
+      android:targetPackage="com.github.mistermo_vibecode.voiceplus" />
+  </shortcut>
+</shortcuts>

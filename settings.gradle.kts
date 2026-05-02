@@ -1,0 +1,68 @@
+@file:Suppress("UnstableApiUsage")
+
+rootProject.name = "voice"
+
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+pluginManagement {
+  repositories {
+    gradlePluginPortal()
+    mavenCentral()
+    google()
+    includeBuild("plugins")
+  }
+}
+
+dependencyResolutionManagement {
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+
+plugins {
+  id("com.gradle.develocity") version "4.4.1"
+  id("org.gradle.toolchains.foojay-resolver-convention") version ("1.0.0")
+  id("org.jetbrains.kotlin.android") version "2.3.21" apply false
+  id("org.jetbrains.kotlin.jvm") version "2.3.21" apply false
+  id("com.android.application") version "9.2.0" apply false
+  id("com.android.library") version "9.2.0" apply false
+}
+
+develocity {
+  buildScan {
+    termsOfUseUrl = "https://gradle.com/terms-of-service"
+    termsOfUseAgree = "yes"
+  }
+}
+
+include(":app")
+include(":navigation")
+
+include(":core:common")
+include(":core:data:api")
+include(":core:data:impl")
+include(":core:documentfile")
+include(":core:initializer")
+include(":core:logging:api")
+include(":core:logging:debug")
+include(":core:playback")
+include(":core:scanner")
+include(":core:search")
+include(":core:sleepTimer:api")
+include(":core:sleepTimer:impl")
+include(":core:strings")
+include(":core:ui")
+
+include(":features:bookOverview")
+include(":features:bookmark")
+include(":features:cover")
+include(":features:folderPicker")
+include(":features:onboarding")
+include(":features:playbackScreen")
+include(":features:review:noop")
+include(":features:review:play")
+include(":features:settings")
+include(":features:sleepTimer")
+include(":features:widget")
+include(":core:featureflag")

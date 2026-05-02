@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools">
+
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+  <uses-permission
+    android:name="com.google.android.gms.permission.AD_ID"
+    tools:node="remove" />
+
+  <application
+    android:enableOnBackInvokedCallback="true"
+    android:name=".di.App"
+    android:icon="@drawable/ic_launcher"
+    android:appCategory="audio"
+    android:label="@string/app_name"
+    android:supportsRtl="true"
+    android:theme="@style/AppTheme"
+    tools:ignore="GoogleAppIndexingWarning,UnusedAttribute">
+
+    <meta-data
+      android:name="com.google.android.gms.car.application"
+      android:resource="@xml/automotive_app_desc" />
+
+    <!-- auto notification -->
+    <meta-data
+      android:name="com.google.android.gms.car.notification.SmallIcon"
+      android:resource="@drawable/ic_notification"
+      tools:ignore="ManifestResource" />
+
+    <!-- auto theme -->
+    <meta-data
+      android:name="com.google.android.gms.car.application.theme"
+      android:resource="@style/AppTheme" />
+
+    <activity-alias
+      android:name=".features.MainActivity"
+      android:targetActivity=".MainActivity"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+
+      <meta-data
+        android:name="android.app.shortcuts"
+        android:resource="@xml/shortcuts" />
+    </activity-alias>
+
+    <activity
+      android:name=".MainActivity"
+      android:windowSoftInputMode="adjustResize"
+      android:exported="true">
+
+      <intent-filter>
+        <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+        <category android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+    </activity>
+
+    <service
+      android:name="voice.core.playback.session.PlaybackService"
+      android:foregroundServiceType="mediaPlayback"
+      android:exported="true"
+      android:enabled="true"
+      tools:ignore="ExportedService">
+      <intent-filter>
+        <action android:name="androidx.media3.session.MediaLibraryService" />
+        <action android:name="android.media.browse.MediaBrowserService" />
+      </intent-filter>
+    </service>
+
+    <receiver
+      android:name=".features.widget.BaseWidgetProvider"
+      android:icon="@drawable/ic_launcher"
+      android:label="@string/app_name"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+        <action android:name="android.intent.action.CONFIGURATION_CHANGED" />
+      </intent-filter>
+
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_info" />
+    </receiver>
+
+
+    <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="${applicationId}.coverprovider"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/cover_paths" />
+    </provider>
+
+    <activity
+      android:name="voice.features.widget.config.WidgetConfigActivity"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+      </intent-filter>
+    </activity>
+
+  </application>
+
+</manifest>

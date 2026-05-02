@@ -1,0 +1,50 @@
+# VoicePlus stress test — local only, never commit
+app/src/androidTest/kotlin/voice/app/VoicePlusStressTest.kt
+
+*.iml
+*.apk
+*.stackdump
+.DS_Store
+captures
+audiobook/build
+build
+.gradle/
+*~
+*.log
+local.properties
+MaterialAudiobookPlayer.iml
+.kobalt
+reports
+mainframer.sh
+.mainframer
+artifacts
+testResults
+Gemfile.lock
+releases
+.transifexrc
+/plugins/.idea/workspace.xml
+/.kotlin
+/.idea/deviceManager.xml
+/fastlane/README.md
+/fastlane/report.xml
+/.idea/copilot.data.migration.ask.xml
+/.idea/copilot.data.migration.ask2agent.xml
+
+# Internal F-Droid planning — not for public release
+docs/fdroid/
+docs/fdroid-release-plan.md
+docs/fdroid-release-howto.md
+
+# IDE / editor config
+.vscode/
+.idea/
+
+# Compiled plugin artifacts
+plugins/bin/
+
+# Release signing key — NEVER commit this
+signing/
+
+# Local AI assistant context — not for public release
+CLAUDE.md
+.claude/
