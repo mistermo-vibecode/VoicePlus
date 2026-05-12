@@ -156,6 +156,7 @@ class VoicePlayer(
   }
 
   override fun seekBack() {
+    sleepTimer.reset()
     scope.launch {
       val skipAmount = seekTimeStore.data.first().seconds
 
@@ -182,6 +183,7 @@ class VoicePlayer(
   }
 
   override fun seekForward() {
+    sleepTimer.reset()
     scope.launch {
       val skipAmount = seekTimeStore.data.first().seconds
 
