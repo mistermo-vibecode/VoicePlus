@@ -1,0 +1,2 @@
+* Fixed crash when opening "Open source licenses" from Settings.
+* Skip forward/backward now resets the sleep timer when auto-reset is enabled.

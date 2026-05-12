@@ -1,5 +1,12 @@
 # VoicePlus Changelog
 
+## v1.21 — Bug fixes
+
+- **Open Source Licenses screen:** Fixed crash that prevented the screen from opening on release builds.
+- **Sleep Timer skip-reset:** Skipping forward or backward now resets the sleep timer when auto-reset is enabled, matching the existing behavior for volume changes and resuming from pause.
+
+---
+
 ## v1.20 — Widget Overhaul, Quick Bookmark, Experimental Playback Persistence
 
 ### Widget Overhaul
