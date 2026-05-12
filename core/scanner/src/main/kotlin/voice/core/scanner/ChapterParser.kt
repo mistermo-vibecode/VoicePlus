@@ -24,7 +24,10 @@ internal class ChapterParser(
   // the TIT2 tag contains the book title rather than a unique chapter title, which
   // is common for multi-file audiobooks (e.g. "01 - BookTitle.mp3" where every
   // file's TIT2 = album = "BookTitle"). The filename always contains the track number.
-  private fun chapterName(metaData: Metadata, ignoreFileTags: Boolean): String {
+  private fun chapterName(
+    metaData: Metadata,
+    ignoreFileTags: Boolean,
+  ): String {
     if (ignoreFileTags) return metaData.fileName
     val title = metaData.title
     return if (title != null && title != metaData.album) title else metaData.fileName
