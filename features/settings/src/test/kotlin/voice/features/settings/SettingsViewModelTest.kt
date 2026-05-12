@@ -46,6 +46,7 @@ class SettingsViewModelTest {
   private val mediaButtonDoubleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_FORWARD)
   private val mediaButtonTripleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_BACKWARD)
   private val experimentalPlaybackPersistenceStore = MemoryDataStore(false)
+  private val ignoreFileTagsStore = MemoryDataStore(false)
 
   private val viewModel = SettingsViewModel(
     useDarkThemeStore = useDarkThemeStore,
@@ -60,6 +61,7 @@ class SettingsViewModelTest {
     mediaButtonDoubleClickHandlerStore = mediaButtonDoubleClickHandlerStore,
     mediaButtonTripleClickHandlerStore = mediaButtonTripleClickHandlerStore,
     experimentalPlaybackPersistenceStore = experimentalPlaybackPersistenceStore,
+    ignoreFileTagsStore = ignoreFileTagsStore,
     dispatcherProvider = DispatcherProvider(scope.coroutineContext, scope.coroutineContext, scope.coroutineContext),
   )
 
