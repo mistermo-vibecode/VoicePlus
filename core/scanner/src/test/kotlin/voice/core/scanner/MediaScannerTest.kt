@@ -10,6 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -202,11 +203,13 @@ class MediaScannerTest {
       chapterParser = ChapterParser(
         chapterRepo = chapterRepo,
         mediaAnalyzer = mediaAnalyzer,
+        ignoreFileTagsStore = mockk { every { data } returns MutableStateFlow(false) },
       ),
       bookParser = BookParser(
         contentRepo = bookContentRepo,
         mediaAnalyzer = mediaAnalyzer,
         fileFactory = FileBasedDocumentFactory,
+        ignoreFileTagsStore = mockk { every { data } returns MutableStateFlow(false) },
       ),
       deviceHasPermissionBug = mockk(),
       excludedBooksStore = mockk { every { data } returns kotlinx.coroutines.flow.MutableStateFlow(emptySet()) },

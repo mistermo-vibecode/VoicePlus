@@ -4,8 +4,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.kotest.matchers.collections.shouldContainExactly
 import io.mockk.Runs
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -71,6 +73,7 @@ class ChapterParserTest {
           )
         }
       },
+      ignoreFileTagsStore = mockk { every { data } returns MutableStateFlow(false) },
     )
     chapterParser.parse(FileBasedDocumentFile(audiobook))
       .map { it.name }

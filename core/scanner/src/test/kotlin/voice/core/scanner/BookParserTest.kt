@@ -3,7 +3,9 @@ package voice.core.scanner
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.kotest.matchers.shouldBe
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -25,6 +27,7 @@ class BookParserTest {
     contentRepo = mockk(),
     mediaAnalyzer = mockk(),
     fileFactory = mockk(),
+    ignoreFileTagsStore = mockk { every { data } returns MutableStateFlow(false) },
   )
 
   @Test
