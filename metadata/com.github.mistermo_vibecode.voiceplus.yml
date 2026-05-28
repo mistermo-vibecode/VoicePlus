@@ -47,25 +47,43 @@ Description: |
 
 RepoType: git
 Repo: https://github.com/mistermo-vibecode/VoicePlus
-Binaries: 
-  https://github.com/mistermo-vibecode/VoicePlus/releases/download/v%v/app-libre-release.apk
+Binaries:
+  https://github.com/mistermo-vibecode/VoicePlus/releases/download/v%v/app-libre-release-signed.apk
 
 Builds:
-  - versionName: '1.18'
-    versionCode: 5404007
-    commit: v1.18
+  - versionName: '1.19'
+    versionCode: 5404008
+    commit: be629e48dd5418de53145f04839cc6d3902e88fc
     subdir: app
     gradle:
       - libre
-    scanignore:
-      - settings.gradle.kts
-      - plugins/settings.gradle.kts
-    scandelete:
-      - features/review/play
+    prebuild:
+      - sed -i -e '/review/d' ../features/review/play/build.gradle.kts
+      - sed -i -e '/foojay/d' ../{.,plugins}/settings.gradle.kts
+
+  - versionName: '1.20'
+    versionCode: 5404009
+    commit: 9b69ffa2dc96f39115ae69579ce0fbd74f21e18f
+    subdir: app
+    gradle:
+      - libre
+    prebuild:
+      - sed -i -e '/review/d' ../features/review/play/build.gradle.kts
+      - sed -i -e '/foojay/d' ../{.,plugins}/settings.gradle.kts
+
+  - versionName: '1.21'
+    versionCode: 5404010
+    commit: edb45d97ab3b523ced7cb40cab079afc90167589
+    subdir: app
+    gradle:
+      - libre
+    prebuild:
+      - sed -i -e '/review/d' ../features/review/play/build.gradle.kts
+      - sed -i -e '/foojay/d' ../{.,plugins}/settings.gradle.kts
 
 AllowedAPKSigningKeys: e9b7ebffdfd96d08bb751810819c2133a6c060bb6f17449d95223b6f8b16d2f2
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: '1.18'
-CurrentVersionCode: 5404007
+CurrentVersion: '1.21'
+CurrentVersionCode: 5404010
