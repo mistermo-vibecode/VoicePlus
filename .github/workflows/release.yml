@@ -30,10 +30,13 @@ jobs:
       - name: Build Signed Release APK
         run: ./gradlew :app:assembleLibreRelease --no-configuration-cache
 
+      - name: Rename APK for F-Droid Binaries URL
+        run: mv app/build/outputs/apk/libre/release/app-libre-release.apk app/build/outputs/apk/libre/release/app-libre-release-signed.apk
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: app/build/outputs/apk/libre/release/app-libre-release.apk
+          files: app/build/outputs/apk/libre/release/app-libre-release-signed.apk
           generate_release_notes: true
           draft: true
