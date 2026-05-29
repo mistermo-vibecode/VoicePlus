@@ -40,6 +40,7 @@ internal fun BookPlayAppBar(
   onCharacterListClick: () -> Unit,
   onCloseClick: () -> Unit,
   useLandscapeLayout: Boolean,
+  onEditChapterNamesClick: (() -> Unit)? = null,
 ) {
   val appBarActions: @Composable RowScope.() -> Unit = {
     IconButton(onClick = onSleepTimerClick) {
@@ -94,6 +95,7 @@ internal fun BookPlayAppBar(
       onVolumeBoostClick = onVolumeBoostClick,
       onListeningLogClick = onListeningLogClick,
       onCharacterListClick = onCharacterListClick,
+      onEditChapterNamesClick = onEditChapterNamesClick,
     )
   }
   if (useLandscapeLayout) {
