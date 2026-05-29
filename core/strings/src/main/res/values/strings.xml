@@ -214,9 +214,11 @@
     <string name="pref_sleep_timer_auto_reset_info">When enabled, the sleep timer resets to its full duration if it detects you\'re still awake — for example, when you change the volume or pause and resume playback.</string>
     <string name="pref_sleep_timer_info">More info</string>
     <string name="pref_ignore_file_tags">Use folder names instead of file tags</string>
-    <string name="pref_ignore_file_tags_info">Derives book and chapter names from the directory and file names, ignoring embedded ID3/metadata tags. Cover art from folder images is still used. Duration and chapter navigation marks are always read. Changes apply to newly added books — re-add your library folder to update existing books.</string>
+    <string name="pref_ignore_file_tags_info">Derives book and chapter names from the directory and file names, ignoring embedded ID3/metadata tags. Cover art from folder images is still used. Duration and chapter navigation marks are always read. Toggling this re-scans your library and updates existing books.</string>
     <string name="experimental">Experimental</string>
     <string name="ignore_file_tags_confirm_title">Re-scan library?</string>
-    <string name="ignore_file_tags_confirm_message">All book and chapter names will be re-derived. Your audio files, playback progress, and bookmarks are not affected.</string>
+    <string name="ignore_file_tags_confirm_message">Book and chapter names will be re-derived from %1$s. Your audio files, playback progress, and bookmarks are not affected.</string>
     <string name="rescan">Re-scan</string>
+    <string name="folder_names">folder names</string>
+    <string name="file_tags">file tags</string>
 </resources>

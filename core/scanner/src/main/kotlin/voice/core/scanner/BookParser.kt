@@ -9,7 +9,6 @@ import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
 import voice.core.data.repo.BookContentRepo
-import voice.core.data.repo.getOrPut
 import voice.core.data.store.IgnoreFileTagsStore
 import voice.core.data.toUri
 import voice.core.documentfile.CachedDocumentFile
@@ -29,18 +28,40 @@ internal class BookParser(
   suspend fun parseAndStore(
     chapters: List<Chapter>,
     file: CachedDocumentFile,
+    forceReParse: Boolean = false,
   ): BookContent {
     val id = BookId(file.uri)
-    val ignoreFileTags = ignoreFileTagsStore.data.first()
-    return contentRepo.getOrPut(id) {
-      val analyzed = if (ignoreFileTags) {
-        null
-      } else {
-        val uri = chapters.first().id.toUri()
-        mediaAnalyzer.analyze(fileFactory.create(uri))
-      }
-      parse(chapters, id, analyzed, file)
+    val existing = contentRepo.get(id)
+    if (existing != null && !forceReParse) {
+      return existing
     }
+
+    val ignoreFileTags = ignoreFileTagsStore.data.first()
+    val analyzed = if (ignoreFileTags) {
+      null
+    } else {
+      val uri = chapters.first().id.toUri()
+      mediaAnalyzer.analyze(fileFactory.create(uri))
+    }
+    val parsed = parse(chapters, id, analyzed, file)
+
+    // When re-parsing an existing book (e.g. after toggling "ignore file tags"), only the
+    // metadata derived from tags/file names is refreshed. Playback-related state such as the
+    // position, speed and added/last-played timestamps is preserved.
+    val content = if (existing != null) {
+      existing.copy(
+        author = parsed.author,
+        name = parsed.name,
+        genre = parsed.genre,
+        narrator = parsed.narrator,
+        series = parsed.series,
+        part = parsed.part,
+      )
+    } else {
+      parsed
+    }
+    contentRepo.put(content)
+    return content
   }
 
   fun parse(

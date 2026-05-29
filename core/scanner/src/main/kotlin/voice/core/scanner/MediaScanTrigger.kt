@@ -36,8 +36,11 @@ internal constructor(
   private val scope = CoroutineScope(Dispatchers.IO)
   private var scanningJob: Job? = null
 
-  public fun scan(restartIfScanning: Boolean = false) {
-    Logger.i("scanForFiles with restartIfScanning=$restartIfScanning")
+  public fun scan(
+    restartIfScanning: Boolean = false,
+    forceReParse: Boolean = false,
+  ) {
+    Logger.i("scanForFiles with restartIfScanning=$restartIfScanning, forceReParse=$forceReParse")
     if (scanningJob?.isActive == true && !restartIfScanning) {
       return
     }
@@ -54,7 +57,7 @@ internal constructor(
               documentFileFactory.create(it.documentFile.uri)
             }
           }
-        scanner.scan(folders)
+        scanner.scan(folders, forceReParse)
       }.also {
         Logger.i("scan took $it")
       }

@@ -23,7 +23,10 @@ internal class MediaScanner(
   private val excludedBooksStore: DataStore<Set<String>>,
 ) {
 
-  suspend fun scan(folders: Map<FolderType, List<CachedDocumentFile>>) {
+  suspend fun scan(
+    folders: Map<FolderType, List<CachedDocumentFile>>,
+    forceReParse: Boolean = false,
+  ) {
     val excludedIds = excludedBooksStore.data.first()
     val files = folders.flatMap { (folderType, files) ->
       when (folderType) {
@@ -66,7 +69,7 @@ internal class MediaScanner(
     files
       .sortedBy { it.audioFileCount() }
       .forEach { file ->
-        scan(file)
+        scan(file, forceReParse)
       }
   }
 
@@ -77,14 +80,17 @@ internal class MediaScanner(
       }
   }
 
-  private suspend fun scan(file: CachedDocumentFile) {
+  private suspend fun scan(
+    file: CachedDocumentFile,
+    forceReParse: Boolean,
+  ) {
     val excludedIds = excludedBooksStore.data.first()
     if (BookId(file.uri).value in excludedIds) return
 
     val chapters = chapterParser.parse(file)
     if (chapters.isEmpty()) return
 
-    val content = bookParser.parseAndStore(chapters, file)
+    val content = bookParser.parseAndStore(chapters, file, forceReParse)
 
     val chapterIds = chapters.map { it.id }
     val currentChapterGone = content.currentChapter !in chapterIds
