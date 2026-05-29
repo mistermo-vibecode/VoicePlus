@@ -218,4 +218,5 @@
     <string name="experimental">Experimental</string>
     <string name="ignore_file_tags_confirm_title">Re-scan library?</string>
     <string name="ignore_file_tags_confirm_message">All book and chapter names will be re-derived. Your audio files, playback progress, and bookmarks are not affected.</string>
+    <string name="rescan">Re-scan</string>
 </resources>

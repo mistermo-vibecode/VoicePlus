@@ -438,7 +438,7 @@ private fun Dialog(
         text = { Text(stringResource(StringsR.string.ignore_file_tags_confirm_message)) },
         confirmButton = {
           Button(onClick = listener::confirmIgnoreFileTagsChange) {
-            Text(stringResource(StringsR.string.dialog_confirm))
+            Text(stringResource(StringsR.string.rescan))
           }
         },
         dismissButton = {
