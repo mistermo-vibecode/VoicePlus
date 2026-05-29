@@ -19,12 +19,11 @@ public fun ChapterEditorScreen(viewModel: ChapterEditorViewModel) {
 public interface ChapterEditorProvider {
   @Provides
   @IntoSet
-  public fun chapterEditorNavEntryProvider(
-    factory: ChapterEditorViewModel.Factory,
-  ): NavEntryProvider<*> = NavEntryProvider<Destination.ChapterEditor> { key ->
-    NavEntry(key) {
-      val viewModel = remember(key) { factory.create(key.bookId) }
-      ChapterEditorScreen(viewModel = viewModel)
+  public fun chapterEditorNavEntryProvider(factory: ChapterEditorViewModel.Factory): NavEntryProvider<*> =
+    NavEntryProvider<Destination.ChapterEditor> { key ->
+      NavEntry(key) {
+        val viewModel = remember(key) { factory.create(key.bookId) }
+        ChapterEditorScreen(viewModel = viewModel)
+      }
     }
-  }
 }
