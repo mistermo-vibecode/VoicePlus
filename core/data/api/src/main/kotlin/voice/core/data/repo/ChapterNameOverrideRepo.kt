@@ -13,6 +13,9 @@ public interface ChapterNameOverrideRepo {
     bookId: BookId,
     name: String,
   )
-  public suspend fun delete(chapterId: ChapterId, markStartMs: Long)
+  public suspend fun delete(
+    chapterId: ChapterId,
+    markStartMs: Long,
+  )
   public suspend fun deleteAll(bookId: BookId)
 }

@@ -32,7 +32,9 @@ class ChapterNameOverrideRepoImplTest {
   }
 
   @After
-  fun teardown() { db.close() }
+  fun teardown() {
+    db.close()
+  }
 
   @Test
   fun `set and observe override`() = runTest {
