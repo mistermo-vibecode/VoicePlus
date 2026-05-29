@@ -10,7 +10,11 @@ private val DIGIT_REGEX = Regex("""^(.*?)(\d+)(.*)$""", RegexOption.DOT_MATCHES_
  * 2. [offset] applied to digits or cardinal words (1–100) in [rawName]
  * 3. [rawName] unchanged
  */
-public fun resolveChapterName(rawName: String, offset: Int, override: String?): String {
+public fun resolveChapterName(
+  rawName: String,
+  offset: Int,
+  override: String?,
+): String {
   if (override != null) return override
   if (offset == 0) return rawName
 
@@ -34,7 +38,7 @@ public fun resolveChapterName(rawName: String, offset: Int, override: String?): 
     else -> Pair(CardinalWordParser.parse(tokens.last()), 1)
   }
   if (parsed != null) {
-    val referenceToken = tokens[tokens.size - dropCount]  // first token of the matched phrase
+    val referenceToken = tokens[tokens.size - dropCount] // first token of the matched phrase
     val newN = (parsed + offset).coerceAtLeast(1)
     val newWord = CardinalWordParser.toWord(newN) ?: newN.toString()
     val capitalised = if (referenceToken[0].isUpperCase()) {

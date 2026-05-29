@@ -17,7 +17,10 @@ public interface ChapterNameOverrideDao {
   public suspend fun insert(override: ChapterNameOverride)
 
   @Query("DELETE FROM chapter_name_overrides WHERE chapterId = :chapterId AND markStartMs = :markStartMs")
-  public suspend fun delete(chapterId: String, markStartMs: Long)
+  public suspend fun delete(
+    chapterId: String,
+    markStartMs: Long,
+  )
 
   @Query("DELETE FROM chapter_name_overrides WHERE bookId = :bookId")
   public suspend fun deleteAll(bookId: String)
