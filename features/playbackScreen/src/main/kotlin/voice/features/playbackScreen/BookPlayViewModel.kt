@@ -147,7 +147,7 @@ class BookPlayViewModel(
       cover = book.content.cover?.let(::ImmutableFile),
       skipSilence = book.content.skipSilence,
       characterCount = characterCount,
-      editChapterNamesVisible = book.chapters.any { it.chapterMarks.isNotEmpty() },
+      editChapterNamesVisible = book.chapters.any { it.markData.isNotEmpty() },
     )
   }
 
