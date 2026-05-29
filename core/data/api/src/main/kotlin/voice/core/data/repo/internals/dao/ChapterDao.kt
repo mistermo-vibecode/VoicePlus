@@ -18,4 +18,7 @@ public interface ChapterDao {
 
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   public suspend fun insert(chapter: Chapter)
+
+  @Query("DELETE FROM chapters2")
+  public suspend fun deleteAll()
 }

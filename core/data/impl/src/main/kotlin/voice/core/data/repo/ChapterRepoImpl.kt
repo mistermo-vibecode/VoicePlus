@@ -34,4 +34,9 @@ public class ChapterRepoImpl(private val dao: ChapterDao) : ChapterRepo {
     dao.insert(chapter)
     cache[chapter.id] = chapter
   }
+
+  override suspend fun deleteAll() {
+    dao.deleteAll()
+    cache.clear()
+  }
 }

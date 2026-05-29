@@ -10,6 +10,7 @@ dependencies {
   implementation(projects.core.strings)
   implementation(projects.core.featureflag)
   implementation(projects.core.playback)
+  implementation(projects.core.scanner)
   implementation(projects.core.ui)
   implementation(projects.core.data.api)
 

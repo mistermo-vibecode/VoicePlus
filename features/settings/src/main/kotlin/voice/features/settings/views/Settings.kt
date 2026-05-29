@@ -1,6 +1,7 @@
 package voice.features.settings.views
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -15,12 +16,14 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,10 +34,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.retain.retain
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
@@ -233,7 +238,18 @@ private fun Settings(
               contentDescription = stringResource(StringsR.string.pref_ignore_file_tags),
             )
           },
-          headlineContent = { Text(stringResource(StringsR.string.pref_ignore_file_tags)) },
+          headlineContent = {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              Text(stringResource(StringsR.string.pref_ignore_file_tags))
+              SuggestionChip(
+                onClick = {},
+                label = { Text(stringResource(StringsR.string.experimental)) },
+              )
+            }
+          },
           trailingContent = {
             Row {
               IconButton(onClick = listener::onIgnoreFileTagsInfoClick) {
@@ -411,6 +427,23 @@ private fun Dialog(
         confirmButton = {
           TextButton(onClick = listener::dismissDialog) {
             Text(stringResource(StringsR.string.close))
+          }
+        },
+      )
+    }
+    is SettingsViewState.Dialog.IgnoreFileTagsConfirm -> {
+      AlertDialog(
+        onDismissRequest = listener::dismissDialog,
+        title = { Text(stringResource(StringsR.string.ignore_file_tags_confirm_title)) },
+        text = { Text(stringResource(StringsR.string.ignore_file_tags_confirm_message)) },
+        confirmButton = {
+          Button(onClick = listener::confirmIgnoreFileTagsChange) {
+            Text(stringResource(StringsR.string.dialog_confirm))
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = listener::dismissDialog) {
+            Text(stringResource(StringsR.string.dialog_cancel))
           }
         },
       )
