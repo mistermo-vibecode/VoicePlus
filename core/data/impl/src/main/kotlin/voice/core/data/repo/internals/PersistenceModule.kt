@@ -12,6 +12,7 @@ import voice.core.data.repo.internals.dao.BookCharacterDao
 import voice.core.data.repo.internals.dao.BookContentDao
 import voice.core.data.repo.internals.dao.BookmarkDao
 import voice.core.data.repo.internals.dao.ChapterDao
+import voice.core.data.repo.internals.dao.ChapterNameOverrideDao
 import voice.core.data.repo.internals.dao.ListeningSessionDao
 import voice.core.data.repo.internals.dao.RecentBookSearchDao
 
@@ -35,6 +36,9 @@ public interface PersistenceModule {
 
   @Provides
   private fun bookCharacterDao(appDb: AppDb): BookCharacterDao = appDb.bookCharacterDao()
+
+  @Provides
+  private fun chapterNameOverrideDao(appDb: AppDb): ChapterNameOverrideDao = appDb.chapterNameOverrideDao()
 
   @Provides
   @SingleIn(AppScope::class)
