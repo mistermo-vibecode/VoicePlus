@@ -142,6 +142,7 @@ dependencies {
   implementation(projects.features.bookOverview)
   implementation(projects.core.search)
   implementation(projects.features.cover)
+  implementation(projects.features.chapterEditor)
   implementation(projects.core.documentfile)
   implementation(projects.features.onboarding)
   implementation(projects.features.bookmark)
