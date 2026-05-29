@@ -34,6 +34,7 @@ internal fun BookPlayView(
   onCloseClick: () -> Unit,
   onCurrentChapterClick: () -> Unit,
   snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+  onEditChapterNamesClick: (() -> Unit)? = null,
 ) {
   Scaffold(
     snackbarHost = {
@@ -52,6 +53,7 @@ internal fun BookPlayView(
         onCharacterListClick = onCharacterListClick,
         onCloseClick = onCloseClick,
         useLandscapeLayout = useLandscapeLayout,
+        onEditChapterNamesClick = onEditChapterNamesClick,
       )
     },
     content = {
@@ -114,6 +116,7 @@ private class BookPlayViewStatePreviewProvider : PreviewParameterProvider<BookPl
       sleepTimerState = BookPlayViewState.SleepTimerViewState.Disabled,
       title = "Das Ende der Welt",
       characterCount = 0,
+      editChapterNamesVisible = false,
     )
     yield(initial)
     yield(

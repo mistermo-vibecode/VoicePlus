@@ -76,6 +76,7 @@ fun BookPlayScreen(bookId: BookId) {
     onCurrentChapterClick = viewModel::onCurrentChapterClick,
     useLandscapeLayout = LocalConfiguration.current.orientation == ORIENTATION_LANDSCAPE,
     snackbarHostState = snackbarHostState,
+    onEditChapterNamesClick = if (viewState.editChapterNamesVisible) viewModel::onEditChapterNamesClick else null,
   )
   if (dialogState != null) {
     when (dialogState) {

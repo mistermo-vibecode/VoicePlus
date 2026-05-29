@@ -108,6 +108,9 @@ class BookPlayViewModelTest {
     characterRepo = mockk<BookCharacterRepo> {
       every { characterCount(any()) } returns flowOf(0)
     },
+    chapterNameOverrideRepo = mockk {
+      every { overridesForBook(any()) } returns flowOf(emptyList())
+    },
     volumeGainFormatter = mockk(),
     batteryOptimization = mockk(),
     sleepTimerPreferenceStore = sleepTimerDataStore,
@@ -334,6 +337,9 @@ class BookPlayViewModelTest {
       bookmarkRepository = mockk(),
       characterRepo = mockk {
         every { characterCount(any()) } returns flowOf(0)
+      },
+      chapterNameOverrideRepo = mockk {
+        every { overridesForBook(any()) } returns flowOf(emptyList())
       },
       volumeGainFormatter = mockk(),
       batteryOptimization = mockk(),

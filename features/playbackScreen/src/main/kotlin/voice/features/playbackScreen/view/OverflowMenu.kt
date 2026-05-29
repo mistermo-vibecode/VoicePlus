@@ -24,6 +24,7 @@ internal fun OverflowMenu(
   onVolumeBoostClick: () -> Unit,
   onListeningLogClick: () -> Unit,
   onCharacterListClick: () -> Unit,
+  onEditChapterNamesClick: (() -> Unit)? = null,
 ) {
   Box {
     var expanded by remember { mutableStateOf(false) }
@@ -86,6 +87,15 @@ internal fun OverflowMenu(
           Text(text = stringResource(id = R.string.character_list))
         },
       )
+      onEditChapterNamesClick?.let { onClick ->
+        DropdownMenuItem(
+          text = { Text("Edit chapter names") },
+          onClick = {
+            expanded = false
+            onClick()
+          },
+        )
+      }
     }
   }
 }
