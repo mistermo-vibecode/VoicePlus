@@ -37,6 +37,7 @@ interface SettingsListener {
 
   fun setIgnoreFileTags(enabled: Boolean)
   fun onIgnoreFileTagsInfoClick()
+  fun confirmIgnoreFileTagsChange()
 
   companion object {
     fun noop() = object : SettingsListener {
@@ -72,6 +73,7 @@ interface SettingsListener {
 
       override fun setIgnoreFileTags(enabled: Boolean) {}
       override fun onIgnoreFileTagsInfoClick() {}
+      override fun confirmIgnoreFileTagsChange() {}
     }
   }
 }

@@ -17,6 +17,7 @@ import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
 import voice.core.data.GridMode
 import voice.core.data.MediaButtonClickAction
+import voice.core.data.repo.ChapterRepo
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.AutoRewindAmountStore
 import voice.core.data.store.DarkThemeStore
@@ -29,6 +30,7 @@ import voice.core.data.store.SeekTimeStore
 import voice.core.data.store.SleepTimerPreferenceStore
 import voice.core.featureflag.FeatureFlag
 import voice.core.featureflag.FolderPickerInSettingsFeatureFlagQualifier
+import voice.core.scanner.MediaScanTrigger
 import voice.core.ui.DARK_THEME_SETTABLE
 import voice.core.ui.GridCount
 import voice.navigation.Destination
@@ -61,6 +63,8 @@ class SettingsViewModel(
   private val experimentalPlaybackPersistenceStore: DataStore<Boolean>,
   @IgnoreFileTagsStore
   private val ignoreFileTagsStore: DataStore<Boolean>,
+  private val chapterRepo: ChapterRepo,
+  private val mediaScanTrigger: MediaScanTrigger,
   dispatcherProvider: DispatcherProvider,
 ) : SettingsListener {
 
@@ -263,12 +267,20 @@ class SettingsViewModel(
   }
 
   override fun setIgnoreFileTags(enabled: Boolean) {
-    mainScope.launch {
-      ignoreFileTagsStore.updateData { enabled }
-    }
+    dialog.value = SettingsViewState.Dialog.IgnoreFileTagsConfirm(enabled)
   }
 
   override fun onIgnoreFileTagsInfoClick() {
     dialog.value = SettingsViewState.Dialog.IgnoreFileTagsInfo
+  }
+
+  override fun confirmIgnoreFileTagsChange() {
+    val newValue = (dialog.value as? SettingsViewState.Dialog.IgnoreFileTagsConfirm)?.newValue ?: return
+    dismissDialog()
+    mainScope.launch {
+      ignoreFileTagsStore.updateData { newValue }
+      chapterRepo.deleteAll()
+      mediaScanTrigger.scan(restartIfScanning = true)
+    }
   }
 }

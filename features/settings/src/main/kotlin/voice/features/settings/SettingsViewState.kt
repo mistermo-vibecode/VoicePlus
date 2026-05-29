@@ -22,15 +22,16 @@ data class SettingsViewState(
   val ignoreFileTags: Boolean,
 ) {
 
-  enum class Dialog {
-    AutoRewindAmount,
-    SeekTime,
-    AutoSleepTimerDuration,
-    MediaButtonDoubleClickAction,
-    MediaButtonTripleAction,
-    SleepTimerAutoResetInfo,
-    ExperimentalPlaybackPersistenceInfo,
-    IgnoreFileTagsInfo,
+  sealed interface Dialog {
+    data object AutoRewindAmount : Dialog
+    data object SeekTime : Dialog
+    data object AutoSleepTimerDuration : Dialog
+    data object MediaButtonDoubleClickAction : Dialog
+    data object MediaButtonTripleAction : Dialog
+    data object SleepTimerAutoResetInfo : Dialog
+    data object ExperimentalPlaybackPersistenceInfo : Dialog
+    data object IgnoreFileTagsInfo : Dialog
+    data class IgnoreFileTagsConfirm(val newValue: Boolean) : Dialog
   }
 
   companion object {

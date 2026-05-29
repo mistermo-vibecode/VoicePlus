@@ -8,6 +8,8 @@ public interface ChapterRepo {
   public suspend fun get(id: ChapterId): Chapter?
 
   public suspend fun put(chapter: Chapter)
+
+  public suspend fun deleteAll()
 }
 
 public suspend inline fun ChapterRepo.getOrPut(
