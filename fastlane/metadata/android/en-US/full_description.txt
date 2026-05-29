@@ -9,6 +9,7 @@ WHAT'S DIFFERENT FROM VOICE
 - Listening Statistics: charts and summaries of your history, all computed on-device
 - Character List: attach a cast list to any book for quick reference while listening
 - Hidden Books: hide books from your library without deleting them
+- Chapter Name Editor: correct wrong chapter numbers with a single offset, or rename chapters, without touching your files
 - Resizable widget with configurable opacity and text scale
 - Customizable media button actions (double-press and triple-press)
 - Sleep timer auto-reset on interaction, with N-chapter countdown
