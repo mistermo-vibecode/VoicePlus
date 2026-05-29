@@ -58,6 +58,7 @@
     <string name="listening_log_playback_range">%1$s → %2$s</string>
     <string name="dialog_confirm">Set</string>
     <string name="dialog_cancel">Cancel</string>
+    <string name="edit_chapter_names">Edit chapter names</string>
     <string name="content_cover">Shows cover to choose</string>
     <string name="change_book_name">Name</string>
     <string name="download_book_cover">Cover from the Internet</string>
