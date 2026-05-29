@@ -280,7 +280,7 @@ class SettingsViewModel(
     mainScope.launch {
       ignoreFileTagsStore.updateData { newValue }
       chapterRepo.deleteAll()
-      mediaScanTrigger.scan(restartIfScanning = true)
+      mediaScanTrigger.scan(restartIfScanning = true, forceReParse = true)
     }
   }
 }

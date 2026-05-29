@@ -86,6 +86,41 @@ class MediaScannerTest {
   }
 
   @Test
+  fun forceReParseReDerivesNamesPreservingPlayback() = test {
+    val audiobookFolder = folder("audiobooks")
+
+    val book1 = File(audiobookFolder, "book1")
+    val book1Id = BookId(book1.toUri())
+    audioFile(book1, "1.mp3")
+    audioFile(book1, "2.mp3")
+
+    scan(FolderType.Root, audiobookFolder)
+
+    bookContentRepo.get(book1Id)!!.name shouldBe "Book Name"
+
+    // Simulate user playback progress that must survive a re-parse.
+    val played = bookContentRepo.get(book1Id)!!.copy(
+      playbackSpeed = 1.5F,
+      positionInChapter = 500L,
+    )
+    bookContentRepo.put(played)
+
+    ignoreFileTags.value = true
+    chapterRepo.deleteAll()
+
+    // A routine (non-forced) scan must NOT touch the existing book's name.
+    scan(FolderType.Root, audiobookFolder)
+    bookContentRepo.get(book1Id)!!.name shouldBe "Book Name"
+
+    scan(FolderType.Root, audiobookFolder, forceReParse = true)
+    val updated = bookContentRepo.get(book1Id)!!
+    updated.name shouldBe "book1"
+    updated.author shouldBe null
+    updated.playbackSpeed shouldBe 1.5F
+    updated.positionInChapter shouldBe 500L
+  }
+
+  @Test
   fun multipleRoots() = test {
     val audiobookFolder1 = folder("audiobooks1")
 
@@ -196,20 +231,21 @@ class MediaScannerTest {
       .allowMainThreadQueries()
       .build()
     val bookContentRepo = BookContentRepoImpl(db.bookContentDao())
-    private val chapterRepo = ChapterRepoImpl(db.chapterDao())
+    val chapterRepo = ChapterRepoImpl(db.chapterDao())
+    val ignoreFileTags = MutableStateFlow(false)
     private val mediaAnalyzer = mockk<MediaAnalyzer>()
     private val scanner = MediaScanner(
       contentRepo = bookContentRepo,
       chapterParser = ChapterParser(
         chapterRepo = chapterRepo,
         mediaAnalyzer = mediaAnalyzer,
-        ignoreFileTagsStore = mockk { every { data } returns MutableStateFlow(false) },
+        ignoreFileTagsStore = mockk { every { data } returns ignoreFileTags },
       ),
       bookParser = BookParser(
         contentRepo = bookContentRepo,
         mediaAnalyzer = mediaAnalyzer,
         fileFactory = FileBasedDocumentFactory,
-        ignoreFileTagsStore = mockk { every { data } returns MutableStateFlow(false) },
+        ignoreFileTagsStore = mockk { every { data } returns ignoreFileTags },
       ),
       deviceHasPermissionBug = mockk(),
       excludedBooksStore = mockk { every { data } returns kotlinx.coroutines.flow.MutableStateFlow(emptySet()) },
@@ -222,8 +258,9 @@ class MediaScannerTest {
     suspend fun scan(
       type: FolderType = FolderType.Root,
       vararg roots: File,
+      forceReParse: Boolean = false,
     ) {
-      scanner.scan(mapOf(type to roots.map(::FileBasedDocumentFile)))
+      scanner.scan(mapOf(type to roots.map(::FileBasedDocumentFile)), forceReParse)
     }
 
     @IgnorableReturnValue
