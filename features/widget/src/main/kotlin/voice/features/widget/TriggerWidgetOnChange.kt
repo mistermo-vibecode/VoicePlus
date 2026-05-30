@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.onEach
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.repo.BookRepository
+import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.SeekTimeStore
 import voice.core.initializer.AppInitializer
@@ -28,6 +29,7 @@ class TriggerWidgetOnChange(
   @SeekTimeStore
   private val seekTimeStore: DataStore<Int>,
   private val repo: BookRepository,
+  private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   private val playStateManager: PlayStateManager,
   private val widgetUpdater: WidgetUpdater,
   private val scope: CoroutineScope,
@@ -46,8 +48,16 @@ class TriggerWidgetOnChange(
       currentBookChanged(),
       playStateChanged(),
       bookIdChanged(),
+      overridesChanged(),
       seekTimeStore.data.distinctUntilChanged().map { },
     )
+  }
+
+  private fun overridesChanged(): Flow<Any?> {
+    return currentBookStore.data.filterNotNull()
+      .flatMapLatest { id -> chapterNameOverrideRepo.overridesForBook(id) }
+      .distinctUntilChanged()
+      .map { }
   }
 
   private fun bookIdChanged(): Flow<BookId?> {
@@ -68,6 +78,7 @@ class TriggerWidgetOnChange(
         previous.id == current.id &&
           previous.content.chapters == current.content.chapters &&
           previous.content.currentChapter == current.content.currentChapter &&
+          previous.content.chapterNameOffset == current.content.chapterNameOffset &&
           (previous.currentMark.name ?: "") == (current.currentMark.name ?: "")
       }
   }

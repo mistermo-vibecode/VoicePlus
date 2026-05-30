@@ -20,9 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import voice.app.features.widget.BaseWidgetProvider
+import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.repo.BookRepository
+import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.SeekTimeStore
 import voice.core.playback.notification.MainActivityIntentProvider
@@ -38,6 +40,7 @@ import voice.core.ui.R as UiR
 class WidgetUpdater(
   private val context: Context,
   private val repo: BookRepository,
+  private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   @CurrentBookStore
   private val currentBookStore: DataStore<BookId?>,
   @SeekTimeStore
@@ -54,12 +57,13 @@ class WidgetUpdater(
     scope.launch {
       val book = currentBookStore.data.first()?.let { repo.get(it) }
       val seekSeconds = seekTimeStore.data.first()
+      val chapterName = book?.let { resolveCurrentChapterName(it) }
       val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, BaseWidgetProvider::class.java))
       for (widgetId in ids) {
         val alpha = configStore.getAlpha(widgetId)
         val scale = configStore.getTextScale(widgetId)
         if (book != null) {
-          initWidgetForPresentBook(widgetId, book, alpha, scale, seekSeconds)
+          initWidgetForPresentBook(widgetId, book, chapterName.orEmpty(), alpha, scale, seekSeconds)
         } else {
           initWidgetForAbsentBook(widgetId, alpha, scale, seekSeconds)
         }
@@ -67,9 +71,18 @@ class WidgetUpdater(
     }
   }
 
+  private suspend fun resolveCurrentChapterName(book: Book): String {
+    val override = chapterNameOverrideRepo.overridesForBook(book.content.id).first()
+      .firstOrNull { it.chapterId == book.currentChapter.id.value && it.markStartMs == book.currentMark.startMs }
+      ?.name
+    return resolveChapterName(book.currentMark.name ?: "", book.content.chapterNameOffset, override)
+      .ifBlank { book.currentChapter.name.orEmpty() }
+  }
+
   private suspend fun initWidgetForPresentBook(
     widgetId: Int,
     book: Book,
+    chapterName: String,
     alpha: Int,
     scale: Float,
     seekSeconds: Int,
@@ -78,7 +91,15 @@ class WidgetUpdater(
     val useWidth = widgetWidth(opts)
     val useHeight = widgetHeight(opts)
     val remoteViews = RemoteViews(context.packageName, R.layout.widget_compact)
-    initElements(remoteViews = remoteViews, book = book, coverSize = useHeight, alpha = alpha, scale = scale, seekSeconds = seekSeconds)
+    initElements(
+      remoteViews = remoteViews,
+      book = book,
+      chapterName = chapterName,
+      coverSize = useHeight,
+      alpha = alpha,
+      scale = scale,
+      seekSeconds = seekSeconds,
+    )
     if (useWidth > 0 && useHeight > 0) {
       setVisibilities(remoteViews, useWidth, useHeight)
     }
@@ -116,6 +137,7 @@ class WidgetUpdater(
   private suspend fun initElements(
     remoteViews: RemoteViews,
     book: Book,
+    chapterName: String,
     coverSize: Int,
     alpha: Int,
     scale: Float,
@@ -135,7 +157,7 @@ class WidgetUpdater(
     }
     remoteViews.setImageViewResource(R.id.playPause, playIcon)
     remoteViews.setTextViewText(R.id.title, book.content.name)
-    remoteViews.setTextViewText(R.id.summary, book.currentMark.name?.takeIf { it.isNotBlank() } ?: book.currentChapter.name)
+    remoteViews.setTextViewText(R.id.summary, chapterName)
     remoteViews.setOnClickPendingIntent(R.id.wholeWidget, mainActivityIntentProvider.toCurrentBook())
 
     if (book.content.cover != null && coverSize > 0) {

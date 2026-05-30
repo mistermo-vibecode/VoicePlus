@@ -332,14 +332,15 @@ class VoicePlayer(
     val mediaId = mediaItem.mediaId.toMediaIdOrNull()
     if (mediaId != null) {
       if (mediaId is MediaId.Book) {
-        val book = runBlocking {
-          repo.get(mediaId.id)
+        val bookWithChapters = runBlocking {
+          val book = repo.get(mediaId.id) ?: return@runBlocking null
+          book to mediaItemProvider.chapters(book)
         }
-        if (book != null) {
+        if (bookWithChapters != null) {
+          val (book, chapters) = bookWithChapters
           player.setPlaybackSpeed(book.content.playbackSpeed)
           setSkipSilenceEnabled(book.content.skipSilence)
           volumeGain.gain = Decibel(book.content.gain)
-          val chapters = mediaItemProvider.chapters(book)
           player.setMediaItems(
             chapters,
             book.content.currentChapterIndex,

@@ -85,7 +85,15 @@ class VoicePlayerTest {
     .build()
 
   private val scope = TestScope()
-  private val mediaItemProvider = MediaItemProvider(mockk(), mockk(), mockk(), mockk(), mockk(), mockk())
+  private val mediaItemProvider = MediaItemProvider(
+    mockk(),
+    mockk(),
+    mockk(),
+    mockk(),
+    mockk { every { overridesForBook(any()) } returns flowOf(emptyList()) },
+    mockk(),
+    mockk(),
+  )
   private val bookId = BookId(UUID.randomUUID().toString())
   private lateinit var currentBook: Book
   private val player = VoicePlayer(
