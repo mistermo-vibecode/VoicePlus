@@ -9,11 +9,13 @@ import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.ChapterId
 import voice.core.data.ListeningSession
 import voice.core.data.repo.BookRepository
+import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.repo.ListeningSessionRepo
 import voice.core.playback.PlayerController
 import voice.core.ui.formatTime
@@ -29,6 +31,7 @@ private const val SKIP_THRESHOLD_MS = 30_000L
 class ListeningLogViewModel(
   private val sessionRepo: ListeningSessionRepo,
   private val bookRepo: BookRepository,
+  private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   private val playerController: PlayerController,
   private val navigator: Navigator,
   @Assisted private val bookId: BookId,
@@ -42,21 +45,30 @@ class ListeningLogViewModel(
   fun viewState(): ListeningLogViewState {
     val sessions by remember { sessionRepo.sessions(bookId) }.collectAsState(initial = emptyList())
     val book by remember { bookRepo.flow(bookId) }.collectAsState(initial = null)
-    val groups = remember(sessions, book) { sessions.toGroups(book) }
+    val overrides by remember { chapterNameOverrideRepo.overridesForBook(bookId) }.collectAsState(initial = emptyList())
+    val groups = remember(sessions, book, overrides) {
+      val offset = book?.content?.chapterNameOffset ?: 0
+      val overrideMap = overrides.associateBy({ Pair(it.chapterId, it.markStartMs) }, { it.name })
+      sessions.toGroups(book, offset, overrideMap)
+    }
     return ListeningLogViewState(
       groups = groups,
       bookTitle = book?.content?.name ?: "",
     )
   }
 
-  private fun List<ListeningSession>.toGroups(book: Book?): List<ListeningLogGroup> {
+  private fun List<ListeningSession>.toGroups(
+    book: Book?,
+    offset: Int,
+    overrideMap: Map<Pair<String, Long>, String>,
+  ): List<ListeningLogGroup> {
     val sorted = sortedByDescending { it.startedAt }
     return sorted
       .groupBy { it.startedAt.atZone(ZoneId.systemDefault()).toLocalDate() }
       .entries
       .sortedByDescending { it.key }
       .map { (date, daySessions) ->
-        val entries = daySessions.toEntries(book)
+        val entries = daySessions.toEntries(book, offset, overrideMap)
         ListeningLogGroup(
           dateLabel = date.format(dateFormatter),
           entries = entries,
@@ -64,7 +76,11 @@ class ListeningLogViewModel(
       }
   }
 
-  private fun List<ListeningSession>.toEntries(book: Book?): List<ListeningLogEntry> {
+  private fun List<ListeningSession>.toEntries(
+    book: Book?,
+    offset: Int,
+    overrideMap: Map<Pair<String, Long>, String>,
+  ): List<ListeningLogEntry> {
     val result = mutableListOf<ListeningLogEntry>()
     // Sessions already sorted descending within this day group
     forEachIndexed { index, session ->
@@ -77,9 +93,9 @@ class ListeningLogViewModel(
       val pauseTime = session.endedAt.atZone(ZoneId.systemDefault()).format(timeFormatter)
       val playTime = session.startedAt.atZone(ZoneId.systemDefault()).format(timeFormatter)
 
-      val startChapter = book.chapterName(session.chapterId, session.startPositionMs)
+      val startChapter = book.chapterName(session.chapterId, session.startPositionMs, offset, overrideMap)
       val endChapterId = session.endChapterId ?: session.chapterId
-      val endChapter = book.chapterName(endChapterId, session.endPositionMs)
+      val endChapter = book.chapterName(endChapterId, session.endPositionMs, offset, overrideMap)
 
       val totalDuration = book?.duration ?: 0L
 
@@ -118,6 +134,8 @@ class ListeningLogViewModel(
   private fun Book?.chapterName(
     id: ChapterId,
     positionMs: Long,
+    offset: Int,
+    overrideMap: Map<Pair<String, Long>, String>,
   ): String {
     if (this == null) return "Unknown Chapter"
     val index = chapters.indexOfFirst { it.id == id }
@@ -125,8 +143,9 @@ class ListeningLogViewModel(
     val chapter = chapters[index]
     val mark = chapter.chapterMarks.firstOrNull { positionMs in it.startMs..it.endMs }
       ?: chapter.chapterMarks.lastOrNull { positionMs >= it.startMs }
-    val markName = mark?.name
-    if (!markName.isNullOrBlank()) return markName
+    val override = mark?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
+    val resolved = resolveChapterName(mark?.name ?: "", offset, override)
+    if (resolved.isNotBlank()) return resolved
     val fallback = chapter.name
     return if (fallback.isNullOrBlank()) "Chapter ${index + 1}" else fallback
   }

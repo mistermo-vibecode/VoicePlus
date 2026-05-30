@@ -5,6 +5,7 @@ import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.datastore.core.DataStore
@@ -12,13 +13,16 @@ import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import voice.core.common.resolveChapterName
 import voice.core.data.BookId
 import voice.core.data.Bookmark
 import voice.core.data.Chapter
 import voice.core.data.markForPosition
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.BookmarkRepo
+import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.store.CurrentBookStore
 import voice.core.playback.PlayerController
 import voice.core.playback.playstate.PlayStateManager
@@ -37,6 +41,7 @@ class BookmarkViewModel(
   private val currentBookStore: DataStore<BookId?>,
   private val repo: BookRepository,
   private val bookmarkRepo: BookmarkRepo,
+  private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   private val playStateManager: PlayStateManager,
   private val playerController: PlayerController,
   private val navigator: Navigator,
@@ -48,6 +53,8 @@ class BookmarkViewModel(
   private val scope = MainScope()
   private var bookmarks by mutableStateOf<List<Bookmark>>(emptyList())
   private var chapters by mutableStateOf<List<Chapter>>(emptyList())
+  private var chapterNameOffset by mutableIntStateOf(0)
+  private var overrideMap by mutableStateOf<Map<Pair<String, Long>, String>>(emptyMap())
 
   private var shouldScrollTo by mutableStateOf<Bookmark.Id?>(null)
   private var dialogViewState: BookmarkDialogViewState by mutableStateOf(BookmarkDialogViewState.None)
@@ -60,6 +67,9 @@ class BookmarkViewModel(
         bookmarks = bookmarkRepo.bookmarks(book.content)
           .sortedByDescending { it.addedAt }
         chapters = book.chapters
+        chapterNameOffset = book.content.chapterNameOffset
+        overrideMap = chapterNameOverrideRepo.overridesForBook(bookId).first()
+          .associateBy({ Pair(it.chapterId, it.markStartMs) }, { it.name })
       }
     }
     return BookmarkViewState(
@@ -82,7 +92,12 @@ class BookmarkViewModel(
             }
           }
           !bookmarkTitle.isNullOrEmpty() -> bookmarkTitle
-          else -> currentChapter.markForPosition(bookmark.time).name ?: ""
+          else -> {
+            val mark = currentChapter.markForPosition(bookmark.time)
+            val override = overrideMap[Pair(currentChapter.id.value, mark.startMs)]
+            resolveChapterName(mark.name ?: "", chapterNameOffset, override)
+              .ifBlank { currentChapter.name ?: "" }
+          }
         }
 
         BookmarkItemViewState(
