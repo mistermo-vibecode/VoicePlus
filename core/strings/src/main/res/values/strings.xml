@@ -59,6 +59,16 @@
     <string name="dialog_confirm">Set</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="edit_chapter_names">Edit chapter names</string>
+    <string name="chapter_offset_label">Chapter offset:</string>
+    <string name="chapter_name_label">Chapter name</string>
+    <string name="chapter_editor_edit_name">Edit chapter name</string>
+    <string name="chapter_editor_remove_custom_name">Remove custom name</string>
+    <string name="chapter_editor_reset_all">Reset all to defaults</string>
+    <string name="chapter_editor_reset_confirm_title">Reset all chapter names?</string>
+    <string name="chapter_editor_reset_confirm_message">This will remove all custom chapter names and reset the chapter number offset to 0.</string>
+    <string name="chapter_editor_reset_confirm_button">Reset</string>
+    <string name="chapter_name_length_counter">%1$d/200</string>
+    <string name="unknown_chapter">Unknown chapter</string>
     <string name="content_cover">Shows cover to choose</string>
     <string name="change_book_name">Name</string>
     <string name="download_book_cover">Cover from the Internet</string>

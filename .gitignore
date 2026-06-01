@@ -35,6 +35,8 @@ docs/fdroid/
 docs/fdroid-release-plan.md
 docs/fdroid-release-howto.md
 docs/superpowers/
+docs/storage-resilience-analysis.md
+docs/SABP storage.md
 
 # IDE / editor config
 .vscode/

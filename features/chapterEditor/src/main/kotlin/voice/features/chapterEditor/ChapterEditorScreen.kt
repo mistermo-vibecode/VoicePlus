@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -87,7 +89,7 @@ private fun ChapterEditorContent(
     modifier = modifier,
     topBar = {
       TopAppBar(
-        title = { Text(text = "Edit Chapter Names") },
+        title = { Text(text = stringResource(StringsR.string.edit_chapter_names)) },
         navigationIcon = {
           IconButton(onClick = onBack) {
             Icon(
@@ -101,52 +103,58 @@ private fun ChapterEditorContent(
   ) { contentPadding ->
     val listState = rememberLazyListState()
 
-    LaunchedEffect(viewState.currentChapterIndex) {
-      listState.animateScrollToItem(
-        // +1 to account for the offset-row header item
-        index = (viewState.currentChapterIndex + 1).coerceAtLeast(0),
-      )
+    // Scroll to the current chapter once, on open. Keyed on Unit with the initial index captured,
+    // so playback advancing across chapters doesn't yank the list away while the user is editing.
+    val initialChapterIndex = remember { viewState.currentChapterIndex }
+    LaunchedEffect(Unit) {
+      listState.animateScrollToItem(initialChapterIndex.coerceAtLeast(0))
     }
 
-    LazyColumn(
-      state = listState,
-      contentPadding = PaddingValues(
-        top = contentPadding.calculateTopPadding(),
-        bottom = contentPadding.calculateBottomPadding() + 16.dp,
-      ),
+    // The offset control is pinned above the scrolling chapter list so it stays reachable no
+    // matter how far the user scrolls.
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(top = contentPadding.calculateTopPadding()),
     ) {
-      // Offset row
-      item(key = "offset_row") {
-        OffsetRow(
-          offset = viewState.offset,
-          onDecrement = onOffsetDecrement,
-          onIncrement = onOffsetIncrement,
-          onOffsetSet = onOffsetSet,
-        )
-      }
+      OffsetRow(
+        offset = viewState.offset,
+        onDecrement = onOffsetDecrement,
+        onIncrement = onOffsetIncrement,
+        onOffsetSet = onOffsetSet,
+      )
+      HorizontalDivider()
 
-      // Chapter items
-      itemsIndexed(
-        items = viewState.chapters,
-        key = { _, item -> "${item.chapterId.value}_${item.markStartMs}" },
-      ) { _, item ->
-        ChapterRow(
-          item = item,
-          onEdit = { onEditChapterClick(item) },
-          onDeleteOverride = { onDeleteOverride(item) },
-        )
-      }
+      LazyColumn(
+        state = listState,
+        modifier = Modifier.weight(1f),
+        contentPadding = PaddingValues(
+          bottom = contentPadding.calculateBottomPadding() + 16.dp,
+        ),
+      ) {
+        // Chapter items
+        itemsIndexed(
+          items = viewState.chapters,
+          key = { _, item -> "${item.chapterId.value}_${item.markStartMs}" },
+        ) { _, item ->
+          ChapterRow(
+            item = item,
+            onEdit = { onEditChapterClick(item) },
+            onDeleteOverride = { onDeleteOverride(item) },
+          )
+        }
 
-      // Reset all button
-      item(key = "reset_all") {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-          contentAlignment = Alignment.CenterEnd,
-        ) {
-          TextButton(onClick = onResetAllClick) {
-            Text(text = "Reset all to defaults")
+        // Reset all button
+        item(key = "reset_all") {
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.CenterEnd,
+          ) {
+            TextButton(onClick = onResetAllClick) {
+              Text(text = stringResource(StringsR.string.chapter_editor_reset_all))
+            }
           }
         }
       }
@@ -167,13 +175,13 @@ private fun ChapterEditorContent(
   if (viewState.showResetConfirm) {
     AlertDialog(
       onDismissRequest = onResetAllDismiss,
-      title = { Text(text = "Reset all chapter names?") },
+      title = { Text(text = stringResource(StringsR.string.chapter_editor_reset_confirm_title)) },
       text = {
-        Text(text = "This will remove all custom chapter names and reset the chapter number offset to 0.")
+        Text(text = stringResource(StringsR.string.chapter_editor_reset_confirm_message))
       },
       confirmButton = {
         TextButton(onClick = onResetAllConfirm) {
-          Text(text = "Reset")
+          Text(text = stringResource(StringsR.string.chapter_editor_reset_confirm_button))
         }
       },
       dismissButton = {
@@ -204,7 +212,7 @@ private fun OffsetRow(
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Text(
-      text = "Chapter offset:",
+      text = stringResource(StringsR.string.chapter_offset_label),
       style = MaterialTheme.typography.labelLarge,
     )
     IconButton(onClick = onDecrement) {
@@ -271,7 +279,7 @@ private fun ChapterRow(
           IconButton(onClick = onDeleteOverride) {
             Icon(
               imageVector = Icons.Default.Clear,
-              contentDescription = "Remove custom name",
+              contentDescription = stringResource(StringsR.string.chapter_editor_remove_custom_name),
               tint = MaterialTheme.colorScheme.error,
             )
           }
@@ -279,7 +287,7 @@ private fun ChapterRow(
         IconButton(onClick = onEdit) {
           Icon(
             imageVector = Icons.Default.Edit,
-            contentDescription = "Edit chapter name",
+            contentDescription = stringResource(StringsR.string.chapter_editor_edit_name),
           )
         }
       }
@@ -297,19 +305,19 @@ private fun EditChapterDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
-    title = { Text(text = "Edit chapter name") },
+    title = { Text(text = stringResource(StringsR.string.chapter_editor_edit_name)) },
     text = {
       Column {
         OutlinedTextField(
           value = text,
           onValueChange = { if (it.length <= 200) text = it },
-          label = { Text(text = "Chapter name") },
+          label = { Text(text = stringResource(StringsR.string.chapter_name_label)) },
           singleLine = true,
           modifier = Modifier.fillMaxWidth(),
         )
         if (text.length >= 180) {
           Text(
-            text = "${text.length}/200",
+            text = stringResource(StringsR.string.chapter_name_length_counter, text.length),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier

@@ -1,6 +1,5 @@
 package voice.features.chapterEditor
 
-import voice.core.data.BookId
 import voice.core.data.ChapterId
 
 public data class ChapterEditorViewState(
@@ -13,7 +12,6 @@ public data class ChapterEditorViewState(
 
 public data class ChapterItemState(
   val chapterId: ChapterId,
-  val bookId: BookId,
   val markStartMs: Long,
   val displayNumber: Int,
   val displayName: String,

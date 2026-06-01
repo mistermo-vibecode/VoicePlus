@@ -311,6 +311,27 @@ class BookPlayViewModelTest {
     }
   }
 
+  @Test
+  fun `edit chapter names is visible for a multi-file book without embedded marks`() = scope.runTest {
+    // Common case: one mp3 per chapter, no embedded chapter marks. markData is empty for every
+    // chapter, but the editor still lists one synthesized mark per file, so the entry must show.
+    val c1 = chapter().copy(markData = emptyList())
+    val c2 = chapter().copy(markData = emptyList())
+    val base = book()
+    val multiFile = base.copy(
+      content = base.content.copy(chapters = listOf(c1.id, c2.id), currentChapter = c1.id),
+      chapters = listOf(c1, c2),
+    )
+    val viewModel = viewModel(book = multiFile)
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) {
+      viewModel.viewState()
+    }.test {
+      var state = awaitItem()
+      while (state == null) state = awaitItem()
+      state.editChapterNamesVisible shouldBe true
+    }
+  }
+
   private fun viewModel(
     book: Book = this.book,
     experimentalPlaybackPersistence: Boolean = false,

@@ -110,6 +110,7 @@ class ListeningLogViewModelTest {
       chapterNameOverrideRepo = overrideRepo,
       playerController = mockk(relaxed = true),
       navigator = mockk(relaxed = true),
+      context = mockk(relaxed = true),
       bookId = bookId,
     )
   }

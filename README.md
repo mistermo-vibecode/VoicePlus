@@ -21,6 +21,7 @@ But you can try both. If the features below add value to your listining experien
 
 ## What's different from Voice
 
+- **[new]** Editable chapter names with ability to fix out of sync chapter numbering
 - Listening log and statistics
 - Character lists per book
 - Resizable widget with configurable opacity and text scale
