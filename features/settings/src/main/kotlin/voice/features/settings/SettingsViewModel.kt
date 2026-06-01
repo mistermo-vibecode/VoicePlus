@@ -17,7 +17,6 @@ import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
 import voice.core.data.GridMode
 import voice.core.data.MediaButtonClickAction
-import voice.core.data.repo.ChapterRepo
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.AutoRewindAmountStore
 import voice.core.data.store.DarkThemeStore
@@ -63,7 +62,6 @@ class SettingsViewModel(
   private val experimentalPlaybackPersistenceStore: DataStore<Boolean>,
   @IgnoreFileTagsStore
   private val ignoreFileTagsStore: DataStore<Boolean>,
-  private val chapterRepo: ChapterRepo,
   private val mediaScanTrigger: MediaScanTrigger,
   dispatcherProvider: DispatcherProvider,
 ) : SettingsListener {
@@ -279,7 +277,8 @@ class SettingsViewModel(
     dismissDialog()
     mainScope.launch {
       ignoreFileTagsStore.updateData { newValue }
-      chapterRepo.deleteAll()
+      // forceReParse re-derives chapter names per book during the scan; no global chapter wipe,
+      // so a scan that can't read files (e.g. a dropped permission) won't blank the library.
       mediaScanTrigger.scan(restartIfScanning = true, forceReParse = true)
     }
   }
