@@ -121,6 +121,22 @@ class MediaScannerTest {
   }
 
   @Test
+  fun emptyScanKeepsExistingBooksActive() = test {
+    val audiobookFolder = folder("audiobooks")
+    val book1 = File(audiobookFolder, "book1")
+    val chapter = audioFile(book1, "1.mp3")
+
+    scan(FolderType.Root, audiobookFolder)
+    assertBookContents(BookContentView(book1, chapters = listOf(chapter)))
+
+    // A scan that finds nothing (e.g. a dropped folder permission) must NOT deactivate the library.
+    val emptyFolder = folder("empty")
+    scan(FolderType.Root, emptyFolder)
+
+    assertBookContents(BookContentView(book1, chapters = listOf(chapter)))
+  }
+
+  @Test
   fun multipleRoots() = test {
     val audiobookFolder1 = folder("audiobooks1")
 

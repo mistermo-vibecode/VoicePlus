@@ -56,7 +56,12 @@ internal class MediaScanner(
 
     // Excluded books are kept inactive even when their files are found
     val activeIds = files.map { BookId(it.uri) }.filter { it.value !in excludedIds }
-    contentRepo.setAllInactiveExcept(activeIds)
+    // A scan that finds no entries at all is almost always a transient read failure (e.g. a
+    // dropped SAF folder permission) rather than the user removing their whole library.
+    // Deactivating here would blank the entire library, so only reconcile when something was found.
+    if (files.isNotEmpty()) {
+      contentRepo.setAllInactiveExcept(activeIds)
+    }
 
     val probeFile = folders.values.flatten().findProbeFile()
     if (probeFile != null) {
@@ -87,7 +92,7 @@ internal class MediaScanner(
     val excludedIds = excludedBooksStore.data.first()
     if (BookId(file.uri).value in excludedIds) return
 
-    val chapters = chapterParser.parse(file)
+    val chapters = chapterParser.parse(file, forceReParse)
     if (chapters.isEmpty()) return
 
     val content = bookParser.parseAndStore(chapters, file, forceReParse)
