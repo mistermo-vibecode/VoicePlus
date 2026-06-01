@@ -15,6 +15,7 @@ import voice.core.data.BookComparator
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
+import voice.core.data.byMarkKey
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterNameOverrideRepo
@@ -139,10 +140,12 @@ class MediaItemProvider(
     content: BookContent,
     overrideMap: Map<Pair<String, Long>, String>,
   ): MediaItem {
-    // A single-file book is one media item whose title is shown statically in the
-    // notification/lockscreen for the whole file, so use the file/chapter name rather than the
-    // first mark's name — otherwise it would read "Chapter 1" regardless of the current chapter.
-    val override = chapter.chapterMarks.firstOrNull()?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
+    // One MediaItem represents the whole file/chapter; its title is shown statically in the
+    // notification/lockscreen. Only apply a per-mark override when the chapter has exactly one mark
+    // (the multi-file case, one file per chapter). For a single-file book with several embedded
+    // marks there is no single "current" mark here, so keep the whole-file name rather than letting
+    // one mark's override (or "Chapter 1") stand in for the entire file.
+    val override = chapter.chapterMarks.singleOrNull()?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
     val title = resolveChapterName(chapter.name ?: "", content.chapterNameOffset, override)
       .ifBlank { chapter.id.value }
     return MediaItem(
@@ -158,9 +161,7 @@ class MediaItemProvider(
   }
 
   private suspend fun overrideMapFor(bookId: BookId): Map<Pair<String, Long>, String> {
-    return chapterNameOverrideRepo.overridesForBook(bookId)
-      .first()
-      .associateBy({ Pair(it.chapterId, it.markStartMs) }, { it.name })
+    return chapterNameOverrideRepo.overridesForBook(bookId).first().byMarkKey()
   }
 
   private fun File.toProvidedUri(): Uri = imageFileProvider.uri(this)

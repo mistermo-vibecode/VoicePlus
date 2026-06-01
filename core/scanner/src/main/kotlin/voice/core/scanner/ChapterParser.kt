@@ -58,11 +58,11 @@ internal class ChapterParser(
       if (file.isAudioFile()) {
         val id = ChapterId(file.uri)
         // When re-parsing (e.g. after toggling "use folder names"), re-derive and overwrite the
-        // chapter instead of reusing the cached one — but only for files we can actually read, so
-        // a book whose files are momentarily unreadable keeps its existing chapters rather than
-        // losing them.
+        // chapter instead of reusing the cached one. If a file is momentarily unreadable, analyze
+        // returns null; fall back to the existing chapter so a transient read failure can't drop it
+        // (which would shrink the book and reset playback position) — matching the getOrPut path.
         val chapter = if (forceReParse) {
-          analyze(file, id)?.also { chapterRepo.put(it) }
+          analyze(file, id)?.also { chapterRepo.put(it) } ?: chapterRepo.get(id)
         } else {
           chapterRepo.getOrPut(id, Instant.ofEpochMilli(file.lastModified)) {
             analyze(file, id)

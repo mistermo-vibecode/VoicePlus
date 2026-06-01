@@ -4,21 +4,23 @@ import android.content.Context
 import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import voice.core.common.resolveChapterName
 import voice.core.data.BookId
 import voice.core.data.Bookmark
 import voice.core.data.Chapter
+import voice.core.data.byMarkKey
 import voice.core.data.markForPosition
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.BookmarkRepo
@@ -53,23 +55,29 @@ class BookmarkViewModel(
   private val scope = MainScope()
   private var bookmarks by mutableStateOf<List<Bookmark>>(emptyList())
   private var chapters by mutableStateOf<List<Chapter>>(emptyList())
-  private var chapterNameOffset by mutableIntStateOf(0)
-  private var overrideMap by mutableStateOf<Map<Pair<String, Long>, String>>(emptyMap())
 
   private var shouldScrollTo by mutableStateOf<Bookmark.Id?>(null)
   private var dialogViewState: BookmarkDialogViewState by mutableStateOf(BookmarkDialogViewState.None)
 
   @Composable
   fun viewState(): BookmarkViewState {
+    // Overrides and offset are collected live so chapter-name edits made elsewhere (the editor)
+    // show up immediately, matching the listening-log screen. Bookmarks and chapters are loaded
+    // together below so a bookmark always has its chapter available when rendered.
+    val overrides by remember(bookId) {
+      chapterNameOverrideRepo.overridesForBook(bookId)
+    }.collectAsState(initial = emptyList())
+    val overrideMap = overrides.byMarkKey()
+    val chapterNameOffset by remember(bookId) {
+      repo.flow(bookId).map { it?.content?.chapterNameOffset ?: 0 }
+    }.collectAsState(initial = 0)
+
     LaunchedEffect(bookId) {
       val book = repo.get(bookId)
       if (book != null) {
         bookmarks = bookmarkRepo.bookmarks(book.content)
           .sortedByDescending { it.addedAt }
         chapters = book.chapters
-        chapterNameOffset = book.content.chapterNameOffset
-        overrideMap = chapterNameOverrideRepo.overridesForBook(bookId).first()
-          .associateBy({ Pair(it.chapterId, it.markStartMs) }, { it.name })
       }
     }
     return BookmarkViewState(

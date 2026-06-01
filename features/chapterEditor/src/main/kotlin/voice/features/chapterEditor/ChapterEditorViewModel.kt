@@ -5,17 +5,18 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
 import voice.core.common.resolveChapterName
 import voice.core.data.BookId
+import voice.core.data.byMarkKey
 import voice.core.data.markForPosition
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterNameOverrideRepo
@@ -38,15 +39,6 @@ public class ChapterEditorViewModel(
 
   private val _showResetConfirm = mutableStateOf(false)
 
-  init {
-    scope.launch {
-      val book = bookRepository.flow(bookId).filterNotNull().first()
-      if (localOffset.value == null) {
-        localOffset.value = book.content.chapterNameOffset
-      }
-    }
-  }
-
   @Composable
   public fun viewState(): ChapterEditorViewState? {
     val book = bookRepository.flow(bookId)
@@ -56,9 +48,15 @@ public class ChapterEditorViewModel(
     val overrideList by overrideRepo.overridesForBook(bookId)
       .collectAsState(emptyList())
 
-    val offset = localOffset.collectAsState().value ?: return null
+    // Seed the editable offset from the persisted value once the book first loads; thereafter
+    // localOffset is the source of truth and every edit is persisted back to the book.
+    remember(book.content.id) {
+      if (localOffset.value == null) localOffset.value = book.content.chapterNameOffset
+      book.content.id
+    }
+    val offset = localOffset.collectAsState().value ?: book.content.chapterNameOffset
 
-    val overrideMap = overrideList.associateBy { Pair(it.chapterId, it.markStartMs) }
+    val overrideMap = overrideList.byMarkKey()
 
     val currentMark = book.currentChapter.markForPosition(book.content.positionInChapter)
 
@@ -67,11 +65,10 @@ public class ChapterEditorViewModel(
     val items = book.chapters.flatMap { chapter ->
       chapter.chapterMarks.map { mark ->
         val key = Pair(chapter.id.value, mark.startMs)
-        val override = overrideMap[key]?.name
+        val override = overrideMap[key]
         val isCurrent = mark == currentMark && chapter == book.currentChapter
         val item = ChapterItemState(
           chapterId = chapter.id,
-          bookId = bookId,
           markStartMs = mark.startMs,
           displayNumber = globalIndex + 1,
           displayName = resolveChapterName(mark.name ?: "", offset, override),
@@ -148,12 +145,8 @@ public class ChapterEditorViewModel(
   }
 
   public fun onBack() {
-    scope.launch {
-      localOffset.value?.let { offset ->
-        bookRepository.updateBook(bookId) { it.copy(chapterNameOffset = offset) }
-      }
-      navigator.goBack()
-    }
+    // Each offset change is already persisted by persistOffset(), so just navigate back.
+    navigator.goBack()
   }
 
   private fun persistOffset() {

@@ -69,4 +69,17 @@ class ChapterNameResolverTest {
   @Test fun `one hundred via two-token match`() {
     assertEquals("Chapter Ninety-Eight", resolveChapterName("Chapter One Hundred", offset = -2, override = null))
   }
+
+  @Test fun `long digit run beyond Int range does not crash and increments via Long`() {
+    assertEquals("20231015093001", resolveChapterName("20231015093000", offset = 1, override = null))
+  }
+
+  @Test fun `digit run beyond Long range falls back to raw name`() {
+    val huge = "99999999999999999999999" // 23 digits, exceeds Long.MAX_VALUE
+    assertEquals(huge, resolveChapterName(huge, offset = 1, override = null))
+  }
+
+  @Test fun `consecutive spaces before a cardinal word do not crash`() {
+    assertEquals("Chapter Fourteen", resolveChapterName("Chapter  Twelve", offset = 2, override = null))
+  }
 }

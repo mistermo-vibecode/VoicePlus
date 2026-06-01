@@ -97,6 +97,7 @@ class BookmarkViewModelTest {
   ): BookmarkViewModel {
     val repo = mockk<BookRepository>(relaxed = true) {
       coEvery { get(bookId) } returns book
+      every { flow(bookId) } returns MutableStateFlow(book)
     }
     val bookmarkRepo = mockk<BookmarkRepo>(relaxed = true) {
       coEvery { bookmarks(book.content) } returns bookmarks

@@ -129,6 +129,32 @@ class MediaItemProviderTest {
   }
 
   @Test
+  fun `first-mark override does not hijack a multi-mark single-file title`() = runTest {
+    // The user renamed the first embedded mark, but the lockscreen title represents the WHOLE file,
+    // so the override must NOT replace it (regression for the single-file title bug).
+    val multi = Chapter(
+      id = ChapterId("content://chapters/multi"),
+      name = "Moby Dick",
+      duration = 60_000L,
+      fileLastModified = Instant.EPOCH,
+      markData = listOf(
+        MarkData(startMs = 0L, name = "Chapter 1"),
+        MarkData(startMs = 30_000L, name = "Chapter 2"),
+      ),
+    )
+    val override = ChapterNameOverride(
+      chapterId = multi.id.value,
+      markStartMs = 0L,
+      bookId = bookId.value,
+      name = "Loomings",
+    )
+    val titles = provider(overrides = listOf(override))
+      .chapters(book(listOf(multi), offset = 0))
+      .map { it.mediaMetadata.title.toString() }
+    assertEquals(listOf("Moby Dick"), titles)
+  }
+
+  @Test
   fun `blank resolved name falls back to chapter id`() = runTest {
     val blank = Chapter(
       id = ChapterId("content://chapters/blank"),

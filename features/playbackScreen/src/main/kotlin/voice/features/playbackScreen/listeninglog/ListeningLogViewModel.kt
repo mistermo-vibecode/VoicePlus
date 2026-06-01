@@ -1,5 +1,6 @@
 package voice.features.playbackScreen.listeninglog
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -14,10 +15,12 @@ import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.ChapterId
 import voice.core.data.ListeningSession
+import voice.core.data.byMarkKey
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.repo.ListeningSessionRepo
 import voice.core.playback.PlayerController
+import voice.core.strings.R
 import voice.core.ui.formatTime
 import voice.navigation.Navigator
 import java.time.ZoneId
@@ -34,6 +37,7 @@ class ListeningLogViewModel(
   private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   private val playerController: PlayerController,
   private val navigator: Navigator,
+  private val context: Context,
   @Assisted private val bookId: BookId,
 ) {
 
@@ -48,7 +52,7 @@ class ListeningLogViewModel(
     val overrides by remember { chapterNameOverrideRepo.overridesForBook(bookId) }.collectAsState(initial = emptyList())
     val groups = remember(sessions, book, overrides) {
       val offset = book?.content?.chapterNameOffset ?: 0
-      val overrideMap = overrides.associateBy({ Pair(it.chapterId, it.markStartMs) }, { it.name })
+      val overrideMap = overrides.byMarkKey()
       sessions.toGroups(book, offset, overrideMap)
     }
     return ListeningLogViewState(
@@ -137,17 +141,18 @@ class ListeningLogViewModel(
     offset: Int,
     overrideMap: Map<Pair<String, Long>, String>,
   ): String {
-    if (this == null) return "Unknown Chapter"
+    if (this == null) return context.getString(R.string.unknown_chapter)
     val index = chapters.indexOfFirst { it.id == id }
-    if (index == -1) return "Unknown Chapter"
+    if (index == -1) return context.getString(R.string.unknown_chapter)
     val chapter = chapters[index]
     val mark = chapter.chapterMarks.firstOrNull { positionMs in it.startMs..it.endMs }
       ?: chapter.chapterMarks.lastOrNull { positionMs >= it.startMs }
     val override = mark?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
-    val resolved = resolveChapterName(mark?.name ?: "", offset, override)
-    if (resolved.isNotBlank()) return resolved
-    val fallback = chapter.name
-    return if (fallback.isNullOrBlank()) "Chapter ${index + 1}" else fallback
+    // Mirror the other surfaces' fallback: prefer the chapter's own name, then a localized
+    // "Unknown chapter" — rather than a synthetic, mis-numbered "Chapter N".
+    return resolveChapterName(mark?.name ?: "", offset, override)
+      .ifBlank { chapter.name.orEmpty() }
+      .ifBlank { context.getString(R.string.unknown_chapter) }
   }
 
   private fun remainingLabel(

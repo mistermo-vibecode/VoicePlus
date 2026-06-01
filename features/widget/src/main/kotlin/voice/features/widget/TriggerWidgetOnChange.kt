@@ -6,6 +6,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -37,6 +38,9 @@ class TriggerWidgetOnChange(
 
   override fun onAppStart(application: Application) {
     anythingChanged()
+      // A single book switch makes several of the merged sources emit at once; conflate so the
+      // burst collapses into one widget refresh instead of redundant Room reads + cover decodes.
+      .conflate()
       .onEach {
         widgetUpdater.update()
       }
@@ -79,6 +83,9 @@ class TriggerWidgetOnChange(
           previous.content.chapters == current.content.chapters &&
           previous.content.currentChapter == current.content.currentChapter &&
           previous.content.chapterNameOffset == current.content.chapterNameOffset &&
+          // Compare the mark's startMs too: two marks in the same chapter can share a raw name but
+          // resolve to different overrides, so a same-named mark crossing must still refresh.
+          previous.currentMark.startMs == current.currentMark.startMs &&
           (previous.currentMark.name ?: "") == (current.currentMark.name ?: "")
       }
   }

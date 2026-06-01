@@ -56,11 +56,17 @@ internal class MediaScanner(
 
     // Excluded books are kept inactive even when their files are found
     val activeIds = files.map { BookId(it.uri) }.filter { it.value !in excludedIds }
-    // A scan that finds no entries at all is almost always a transient read failure (e.g. a
-    // dropped SAF folder permission) rather than the user removing their whole library.
-    // Deactivating here would blank the entire library, so only reconcile when something was found.
-    if (files.isNotEmpty()) {
+    // A scan that finds no files, or one where a configured folder came back empty, is almost
+    // always a transient read failure (dropped SAF permission, unmounted SD card) rather than the
+    // user emptying their library. Reconciling then would deactivate the books under that folder
+    // and blank them from the library, so only reconcile when the scan looks healthy. This catches
+    // a whole folder dropping out (the multi-folder case); a partial failure deeper inside a
+    // still-readable folder is not detected.
+    val aConfiguredFolderIsEmpty = folders.values.flatten().any { it.isDirectory && it.children.isEmpty() }
+    if (files.isNotEmpty() && !aConfiguredFolderIsEmpty) {
       contentRepo.setAllInactiveExcept(activeIds)
+    } else if (files.isNotEmpty()) {
+      Logger.w("Skipping reconciliation: a configured folder returned no entries (likely dropped permission).")
     }
 
     val probeFile = folders.values.flatten().findProbeFile()
@@ -74,7 +80,7 @@ internal class MediaScanner(
     files
       .sortedBy { it.audioFileCount() }
       .forEach { file ->
-        scan(file, forceReParse)
+        scan(file, excludedIds, forceReParse)
       }
   }
 
@@ -87,9 +93,9 @@ internal class MediaScanner(
 
   private suspend fun scan(
     file: CachedDocumentFile,
+    excludedIds: Set<String>,
     forceReParse: Boolean,
   ) {
-    val excludedIds = excludedBooksStore.data.first()
     if (BookId(file.uri).value in excludedIds) return
 
     val chapters = chapterParser.parse(file, forceReParse)

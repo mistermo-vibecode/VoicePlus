@@ -20,6 +20,7 @@ import voice.core.common.MainScope
 import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
+import voice.core.data.byMarkKey
 import voice.core.data.durationMs
 import voice.core.data.markForPosition
 import voice.core.data.repo.BookCharacterRepo
@@ -131,9 +132,9 @@ class BookPlayViewModel(
     val overrides by remember(persistedBook.content.id) {
       chapterNameOverrideRepo.overridesForBook(persistedBook.content.id)
     }.collectAsState(emptyList())
-    val overrideMap = overrides.associateBy { Pair(it.chapterId, it.markStartMs) }
+    val overrideMap = overrides.byMarkKey()
     val offset = persistedBook.content.chapterNameOffset
-    val currentOverride = overrideMap[Pair(book.currentChapter.id.value, currentMark.startMs)]?.name
+    val currentOverride = overrideMap[Pair(book.currentChapter.id.value, currentMark.startMs)]
     val chapterName = resolveChapterName(currentMark.name ?: "", offset, currentOverride)
 
     return BookPlayViewState(
@@ -147,7 +148,9 @@ class BookPlayViewModel(
       cover = book.content.cover?.let(::ImmutableFile),
       skipSilence = book.content.skipSilence,
       characterCount = characterCount,
-      editChapterNamesVisible = book.chapters.any { it.markData.isNotEmpty() },
+      // Gate on chapter MARKS (what the editor actually lists), not raw markData — otherwise the
+      // entry is hidden for the common one-file-per-chapter book whose files carry no embedded marks.
+      editChapterNamesVisible = hasMoreThanOneChapter,
     )
   }
 
@@ -305,12 +308,12 @@ class BookPlayViewModel(
       val book = currentBook() ?: return@launch
       val offset = book.content.chapterNameOffset
       val overrideList = chapterNameOverrideRepo.overridesForBook(book.content.id).first()
-      val overrideMap = overrideList.associateBy { Pair(it.chapterId, it.markStartMs) }
+      val overrideMap = overrideList.byMarkKey()
       _dialogState.value = BookPlayDialogViewState.SelectChapterDialog(
         items = book.chapters.flatMapIndexed { chapterIndex, chapter ->
           chapter.chapterMarks.mapIndexed { markIndex, chapterMark ->
             val previousChapters = book.chapters.take(chapterIndex)
-            val override = overrideMap[Pair(chapter.id.value, chapterMark.startMs)]?.name
+            val override = overrideMap[Pair(chapter.id.value, chapterMark.startMs)]
             BookPlayDialogViewState.SelectChapterDialog.ItemViewState(
               number = previousChapters.sumOf { it.chapterMarks.count() } + markIndex + 1,
               name = resolveChapterName(chapterMark.name ?: "", offset, override),

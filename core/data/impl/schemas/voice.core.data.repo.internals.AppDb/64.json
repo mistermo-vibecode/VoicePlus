@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 64,
-    "identityHash": "166630d64bda8fc83b4c12ede993900a",
+    "identityHash": "ec842e656dae35c2181e26295f4a45d4",
     "entities": [
       {
         "tableName": "chapters2",
@@ -480,12 +480,23 @@
             "chapterId",
             "markStartMs"
           ]
-        }
+        },
+        "indices": [
+          {
+            "name": "index_chapter_name_overrides_bookId",
+            "unique": false,
+            "columnNames": [
+              "bookId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chapter_name_overrides_bookId` ON `${TABLE_NAME}` (`bookId`)"
+          }
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '166630d64bda8fc83b4c12ede993900a')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ec842e656dae35c2181e26295f4a45d4')"
     ]
   }
 }
