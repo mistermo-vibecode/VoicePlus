@@ -139,9 +139,11 @@ class MediaItemProvider(
     content: BookContent,
     overrideMap: Map<Pair<String, Long>, String>,
   ): MediaItem {
-    val firstMark = chapter.chapterMarks.firstOrNull()
-    val override = firstMark?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
-    val title = resolveChapterName(firstMark?.name ?: chapter.name ?: "", content.chapterNameOffset, override)
+    // A single-file book is one media item whose title is shown statically in the
+    // notification/lockscreen for the whole file, so use the file/chapter name rather than the
+    // first mark's name — otherwise it would read "Chapter 1" regardless of the current chapter.
+    val override = chapter.chapterMarks.firstOrNull()?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
+    val title = resolveChapterName(chapter.name ?: "", content.chapterNameOffset, override)
       .ifBlank { chapter.id.value }
     return MediaItem(
       title = title,

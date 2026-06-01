@@ -109,21 +109,23 @@ class MediaItemProviderTest {
   }
 
   @Test
-  fun `multi-mark chapter resolves the first mark name with offset`() = runTest {
+  fun `multi-mark single-file book titles from the file name, not the first mark`() = runTest {
+    // Regression guard for the lockscreen bug: a single .m4b with embedded marks is ONE media item
+    // whose title is shown statically in the notification, so it must be the book/file name, not
+    // "Chapter 1" (the first mark) which would then show regardless of the current chapter.
     val multi = Chapter(
       id = ChapterId("content://chapters/multi"),
-      name = "Part One",
+      name = "Moby Dick",
       duration = 60_000L,
       fileLastModified = Instant.EPOCH,
       markData = listOf(
-        MarkData(startMs = 0L, name = "Chapter 5"),
-        MarkData(startMs = 30_000L, name = "Chapter 6"),
+        MarkData(startMs = 0L, name = "Chapter 1"),
+        MarkData(startMs = 30_000L, name = "Chapter 2"),
       ),
     )
-    // One media item per file: the title derives from the first mark's name (+offset), not chapter.name or later marks.
-    val titles = provider().chapters(book(listOf(multi), offset = 2))
+    val titles = provider().chapters(book(listOf(multi), offset = 0))
       .map { it.mediaMetadata.title.toString() }
-    assertEquals(listOf("Chapter 7"), titles)
+    assertEquals(listOf("Moby Dick"), titles)
   }
 
   @Test
