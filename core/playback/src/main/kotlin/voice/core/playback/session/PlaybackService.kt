@@ -1,5 +1,6 @@
 package voice.core.playback.session
 
+import android.content.Intent
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import dev.zacsweers.metro.Inject
@@ -41,6 +42,7 @@ class PlaybackService : MediaLibraryService() {
   private fun release() {
     runBlocking {
       positionUpdater.flushPositionNow()
+      player.flushListeningSessionNow()
     }
     positionUpdater.release()
     player.release()
@@ -51,6 +53,15 @@ class PlaybackService : MediaLibraryService() {
   override fun onDestroy() {
     super.onDestroy()
     release()
+  }
+
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    Logger.d("onTaskRemoved: persisting in-flight position and session")
+    runBlocking {
+      positionUpdater.flushPositionNow()
+      player.flushListeningSessionNow()
+    }
+    super.onTaskRemoved(rootIntent)
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {

@@ -59,6 +59,9 @@ class VoicePlayer(
   private var sessionStartPosition: Long = 0L
   private var sessionStartChapterId: ChapterId? = null
 
+  // Test seam: overridden in tests so session-duration gating is deterministic.
+  internal var now: () -> Instant = { Instant.now() }
+
   fun forceSeekToNext() {
     scope.launch {
       val bookId = currentBookStoreId.data.first() ?: return@launch
@@ -216,7 +219,7 @@ class VoicePlayer(
 
     if (playWhenReady) {
       updateLastPlayedAt()
-      sessionStartTime = Instant.now()
+      sessionStartTime = now()
       sessionStartPosition = player.currentPosition.takeUnless { it == C.TIME_UNSET } ?: 0L
       sessionStartChapterId = currentChapterId()
     } else {
@@ -240,29 +243,43 @@ class VoicePlayer(
     return book.chapters.getOrNull(player.currentMediaItemIndex)?.id
   }
 
-  private fun saveSessionIfActive(endPositionMs: Long) {
-    val startTime = sessionStartTime ?: return
-    val chapterId = sessionStartChapterId ?: return
-    val endTime = Instant.now()
+  // Builds and CLEARS the in-flight session synchronously; returns the row to persist,
+  // or null if there is no active session or it was too short to record.
+  private fun buildSessionIfActive(endPositionMs: Long): ListeningSession? {
+    val startTime = sessionStartTime ?: return null
+    val chapterId = sessionStartChapterId ?: return null
+    val endTime = now()
     val duration = endTime.toEpochMilli() - startTime.toEpochMilli()
-    if (duration < MIN_SESSION_DURATION_MS) return
+    if (duration < MIN_SESSION_DURATION_MS) return null
     sessionStartTime = null
-    val currentChapId = currentChapterId()
-    scope.launch {
-      val bookId = currentBookStoreId.data.first() ?: return@launch
-      listeningSessionRepo.addSession(
-        ListeningSession(
-          bookId = bookId,
-          chapterId = chapterId,
-          startedAt = startTime,
-          endedAt = endTime,
-          durationMs = duration,
-          startPositionMs = sessionStartPosition,
-          endPositionMs = endPositionMs,
-          endChapterId = currentChapId,
-        ),
-      )
-    }
+    val bookId = runBlocking { currentBookStoreId.data.first() } ?: return null
+    return ListeningSession(
+      bookId = bookId,
+      chapterId = chapterId,
+      startedAt = startTime,
+      endedAt = endTime,
+      durationMs = duration,
+      startPositionMs = sessionStartPosition,
+      endPositionMs = endPositionMs,
+      endChapterId = currentChapterId(),
+    )
+  }
+
+  private fun saveSessionIfActive(endPositionMs: Long) {
+    val session = buildSessionIfActive(endPositionMs) ?: return
+    scope.launch { listeningSessionRepo.addSession(session) }
+  }
+
+  /**
+   * Persists the in-flight listening session immediately, suspending until the write completes.
+   * For teardown paths (onDestroy / onTaskRemoved) where the player scope is about to be cancelled
+   * and a fire-and-forget save would be dropped. Idempotent: a second call after the session was
+   * already flushed returns without writing (buildSessionIfActive clears the start time).
+   */
+  suspend fun flushListeningSessionNow() {
+    val endPositionMs = player.currentPosition.takeUnless { it == C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
+    val session = buildSessionIfActive(endPositionMs) ?: return
+    listeningSessionRepo.addSession(session)
   }
 
   override fun pause() {
