@@ -5,6 +5,7 @@ import dev.zacsweers.metro.HasMemberInjections
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.createGraphFactory
 import voice.core.common.rootGraph
+import voice.core.data.store.snapshot.LibrarySnapshotService
 import voice.core.initializer.AppInitializer
 
 @HasMemberInjections
@@ -13,6 +14,9 @@ open class App : Application() {
   @Inject
   lateinit var appInitializers: Set<AppInitializer>
 
+  @Inject
+  lateinit var librarySnapshotService: LibrarySnapshotService
+
   override fun onCreate() {
     super.onCreate()
 
@@ -20,6 +24,8 @@ open class App : Application() {
       .also { graph ->
         graph.inject(this)
       }
+
+    librarySnapshotService.start()
 
     appInitializers.forEach {
       it.onAppStart(this)

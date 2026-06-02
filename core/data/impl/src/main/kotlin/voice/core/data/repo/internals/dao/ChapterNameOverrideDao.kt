@@ -24,4 +24,7 @@ public interface ChapterNameOverrideDao {
 
   @Query("DELETE FROM chapter_name_overrides WHERE bookId = :bookId")
   public suspend fun deleteAll(bookId: String)
+
+  @Query("SELECT * FROM chapter_name_overrides")
+  public suspend fun all(): List<ChapterNameOverride>
 }

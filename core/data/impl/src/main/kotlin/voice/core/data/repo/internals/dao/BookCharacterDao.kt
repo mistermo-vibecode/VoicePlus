@@ -26,4 +26,7 @@ public interface BookCharacterDao {
 
   @Query("DELETE FROM book_character WHERE id = :id")
   public suspend fun delete(id: Long)
+
+  @Query("SELECT * FROM book_character")
+  public suspend fun all(): List<BookCharacter>
 }
