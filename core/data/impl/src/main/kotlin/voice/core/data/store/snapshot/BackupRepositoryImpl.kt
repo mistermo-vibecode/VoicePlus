@@ -41,7 +41,7 @@ public class BackupRepositoryImpl internal constructor(
   @SnapshotSlot1Store slot1: DataStore<LibrarySnapshot?>,
   @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
   private val persistedUriPermissions: PersistedUriPermissions,
-  private val restorer: BackupRestorer,
+  private val osWipeRestorer: OsWipeRestorer,
 ) : BackupRepository {
 
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
@@ -112,10 +112,11 @@ public class BackupRepositoryImpl internal constructor(
         Logger.w("Ignoring external backup from a newer dbVersion=${snapshot.dbVersion}")
         return false
       }
-      // The ring re-stamps a fresh local sequence; RestoreSelector still gates the actual DB mutation.
-      ring.writeNext(snapshot)
-      restorer.restoreIfNeeded()
-      true
+      // OS-wipe path: scan for the re-granted books under their NEW URIs, then re-key the bundle onto them.
+      // We deliberately do NOT write this (dead-URI) bundle to the on-device ring; the SnapshotWriter
+      // captures the freshly re-keyed (new-URI) state into the ring right after.
+      val result = osWipeRestorer.run(snapshot)
+      result.matched.isNotEmpty() || result.unmatched.isNotEmpty()
     }.getOrElse {
       Logger.w(it, "External backup import failed; library is unaffected")
       false
