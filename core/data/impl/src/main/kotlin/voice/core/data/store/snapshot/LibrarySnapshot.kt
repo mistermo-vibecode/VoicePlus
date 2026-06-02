@@ -5,9 +5,11 @@ import voice.core.data.BookCharacter
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Bookmark
+import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.ChapterNameOverride
 import voice.core.data.ListeningSession
+import voice.core.data.MarkData
 import java.io.File
 import java.time.Instant
 import java.util.UUID
@@ -25,6 +27,9 @@ internal data class LibrarySnapshot(
   val characters: List<BookCharacterDto>,
   val chapterNameOverrides: List<ChapterNameOverrideDto>,
   val sessions: List<ListeningSessionDto> = emptyList(),
+  // chapters2 rows for every book. Required for the OS-wipe restore: without re-inserted Chapter rows
+  // BookRepository.book() returns null and the restored book is invisible. Default-empty so legacy bundles decode.
+  val chapters: List<ChapterDto> = emptyList(),
 ) {
   fun activeIds(): Set<String> = books.filter { it.isActive }.map { it.id }.toSet()
 
@@ -53,6 +58,10 @@ internal data class BookContentDto(
   val series: String?,
   val part: String?,
   val chapterNameOffset: Int = 0,
+  // Re-grant-invariant folder fingerprint for the OS-wipe re-key. Null => this book is never auto-re-keyed
+  // (surfaced as unmatched). Populated by the writer from the scanner's identity store. Default-null so
+  // legacy bundles decode and the on-device (same-URI) restore path simply ignores it.
+  val identity: BookIdentityStampDto? = null,
 )
 
 @Serializable
@@ -96,6 +105,33 @@ internal data class ListeningSessionDto(
   val startPositionMs: Long,
   val endPositionMs: Long,
   val endChapterId: String?,
+)
+
+@Serializable
+internal data class ChapterDto(
+  val id: String,
+  val name: String?,
+  val duration: Long,
+  val fileLastModifiedEpochMillis: Long,
+  val markData: List<MarkData>,
+  // Folder-relative document-id tail (with extension), e.g. "Disc1/01 - Intro.mp3". The stable per-chapter
+  // anchor for re-keying bookmarks/overrides/positions after an OS-wipe. Empty until the identity store fills it.
+  val relName: String = "",
+)
+
+@Serializable
+internal data class BookIdentityStampDto(
+  val authority: String,
+  val isSingleFile: Boolean,
+  val relPath: String,
+  val folderName: String,
+  val children: List<ChildEntryDto>,
+)
+
+@Serializable
+internal data class ChildEntryDto(
+  val relName: String,
+  val size: Long,
 )
 
 internal fun BookContent.toDto() = BookContentDto(
@@ -209,4 +245,21 @@ internal fun ListeningSessionDto.toListeningSession() = ListeningSession(
   startPositionMs = startPositionMs,
   endPositionMs = endPositionMs,
   endChapterId = endChapterId?.let { ChapterId(it) },
+)
+
+internal fun Chapter.toDto(relName: String = "") = ChapterDto(
+  id = id.value,
+  name = name,
+  duration = duration,
+  fileLastModifiedEpochMillis = fileLastModified.toEpochMilli(),
+  markData = markData,
+  relName = relName,
+)
+
+internal fun ChapterDto.toChapter() = Chapter(
+  id = ChapterId(id),
+  name = name,
+  duration = duration,
+  fileLastModified = Instant.ofEpochMilli(fileLastModifiedEpochMillis),
+  markData = markData,
 )

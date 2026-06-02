@@ -16,6 +16,7 @@ import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.dao.BookCharacterDao
 import voice.core.data.repo.internals.dao.BookmarkDao
+import voice.core.data.repo.internals.dao.ChapterDao
 import voice.core.data.repo.internals.dao.ChapterNameOverrideDao
 import voice.core.data.repo.internals.dao.ListeningSessionDao
 import voice.core.data.store.ExcludedBooksStore
@@ -28,6 +29,7 @@ internal class SnapshotWriter(
   private val contentRepo: BookContentRepo,
   private val bookmarkDao: BookmarkDao,
   private val bookCharacterDao: BookCharacterDao,
+  private val chapterDao: ChapterDao,
   private val chapterNameOverrideDao: ChapterNameOverrideDao,
   private val listeningSessionDao: ListeningSessionDao,
   @SnapshotSlot0Store slot0: DataStore<LibrarySnapshot?>,
@@ -62,6 +64,9 @@ internal class SnapshotWriter(
           characters = bookCharacterDao.all().map { it.toDto() },
           chapterNameOverrides = chapterNameOverrideDao.all().map { it.toDto() },
           sessions = listeningSessionDao.all().map { it.toDto() },
+          // relName/identity are enriched from the scanner identity store in a later pass; the rows
+          // themselves must be captured here so the OS-wipe restore can re-insert chapters2.
+          chapters = chapterDao.all().map { it.toDto() },
         )
         if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
           Logger.w(

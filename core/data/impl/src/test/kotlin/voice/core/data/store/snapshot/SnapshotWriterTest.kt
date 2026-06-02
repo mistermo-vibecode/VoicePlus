@@ -52,6 +52,7 @@ class SnapshotWriterTest {
     contentRepo = contentRepo,
     bookmarkDao = db.bookmarkDao(),
     bookCharacterDao = db.bookCharacterDao(),
+    chapterDao = db.chapterDao(),
     chapterNameOverrideDao = db.chapterNameOverrideDao(),
     listeningSessionDao = db.listeningSessionDao(),
     slot0 = slot0,

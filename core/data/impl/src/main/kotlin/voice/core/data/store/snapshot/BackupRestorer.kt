@@ -11,6 +11,7 @@ import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.internals.dao.BookCharacterDao
 import voice.core.data.repo.internals.dao.BookContentDao
 import voice.core.data.repo.internals.dao.BookmarkDao
+import voice.core.data.repo.internals.dao.ChapterDao
 import voice.core.data.repo.internals.dao.ChapterNameOverrideDao
 import voice.core.data.repo.internals.dao.ListeningSessionDao
 import voice.core.data.repo.internals.transaction
@@ -26,6 +27,7 @@ internal class BackupRestorer(
   private val bookContentDao: BookContentDao,
   private val bookmarkDao: BookmarkDao,
   private val bookCharacterDao: BookCharacterDao,
+  private val chapterDao: ChapterDao,
   private val chapterNameOverrideDao: ChapterNameOverrideDao,
   private val listeningSessionDao: ListeningSessionDao,
   @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
@@ -62,7 +64,11 @@ internal class BackupRestorer(
     val characters = snapshot.characters.filter { it.bookId !in excludedIds }.map { it.toBookCharacter() }
     val overrides = snapshot.chapterNameOverrides.filter { it.bookId !in excludedIds }.map { it.toOverride() }
     val sessions = snapshot.sessions.filter { it.bookId !in excludedIds }.map { it.toListeningSession() }
+    // chapters2 carries no bookId, so restore them all (REPLACE). A chapter with no surviving content2 row is
+    // simply invisible; re-inserting is what lets a restored book's BookRepository.book() resolve at all.
+    val chapters = snapshot.chapters.map { it.toChapter() }
     appDb.transaction {
+      chapters.forEach { chapterDao.insert(it) }
       books.forEach { (id, snap) ->
         val liveRow = liveById[id]
         when {

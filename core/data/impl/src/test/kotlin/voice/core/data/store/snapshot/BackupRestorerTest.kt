@@ -13,6 +13,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import voice.core.data.BookContent
 import voice.core.data.BookId
+import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.ListeningSession
 import voice.core.data.repo.BookContentRepoImpl
@@ -47,6 +48,7 @@ class BackupRestorerTest {
     bookContentDao = db.bookContentDao(),
     bookmarkDao = db.bookmarkDao(),
     bookCharacterDao = db.bookCharacterDao(),
+    chapterDao = db.chapterDao(),
     chapterNameOverrideDao = db.chapterNameOverrideDao(),
     listeningSessionDao = db.listeningSessionDao(),
     excludedBooksStore = excluded,
@@ -116,6 +118,21 @@ class BackupRestorerTest {
     val restored = db.bookContentDao().all().single { it.id.value == "a" }
     restored.isActive shouldBe true
     restored.positionInChapter shouldBe 5000L
+  }
+
+  @Test
+  fun `restores chapters2 so a restored book is resolvable`() = runTest {
+    slot0.updateData {
+      LibrarySnapshot(
+        schemaVersion = 1, dbVersion = AppDb.VERSION, sequence = 1, savedAtEpochMillis = 0,
+        totalCount = 1, activeCount = 1,
+        books = listOf(book("a", active = true).toDto()),
+        bookmarks = emptyList(), characters = emptyList(), chapterNameOverrides = emptyList(),
+        chapters = listOf(Chapter(ChapterId("ca"), "Ch A", 1_000, Instant.EPOCH, emptyList()).toDto()),
+      )
+    }
+    restorer().restoreIfNeeded()
+    db.chapterDao().all().map { it.id.value } shouldContainExactlyInAnyOrder listOf("ca")
   }
 
   @Test
