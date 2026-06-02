@@ -17,6 +17,7 @@ import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.dao.BookCharacterDao
 import voice.core.data.repo.internals.dao.BookmarkDao
 import voice.core.data.repo.internals.dao.ChapterNameOverrideDao
+import voice.core.data.repo.internals.dao.ListeningSessionDao
 import voice.core.data.store.ExcludedBooksStore
 import voice.core.logging.api.Logger
 import kotlin.time.Duration.Companion.seconds
@@ -28,6 +29,7 @@ internal class SnapshotWriter(
   private val bookmarkDao: BookmarkDao,
   private val bookCharacterDao: BookCharacterDao,
   private val chapterNameOverrideDao: ChapterNameOverrideDao,
+  private val listeningSessionDao: ListeningSessionDao,
   @SnapshotSlot0Store slot0: DataStore<LibrarySnapshot?>,
   @SnapshotSlot1Store slot1: DataStore<LibrarySnapshot?>,
   @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
@@ -59,6 +61,7 @@ internal class SnapshotWriter(
           bookmarks = bookmarkDao.all().map { it.toDto() },
           characters = bookCharacterDao.all().map { it.toDto() },
           chapterNameOverrides = chapterNameOverrideDao.all().map { it.toDto() },
+          sessions = listeningSessionDao.all().map { it.toDto() },
         )
         if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
           Logger.w(

@@ -2,6 +2,7 @@ package voice.core.data.repo.internals.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import voice.core.data.BookId
@@ -21,4 +22,10 @@ public interface ListeningSessionDao {
 
   @Query("SELECT * FROM listening_session ORDER BY startedAt ASC")
   public fun allSessions(): Flow<List<ListeningSession>>
+
+  @Query("SELECT * FROM listening_session")
+  public suspend fun all(): List<ListeningSession>
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  public suspend fun upsert(session: ListeningSession)
 }

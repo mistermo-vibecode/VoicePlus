@@ -7,6 +7,7 @@ import voice.core.data.BookId
 import voice.core.data.Bookmark
 import voice.core.data.ChapterId
 import voice.core.data.ChapterNameOverride
+import voice.core.data.ListeningSession
 import java.io.File
 import java.time.Instant
 import java.util.UUID
@@ -23,6 +24,7 @@ internal data class LibrarySnapshot(
   val bookmarks: List<BookmarkDto>,
   val characters: List<BookCharacterDto>,
   val chapterNameOverrides: List<ChapterNameOverrideDto>,
+  val sessions: List<ListeningSessionDto> = emptyList(),
 ) {
   fun activeIds(): Set<String> = books.filter { it.isActive }.map { it.id }.toSet()
 
@@ -81,6 +83,19 @@ internal data class ChapterNameOverrideDto(
   val markStartMs: Long,
   val bookId: String,
   val name: String,
+)
+
+@Serializable
+internal data class ListeningSessionDto(
+  val id: Long,
+  val bookId: String,
+  val chapterId: String,
+  val startedAtEpochMillis: Long,
+  val endedAtEpochMillis: Long,
+  val durationMs: Long,
+  val startPositionMs: Long,
+  val endPositionMs: Long,
+  val endChapterId: String?,
 )
 
 internal fun BookContent.toDto() = BookContentDto(
@@ -171,3 +186,27 @@ internal fun BookCharacterDto.toBookCharacter() = BookCharacter(
 internal fun ChapterNameOverride.toDto() = ChapterNameOverrideDto(chapterId, markStartMs, bookId, name)
 
 internal fun ChapterNameOverrideDto.toOverride() = ChapterNameOverride(chapterId, markStartMs, bookId, name)
+
+internal fun ListeningSession.toDto() = ListeningSessionDto(
+  id = id,
+  bookId = bookId.value,
+  chapterId = chapterId.value,
+  startedAtEpochMillis = startedAt.toEpochMilli(),
+  endedAtEpochMillis = endedAt.toEpochMilli(),
+  durationMs = durationMs,
+  startPositionMs = startPositionMs,
+  endPositionMs = endPositionMs,
+  endChapterId = endChapterId?.value,
+)
+
+internal fun ListeningSessionDto.toListeningSession() = ListeningSession(
+  id = id,
+  bookId = BookId(bookId),
+  chapterId = ChapterId(chapterId),
+  startedAt = Instant.ofEpochMilli(startedAtEpochMillis),
+  endedAt = Instant.ofEpochMilli(endedAtEpochMillis),
+  durationMs = durationMs,
+  startPositionMs = startPositionMs,
+  endPositionMs = endPositionMs,
+  endChapterId = endChapterId?.let { ChapterId(it) },
+)

@@ -14,6 +14,7 @@ import org.robolectric.RobolectricTestRunner
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.ChapterId
+import voice.core.data.ListeningSession
 import voice.core.data.repo.BookContentRepoImpl
 import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.MemoryDataStore
@@ -47,6 +48,7 @@ class BackupRestorerTest {
     bookmarkDao = db.bookmarkDao(),
     bookCharacterDao = db.bookCharacterDao(),
     chapterNameOverrideDao = db.chapterNameOverrideDao(),
+    listeningSessionDao = db.listeningSessionDao(),
     excludedBooksStore = excluded,
     appDb = db,
     contentRepo = contentRepo,
@@ -114,5 +116,31 @@ class BackupRestorerTest {
     val restored = db.bookContentDao().all().single { it.id.value == "a" }
     restored.isActive shouldBe true
     restored.positionInChapter shouldBe 5000L
+  }
+
+  @Test
+  fun `restores listening sessions when room is empty`() = runTest {
+    slot0.updateData {
+      LibrarySnapshot(
+        schemaVersion = 1, dbVersion = AppDb.VERSION, sequence = 1, savedAtEpochMillis = 0,
+        totalCount = 1, activeCount = 1,
+        books = listOf(book("a", active = true).toDto()),
+        bookmarks = emptyList(), characters = emptyList(), chapterNameOverrides = emptyList(),
+        sessions = listOf(
+          ListeningSession(
+            id = 7,
+            bookId = BookId("a"),
+            chapterId = ChapterId("ca"),
+            startedAt = Instant.ofEpochMilli(100),
+            endedAt = Instant.ofEpochMilli(200),
+            durationMs = 100,
+            startPositionMs = 0,
+            endPositionMs = 100,
+          ).toDto(),
+        ),
+      )
+    }
+    restorer().restoreIfNeeded()
+    db.listeningSessionDao().all().map { it.id } shouldContainExactlyInAnyOrder listOf(7L)
   }
 }
