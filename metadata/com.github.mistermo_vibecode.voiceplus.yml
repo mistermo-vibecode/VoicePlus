@@ -83,7 +83,7 @@ Builds:
 
   - versionName: '1.22'
     versionCode: 5404011
-    commit: 43665e353c67be37cde743437ce618115ddb3b2d
+    commit: 1c1da7aeb74963605a564f81d2eccbff24cfed17
     subdir: app
     gradle:
       - libre
