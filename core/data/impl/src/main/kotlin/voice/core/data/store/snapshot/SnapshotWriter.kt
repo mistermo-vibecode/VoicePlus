@@ -1,5 +1,6 @@
 package voice.core.data.store.snapshot
 
+import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
@@ -20,6 +21,8 @@ import voice.core.data.repo.internals.dao.ChapterDao
 import voice.core.data.repo.internals.dao.ChapterNameOverrideDao
 import voice.core.data.repo.internals.dao.ListeningSessionDao
 import voice.core.data.store.ExcludedBooksStore
+import voice.core.data.store.snapshot.identity.DeviceRelativePath
+import voice.core.data.store.snapshot.identity.IdentityStampBuilder
 import voice.core.logging.api.Logger
 import kotlin.time.Duration.Companion.seconds
 
@@ -52,6 +55,26 @@ internal class SnapshotWriter(
     withContext(Dispatchers.IO) {
       runCatching {
         val excludedIds = excludedBooksStore.data.first()
+        val allChapters = chapterDao.all()
+        val chapterById = allChapters.associateBy { it.id.value }
+        // Each book's re-grant-invariant identity stamp, and the volume-relative documentId of the book each
+        // chapter belongs to, are derived purely from the stored URIs (see IdentityStampBuilder).
+        val bookDtos = books.map { book ->
+          val bookChapters = book.chapters.mapNotNull { chapterById[it.value] }
+          book.toDto().copy(identity = IdentityStampBuilder.build(book, bookChapters))
+        }
+        val bookRelPathByChapterId: Map<String, String> = buildMap {
+          books.forEach { book ->
+            val relPath = DeviceRelativePath.documentId(book.id.value.toUri())
+            book.chapters.forEach { put(it.value, relPath) }
+          }
+        }
+        val chapterDtos = allChapters.map { chapter ->
+          val relName = bookRelPathByChapterId[chapter.id.value]
+            ?.let { DeviceRelativePath.relName(chapter.id.value.toUri(), it) }
+            .orEmpty()
+          chapter.toDto(relName = relName)
+        }
         val snapshot = LibrarySnapshot(
           schemaVersion = LibrarySnapshot.SCHEMA_VERSION,
           dbVersion = AppDb.VERSION,
@@ -59,14 +82,12 @@ internal class SnapshotWriter(
           savedAtEpochMillis = System.currentTimeMillis(),
           totalCount = books.size,
           activeCount = books.count { it.isActive },
-          books = books.map { it.toDto() },
+          books = bookDtos,
           bookmarks = bookmarkDao.all().map { it.toDto() },
           characters = bookCharacterDao.all().map { it.toDto() },
           chapterNameOverrides = chapterNameOverrideDao.all().map { it.toDto() },
           sessions = listeningSessionDao.all().map { it.toDto() },
-          // relName/identity are enriched from the scanner identity store in a later pass; the rows
-          // themselves must be captured here so the OS-wipe restore can re-insert chapters2.
-          chapters = chapterDao.all().map { it.toDto() },
+          chapters = chapterDtos,
         )
         if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
           Logger.w(

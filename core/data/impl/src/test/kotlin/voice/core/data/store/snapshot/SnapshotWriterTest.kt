@@ -13,6 +13,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import voice.core.data.BookContent
 import voice.core.data.BookId
+import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.repo.BookContentRepoImpl
 import voice.core.data.repo.internals.AppDb
@@ -80,6 +81,36 @@ class SnapshotWriterTest {
     val written = ring.best()
     written.shouldNotBeNull()
     written.activeIds() shouldBe setOf("b1")
+  }
+
+  @Test
+  fun `stamps each book with its re-grant-invariant identity and chapter relNames`() = runTest {
+    val auth = "com.android.externalstorage.documents"
+    fun docUri(documentId: String): String {
+      val enc = java.net.URLEncoder.encode(documentId, "UTF-8").replace("+", "%20")
+      return "content://$auth/tree/primary%3ABooks/document/$enc"
+    }
+    val ch1 = docUri("primary:Books/Dune/01.mp3")
+    val ch2 = docUri("primary:Books/Dune/Disc2/02.mp3")
+    db.chapterDao().insert(Chapter(ChapterId(ch1), "One", 1_000, Instant.EPOCH, emptyList()))
+    db.chapterDao().insert(Chapter(ChapterId(ch2), "Two", 1_000, Instant.EPOCH, emptyList()))
+    contentRepo.put(
+      BookContent(
+        id = BookId(docUri("primary:Books/Dune")), playbackSpeed = 1f, skipSilence = false, isActive = true,
+        lastPlayedAt = Instant.EPOCH, author = null, name = "Dune", addedAt = Instant.EPOCH,
+        chapters = listOf(ChapterId(ch1), ChapterId(ch2)), currentChapter = ChapterId(ch1),
+        positionInChapter = 0, cover = null, gain = 0f, genre = null, narrator = null, series = null, part = null,
+      ),
+    )
+
+    writer().writeSnapshot(contentRepo.all())
+
+    val written = ring.best().shouldNotBeNull()
+    val identity = written.books.single().identity.shouldNotBeNull()
+    identity.relPath shouldBe "primary:Books/Dune"
+    identity.authority shouldBe auth
+    identity.children.map { it.relName } shouldBe listOf("01.mp3", "Disc2/02.mp3")
+    written.chapters.map { it.relName }.toSet() shouldBe setOf("01.mp3", "Disc2/02.mp3")
   }
 
   @Test
