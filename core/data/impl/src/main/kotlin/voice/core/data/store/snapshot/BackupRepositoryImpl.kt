@@ -11,8 +11,10 @@ import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import voice.core.data.store.snapshot.rekey.ReKeyResult
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -50,6 +52,8 @@ public class BackupRepositoryImpl internal constructor(
   override val lastBackupAt: Flow<Instant?> = stateStore.data.map { state ->
     state.lastBackupMillis?.let(Instant::ofEpochMilli)
   }
+  private val lastRestoreState = MutableStateFlow<RestoreSummary?>(null)
+  override val lastRestore: Flow<RestoreSummary?> = lastRestoreState
 
   override suspend fun setBackupFolder(uri: Uri) {
     val granted = runCatching {
@@ -103,9 +107,10 @@ public class BackupRepositoryImpl internal constructor(
           json.decodeFromStream(LibrarySnapshot.serializer(), input)
         }
       } ?: return false
-      // Only ingest genuine, compatible VoicePlus bundles.
-      if (snapshot.schemaVersion != LibrarySnapshot.SCHEMA_VERSION) {
-        Logger.w("Ignoring external backup with unexpected schemaVersion=${snapshot.schemaVersion}")
+      // Only ingest genuine, compatible VoicePlus bundles. Accept this schema or older (older bundles decode
+      // via default-valued fields); refuse a NEWER schema rather than silently truncating fields we can't read.
+      if (snapshot.schemaVersion > LibrarySnapshot.SCHEMA_VERSION) {
+        Logger.w("Ignoring external backup from a newer schemaVersion=${snapshot.schemaVersion}")
         return false
       }
       if (snapshot.dbVersion > AppDb.VERSION) {
@@ -116,6 +121,7 @@ public class BackupRepositoryImpl internal constructor(
       // We deliberately do NOT write this (dead-URI) bundle to the on-device ring; the SnapshotWriter
       // captures the freshly re-keyed (new-URI) state into the ring right after.
       val result = osWipeRestorer.run(snapshot)
+      lastRestoreState.value = result.toSummary()
       result.matched.isNotEmpty() || result.unmatched.isNotEmpty()
     }.getOrElse {
       Logger.w(it, "External backup import failed; library is unaffected")
@@ -157,3 +163,8 @@ public class BackupRepositoryImpl internal constructor(
     const val BUNDLE_NAME = "voiceplus-backup.json"
   }
 }
+
+private fun ReKeyResult.toSummary(): RestoreSummary = RestoreSummary(
+  restoredCount = matched.size,
+  unmatched = unmatched.map { UnmatchedBookInfo(folderName = it.folderName, relPath = it.relPath, reason = it.reason.name) },
+)

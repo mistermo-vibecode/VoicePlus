@@ -4,6 +4,7 @@ import io.kotest.matchers.shouldBe
 import org.junit.Test
 import voice.core.data.BookId
 import voice.core.data.ChapterId
+import voice.core.data.store.snapshot.BookCharacterDto
 import voice.core.data.store.snapshot.BookContentDto
 import voice.core.data.store.snapshot.BookmarkDto
 import voice.core.data.store.snapshot.ChapterNameOverrideDto
@@ -47,6 +48,7 @@ class RestoreReKeyerTest {
     bookmarks: List<BookmarkDto> = emptyList(),
     overrides: List<ChapterNameOverrideDto> = emptyList(),
     sessions: List<ListeningSessionDto> = emptyList(),
+    characters: List<BookCharacterDto> = emptyList(),
     snapDuration: Long = 1_000,
     authority: String = EXTERNAL_STORAGE_AUTHORITY,
     singleFile: Boolean = false,
@@ -64,6 +66,7 @@ class RestoreReKeyerTest {
     bookmarks = bookmarks,
     overrides = overrides,
     sessions = sessions,
+    characters = characters,
   )
 
   private fun scanBook(
@@ -299,6 +302,50 @@ class RestoreReKeyerTest {
     val snap = listOf(snapBook("primary:Books/Dune", listOf("01.mp3", "02.mp3")))
     val scan = listOf(scanBook("primary:Books/Dune", listOf("01.mp3", "02.mp3")))
     RestoreReKeyer.reKey(snap, scan) shouldBe RestoreReKeyer.reKey(snap, scan)
+  }
+
+  @Test
+  fun `character notes are re-keyed onto the new book id`() {
+    val relPath = "primary:Books/Dune"
+    val r = RestoreReKeyer.reKey(
+      snapshot = listOf(
+        snapBook(
+          relPath, listOf("01.mp3"),
+          characters = listOf(
+            BookCharacterDto(
+              id = 42, bookId = "old://$relPath", name = "Paul", description = "the heir",
+              sortOrder = 1, createdAtEpochMillis = 100, updatedAtEpochMillis = 200,
+            ),
+          ),
+        ),
+      ),
+      scanned = listOf(scanBook(relPath, listOf("01.mp3"))),
+    )
+    val character = r.matched.single().characters.single()
+    character.bookId shouldBe BookId("new://$relPath")
+    character.name shouldBe "Paul"
+    character.description shouldBe "the heir"
+    character.id shouldBe 0L // fresh PK so Room assigns a new one
+  }
+
+  @Test
+  fun `a materially different chapter duration vetoes the match (in-place re-rip)`() {
+    val r = RestoreReKeyer.reKey(
+      snapshot = listOf(snapBook("primary:Books/Dune", listOf("01.mp3"), snapDuration = 1_000)),
+      scanned = listOf(scanBook("primary:Books/Dune", listOf("01.mp3"), durations = listOf(60_000))),
+    )
+    r.matched.shouldBe(emptyList())
+    r.unmatched.single().reason shouldBe UnmatchedReason.CONTENT_CHANGED
+  }
+
+  @Test
+  fun `minor duration jitter still matches (re-encode of the same audio)`() {
+    val r = RestoreReKeyer.reKey(
+      snapshot = listOf(snapBook("primary:Books/Dune", listOf("01.mp3"), snapDuration = 60_000)),
+      scanned = listOf(scanBook("primary:Books/Dune", listOf("01.mp3"), durations = listOf(61_000))),
+    )
+    r.unmatched.shouldBe(emptyList())
+    r.matched.single().content.id shouldBe BookId("new://primary:Books/Dune")
   }
 
   @Test

@@ -1,5 +1,6 @@
 package voice.core.data.store.snapshot.rekey
 
+import voice.core.data.BookCharacter
 import voice.core.data.BookContent
 import voice.core.data.Bookmark
 import voice.core.data.ChapterId
@@ -7,6 +8,7 @@ import voice.core.data.ChapterNameOverride
 import voice.core.data.ListeningSession
 import java.time.Instant
 import java.util.UUID
+import kotlin.math.abs
 
 /**
  * Pure, deterministic re-keyer for OS-wipe restore. Maps snapshot books (keyed to dead pre-wipe URIs) onto
@@ -77,9 +79,16 @@ internal object RestoreReKeyer {
     UnmatchedBook(relPath = stamp.relPath, folderName = stamp.folderName, reason = reason)
 
   /**
-   * The never-cross-attach gate. HARD: identical child count + identical relName multiset. SOFT but
-   * contradiction-fatal: any pair of same-named files whose sizes are both known and disagree fails (a
-   * re-rip / replacement) — we refuse to graft a stale position onto different audio.
+   * The never-cross-attach gate. HARD: identical child count + identical relName multiset. Then two
+   * contradiction-fatal soft signals, each skipped when either side is unknown (0):
+   *  - file size — currently ALWAYS 0/unknown in production (the identity stamp is derived from URIs, not a
+   *    DocumentFile walk), so this particular gate is inert today; kept for forward compatibility if sizes
+   *    are ever captured.
+   *  - chapter duration — snapshot vs freshly-scanned duration per relName. Durations ARE captured
+   *    end-to-end, so this is the live guard against an in-place re-rip / edition swap that kept the same
+   *    filenames. Minor re-encode jitter is tolerated; a material change fails the match.
+   * Any same-named pair whose two known values disagree fails — we refuse to graft a stale position onto
+   * different audio.
    */
   private fun confirm(snap: SnapshotBook, cand: ScannedBook): Boolean {
     val snapChildren = snap.stamp.children
@@ -91,7 +100,18 @@ internal object RestoreReKeyer {
       val candSize = candSizeByRelName[child.relName] ?: return false
       if (child.size > 0 && candSize > 0 && child.size != candSize) return false
     }
+    val candDurationByRelName = cand.chapters.associate { it.relName to it.duration }
+    for (chapter in snap.chapters) {
+      val candDuration = candDurationByRelName[chapter.relName] ?: continue
+      if (chapter.duration > 0 && candDuration > 0 && !durationsAgree(chapter.duration, candDuration)) return false
+    }
     return true
+  }
+
+  /** Tolerate minor re-encode jitter (a few seconds), but reject an edition/content swap. */
+  private fun durationsAgree(snapMs: Long, scannedMs: Long): Boolean {
+    val tolerance = maxOf(DURATION_TOLERANCE_MS, maxOf(snapMs, scannedMs) / 100) // 3s floor, else 1%
+    return abs(snapMs - scannedMs) <= tolerance
   }
 
   /**
@@ -191,11 +211,25 @@ internal object RestoreReKeyer {
       )
     }
 
+    // Characters are book-scoped (no chapter anchor): rewrite bookId, fresh PK, the writer dedups.
+    val characters = snap.characters.map { dto ->
+      BookCharacter(
+        id = 0,
+        bookId = newBookId,
+        name = dto.name,
+        description = dto.description,
+        sortOrder = dto.sortOrder,
+        createdAt = Instant.ofEpochMilli(dto.createdAtEpochMillis),
+        updatedAt = Instant.ofEpochMilli(dto.updatedAtEpochMillis),
+      )
+    }
+
     return MatchedBook(
       content = content,
       bookmarks = bookmarks,
       overrides = overrides,
       sessions = sessions,
+      characters = characters,
       sourceLastPlayedAt = Instant.ofEpochMilli(snap.content.lastPlayedAtEpochMillis),
     )
   }
@@ -207,4 +241,6 @@ internal object RestoreReKeyer {
    */
   private fun clamp(positionMs: Long, freshDurationMs: Long): Long =
     if (freshDurationMs > 0) positionMs.coerceIn(0L, freshDurationMs) else positionMs.coerceAtLeast(0L)
+
+  private const val DURATION_TOLERANCE_MS = 3_000L
 }

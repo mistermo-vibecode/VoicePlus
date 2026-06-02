@@ -10,8 +10,9 @@ class RestoreSelectorTest {
     seq: Long,
     activeIds: List<String>,
     dbVersion: Int = AppDb.VERSION,
+    schemaVersion: Int = LibrarySnapshot.SCHEMA_VERSION,
   ) = LibrarySnapshot(
-    schemaVersion = 1, dbVersion = dbVersion, sequence = seq, savedAtEpochMillis = 0,
+    schemaVersion = schemaVersion, dbVersion = dbVersion, sequence = seq, savedAtEpochMillis = 0,
     totalCount = activeIds.size, activeCount = activeIds.size,
     books = activeIds.map {
       BookContentDto(it, 1f, false, true, 0, null, it, 0, listOf("c"), "c", 0, null, 0f, null, null, null, null)
@@ -71,6 +72,16 @@ class RestoreSelectorTest {
       liveActiveIds = emptySet(),
       excludedIds = emptySet(),
       candidates = listOf(snap(5, listOf("a"), dbVersion = AppDb.VERSION + 1)),
+    ) shouldBe null
+  }
+
+  @Test
+  fun `candidate from a newer storage schemaVersion is rejected`() {
+    RestoreSelector.select(
+      liveTotal = 0,
+      liveActiveIds = emptySet(),
+      excludedIds = emptySet(),
+      candidates = listOf(snap(5, listOf("a"), schemaVersion = LibrarySnapshot.SCHEMA_VERSION + 1)),
     ) shouldBe null
   }
 }

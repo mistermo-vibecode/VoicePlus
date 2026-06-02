@@ -18,7 +18,11 @@ internal object RestoreSelector {
     candidates: List<LibrarySnapshot>,
   ): LibrarySnapshot? {
     val best = candidates
-      .filter { it.activeCount > 0 && it.dbVersion <= AppDb.VERSION }
+      .filter {
+        it.activeCount > 0 &&
+          it.dbVersion <= AppDb.VERSION &&
+          it.schemaVersion <= LibrarySnapshot.SCHEMA_VERSION
+      }
       .maxByOrNull { it.sequence }
       ?: return null
 

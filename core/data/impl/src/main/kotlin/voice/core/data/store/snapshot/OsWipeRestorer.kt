@@ -7,12 +7,14 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.flow.first
+import voice.core.data.BookCharacter
 import voice.core.data.BookContent
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.ListeningSession
 import voice.core.data.MediaScanWaiter
 import voice.core.data.repo.BookContentRepo
+import voice.core.data.repo.internals.dao.BookCharacterDao
 import voice.core.data.repo.internals.dao.BookContentDao
 import voice.core.data.repo.internals.dao.BookmarkDao
 import voice.core.data.repo.internals.dao.ChapterDao
@@ -53,6 +55,7 @@ internal class OsWipeRestorer(
   private val bookContentDao: BookContentDao,
   private val chapterDao: ChapterDao,
   private val bookmarkDao: BookmarkDao,
+  private val bookCharacterDao: BookCharacterDao,
   private val chapterNameOverrideDao: ChapterNameOverrideDao,
   private val listeningSessionDao: ListeningSessionDao,
   @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
@@ -78,17 +81,23 @@ internal class OsWipeRestorer(
     val bookmarksByBook = snapshot.bookmarks.groupBy { it.bookId }
     val overridesByBook = snapshot.chapterNameOverrides.groupBy { it.bookId }
     val sessionsByBook = snapshot.sessions.groupBy { it.bookId }
+    val charactersByBook = snapshot.characters.groupBy { it.bookId }
     val snapshotBooks = snapshot.books
       .filter { it.id !in excludedIds }
-      .map { dto -> toSnapshotBook(dto, snapChapterById, bookmarksByBook, overridesByBook, sessionsByBook) }
+      .map { dto ->
+        toSnapshotBook(dto, snapChapterById, bookmarksByBook, overridesByBook, sessionsByBook, charactersByBook)
+      }
 
     // 4. Pure, deterministic, never-cross-attach re-key.
     val result = RestoreReKeyer.reKey(snapshotBooks, scannedBooks)
 
     // 5. Persist the matched books, keyed entirely to the new ids. Atomic; additive; freshness-aware.
     val liveById = liveBooks.associateBy { it.id.value }
-    val seenSessionKeys = listeningSessionDao.all().mapTo(mutableSetOf()) { it.naturalKey() }
     appDb.transaction {
+      // Seed the natural-key dedup sets INSIDE the transaction so a concurrent caller can't make us
+      // double-insert the autoGenerate-PK rows (sessions / characters).
+      val seenSessionKeys = listeningSessionDao.all().mapTo(mutableSetOf()) { it.naturalKey() }
+      val seenCharacterKeys = bookCharacterDao.all().mapTo(mutableSetOf()) { it.naturalKey() }
       result.matched.forEach { matched ->
         val live = liveById[matched.content.id.value]
         // Never overwrite a position the user has since advanced past the snapshot; just re-activate and
@@ -106,6 +115,10 @@ internal class OsWipeRestorer(
         matched.sessions.forEach { session ->
           // ListeningSession has an autoGenerate PK; dedup on a natural key so a re-run can't double-count.
           if (seenSessionKeys.add(session.naturalKey())) listeningSessionDao.insert(session)
+        }
+        matched.characters.forEach { character ->
+          // BookCharacter also has an autoGenerate PK; same natural-key dedup.
+          if (seenCharacterKeys.add(character.naturalKey())) bookCharacterDao.insert(character)
         }
       }
     }
@@ -140,6 +153,7 @@ internal class OsWipeRestorer(
     bookmarksByBook: Map<String, List<BookmarkDto>>,
     overridesByBook: Map<String, List<ChapterNameOverrideDto>>,
     sessionsByBook: Map<String, List<ListeningSessionDto>>,
+    charactersByBook: Map<String, List<BookCharacterDto>>,
   ): SnapshotBook {
     val bookRelPath = DeviceRelativePath.documentId(dto.id.toUri())
     val bookChapters = dto.chapters.mapNotNull { snapChapterById[it] }
@@ -156,6 +170,7 @@ internal class OsWipeRestorer(
       bookmarks = bookmarksByBook[dto.id].orEmpty(),
       overrides = overridesByBook[dto.id].orEmpty(),
       sessions = sessionsByBook[dto.id].orEmpty(),
+      characters = charactersByBook[dto.id].orEmpty(),
     )
   }
 
@@ -179,3 +194,5 @@ internal class OsWipeRestorer(
 }
 
 private fun ListeningSession.naturalKey(): String = "${bookId.value}|${startedAt.toEpochMilli()}|$startPositionMs"
+
+private fun BookCharacter.naturalKey(): String = "${bookId.value}|$name|${createdAt.toEpochMilli()}"

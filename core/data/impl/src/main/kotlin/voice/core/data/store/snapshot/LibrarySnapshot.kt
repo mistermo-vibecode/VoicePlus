@@ -34,7 +34,11 @@ internal data class LibrarySnapshot(
   fun activeIds(): Set<String> = books.filter { it.isActive }.map { it.id }.toSet()
 
   companion object {
-    const val SCHEMA_VERSION = 1
+    // Bump whenever a restore-affecting field is added/changed. Import/restore accepts any bundle whose
+    // schemaVersion is <= this (older bundles decode via default-valued fields); a bundle from a NEWER
+    // schema is refused rather than silently truncated. v2 added: listening sessions, chapters2 rows,
+    // per-book identity stamp + chapter relNames, character notes on the OS-wipe path.
+    const val SCHEMA_VERSION = 2
   }
 }
 
