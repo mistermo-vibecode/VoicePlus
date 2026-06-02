@@ -1,6 +1,7 @@
 package voice.core.scanner
 
 import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import voice.core.data.MediaScanWaiter
 import voice.core.data.folders.AudiobookFolders
 import voice.core.data.folders.FolderType
 import voice.core.data.repo.BookRepository
@@ -22,6 +24,7 @@ import voice.core.logging.api.Logger
 import kotlin.time.measureTime
 
 @SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
 @Inject
 public class MediaScanTrigger
 internal constructor(
@@ -30,7 +33,7 @@ internal constructor(
   private val coverScanner: CoverScanner,
   private val bookRepo: BookRepository,
   private val documentFileFactory: CachedDocumentFileFactory,
-) {
+) : MediaScanWaiter {
 
   private val _scannerActive = MutableStateFlow(false)
   public val scannerActive: Flow<Boolean> = _scannerActive
@@ -80,5 +83,19 @@ internal constructor(
       val books = bookRepo.all()
       coverScanner.scan(books)
     }
+  }
+
+  /**
+   * Starts a scan and suspends until it (and its active-book reconcile) has finished. Joins the actual
+   * [scanningJob] rather than observing [scannerActive] — the flag is racy (you can miss the whole scan or
+   * read a stale `false`). Defaults to `restartIfScanning = true` so a restore's scan is never silently
+   * collapsed into an in-flight App-start / overview scan by the re-entrancy guard in [scan].
+   */
+  override suspend fun scanAndAwait(
+    restartIfScanning: Boolean,
+    forceReParse: Boolean,
+  ) {
+    scan(restartIfScanning = restartIfScanning, forceReParse = forceReParse)
+    scanningJob?.join()
   }
 }
