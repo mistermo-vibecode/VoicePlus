@@ -214,6 +214,21 @@ private fun Settings(
 
       item {
         ListItem(
+          modifier = Modifier.clickable { listener.openBackup() },
+          leadingContent = {
+            Icon(
+              imageVector = Icons.Outlined.FolderOpen,
+              contentDescription = stringResource(StringsR.string.backup_title),
+            )
+          },
+          headlineContent = {
+            Text(stringResource(StringsR.string.backup_title))
+          },
+        )
+      }
+
+      item {
+        ListItem(
           modifier = Modifier.clickable { listener.openLicenses() },
           leadingContent = {
             Icon(

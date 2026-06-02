@@ -30,6 +30,7 @@ internal class SnapshotWriter(
   @SnapshotSlot1Store slot1: DataStore<LibrarySnapshot?>,
   @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
   @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
+  private val backupRepository: BackupRepository,
 ) {
 
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
@@ -64,6 +65,7 @@ internal class SnapshotWriter(
         return
       }
       ring.writeNext(snapshot)
+      backupRepository.exportNow()
     }.onFailure { Logger.w(it, "Snapshot write failed; library is unaffected") }
   }
 

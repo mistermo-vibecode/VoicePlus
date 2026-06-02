@@ -30,6 +30,11 @@ sealed interface Destination {
   }
 
   @Serializable
+  data object BackupRestore : Compose {
+    override val trackingName: String get() = "BackupRestore"
+  }
+
+  @Serializable
   data object ListeningStatistics : Compose {
     override val trackingName: String get() = "ListeningStatistics"
   }

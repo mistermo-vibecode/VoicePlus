@@ -22,6 +22,7 @@ interface SettingsListener {
 
   fun openListeningStats()
   fun openHiddenBooks()
+  fun openBackup()
   fun openLicenses()
 
   fun onMediaButtonDoubleClickRowClick()
@@ -58,6 +59,7 @@ interface SettingsListener {
       override fun onAppVersionClick() {}
       override fun openListeningStats() {}
       override fun openHiddenBooks() {}
+      override fun openBackup() {}
       override fun openLicenses() {}
 
       override fun onMediaButtonDoubleClickRowClick() {}

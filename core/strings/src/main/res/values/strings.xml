@@ -28,6 +28,13 @@
     <string name="hidden_books_empty">No hidden books. Books you remove from your library will appear here.</string>
     <string name="hidden_books_restore">Restore</string>
     <string name="hidden_books_restore_all">Restore All</string>
+    <string name="backup_title">Backup &amp; Restore</string>
+    <string name="backup_folder">Backup folder</string>
+    <string name="backup_folder_none">No folder chosen</string>
+    <string name="backup_last">Last backup</string>
+    <string name="backup_last_never">Never</string>
+    <string name="backup_choose_folder">Choose backup folder</string>
+    <string name="backup_restore_now">Restore from backup folder</string>
     <string name="listening_stats">Listening Statistics</string>
     <string name="listening_stats_total_lifetime">Total Listening Time</string>
     <string name="listening_stats_today">Today</string>

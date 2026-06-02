@@ -56,4 +56,16 @@ public interface SnapshotModule {
     defaultValue = null,
     fileName = "librarySnapshot2",
   )
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @SnapshotBackupStateStore
+  private fun backupState(
+    @SnapshotJson json: Json,
+    context: Application,
+  ): DataStore<BackupState> = VoiceDataStoreFactory(json, context).create(
+    serializer = BackupState.serializer(),
+    defaultValue = BackupState(),
+    fileName = "snapshotBackupState",
+  )
 }

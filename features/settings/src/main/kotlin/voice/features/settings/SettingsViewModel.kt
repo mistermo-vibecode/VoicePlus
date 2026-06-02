@@ -220,6 +220,10 @@ class SettingsViewModel(
     navigator.goTo(Destination.HiddenBooks)
   }
 
+  override fun openBackup() {
+    navigator.goTo(Destination.BackupRestore)
+  }
+
   override fun openLicenses() {
     navigator.goTo(Destination.OpenSourceLicenses)
   }

@@ -29,6 +29,14 @@ class SnapshotWriterTest {
   private val slot2 = MemoryDataStore<LibrarySnapshot?>(null)
   private val excluded = MemoryDataStore<Set<String>>(emptySet())
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
+  private val noopBackup = object : BackupRepository {
+    override val backupFolder = kotlinx.coroutines.flow.flowOf<android.net.Uri?>(null)
+    override val lastBackupAt = kotlinx.coroutines.flow.flowOf<java.time.Instant?>(null)
+    override suspend fun setBackupFolder(uri: android.net.Uri) {}
+    override suspend fun clearBackupFolder() {}
+    override suspend fun exportNow() {}
+    override suspend fun importAndRestore() = false
+  }
 
   @Before
   fun setup() {
@@ -49,6 +57,7 @@ class SnapshotWriterTest {
     slot1 = slot1,
     slot2 = slot2,
     excludedBooksStore = excluded,
+    backupRepository = noopBackup,
   )
 
   private fun book(id: String, active: Boolean) = BookContent(
