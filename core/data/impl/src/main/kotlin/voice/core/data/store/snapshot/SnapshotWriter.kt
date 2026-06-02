@@ -5,10 +5,12 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
 import voice.core.data.BookContent
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.internals.AppDb
@@ -43,30 +45,32 @@ internal class SnapshotWriter(
   }
 
   internal suspend fun writeSnapshot(books: List<BookContent>) {
-    runCatching {
-      val excludedIds = excludedBooksStore.data.first()
-      val snapshot = LibrarySnapshot(
-        schemaVersion = LibrarySnapshot.SCHEMA_VERSION,
-        dbVersion = AppDb.VERSION,
-        sequence = 0L, // assigned by the ring
-        savedAtEpochMillis = System.currentTimeMillis(),
-        totalCount = books.size,
-        activeCount = books.count { it.isActive },
-        books = books.map { it.toDto() },
-        bookmarks = bookmarkDao.all().map { it.toDto() },
-        characters = bookCharacterDao.all().map { it.toDto() },
-        chapterNameOverrides = chapterNameOverrideDao.all().map { it.toDto() },
-      )
-      if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
-        Logger.w(
-          "Snapshot rotation declined: suspicious active shrink " +
-            "(incoming=${snapshot.activeCount}, totalKnown=${snapshot.totalCount})",
+    withContext(Dispatchers.IO) {
+      runCatching {
+        val excludedIds = excludedBooksStore.data.first()
+        val snapshot = LibrarySnapshot(
+          schemaVersion = LibrarySnapshot.SCHEMA_VERSION,
+          dbVersion = AppDb.VERSION,
+          sequence = 0L, // assigned by the ring
+          savedAtEpochMillis = System.currentTimeMillis(),
+          totalCount = books.size,
+          activeCount = books.count { it.isActive },
+          books = books.map { it.toDto() },
+          bookmarks = bookmarkDao.all().map { it.toDto() },
+          characters = bookCharacterDao.all().map { it.toDto() },
+          chapterNameOverrides = chapterNameOverrideDao.all().map { it.toDto() },
         )
-        return
-      }
-      ring.writeNext(snapshot)
-      backupRepository.exportNow()
-    }.onFailure { Logger.w(it, "Snapshot write failed; library is unaffected") }
+        if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
+          Logger.w(
+            "Snapshot rotation declined: suspicious active shrink " +
+              "(incoming=${snapshot.activeCount}, totalKnown=${snapshot.totalCount})",
+          )
+          return@withContext
+        }
+        ring.writeNext(snapshot)
+        backupRepository.exportNow()
+      }.onFailure { Logger.w(it, "Snapshot write failed; library is unaffected") }
+    }
   }
 
   companion object {

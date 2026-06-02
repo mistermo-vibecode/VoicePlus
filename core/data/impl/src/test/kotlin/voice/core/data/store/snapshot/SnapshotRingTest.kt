@@ -13,7 +13,10 @@ class SnapshotRingTest {
   private val slot2 = MemoryDataStore<LibrarySnapshot?>(null)
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
 
-  private fun snap(seq: Long, active: Int) = LibrarySnapshot(
+  private fun snap(
+    seq: Long,
+    active: Int,
+  ) = LibrarySnapshot(
     schemaVersion = 1, sequence = seq, savedAtEpochMillis = 0,
     totalCount = active, activeCount = active,
     books = (1..active).map {

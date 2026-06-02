@@ -9,15 +9,18 @@ import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
 import voice.core.data.folders.PersistedUriPermissions
+import voice.core.data.repo.internals.AppDb
 import voice.core.logging.api.Logger
 import java.time.Instant
 
@@ -49,12 +52,17 @@ public class BackupRepositoryImpl internal constructor(
   }
 
   override suspend fun setBackupFolder(uri: Uri) {
-    runCatching {
+    val granted = runCatching {
       context.contentResolver.takePersistableUriPermission(
         uri,
         Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
       )
-    }.onFailure { Logger.w(it, "Could not persist backup folder permission") }
+      uri in persistedUriPermissions.persistedUris()
+    }.getOrElse { false }
+    if (!granted) {
+      Logger.w("Backup folder permission was not granted; not saving the folder")
+      return
+    }
     stateStore.updateData { it.copy(folderUri = uri.toString()) }
     importAndRestore()
     exportNow()
@@ -76,9 +84,11 @@ public class BackupRepositoryImpl internal constructor(
     runCatching {
       val folder = activeFolder() ?: return
       val snapshot = ring.best() ?: return
-      val bundleUri = findOrCreateBundle(folder) ?: return
-      context.contentResolver.openOutputStream(bundleUri, "wt")?.use { out ->
-        json.encodeToStream(LibrarySnapshot.serializer(), snapshot, out)
+      withContext(Dispatchers.IO) {
+        val bundleUri = findOrCreateBundle(folder) ?: return@withContext
+        context.contentResolver.openOutputStream(bundleUri, "wt")?.use { out ->
+          json.encodeToStream(LibrarySnapshot.serializer(), snapshot, out)
+        }
       }
       stateStore.updateData { it.copy(lastBackupMillis = System.currentTimeMillis()) }
     }.onFailure { Logger.w(it, "External backup export failed; library is unaffected") }
@@ -87,13 +97,23 @@ public class BackupRepositoryImpl internal constructor(
   override suspend fun importAndRestore(): Boolean {
     return runCatching {
       val folder = activeFolder() ?: return false
-      val bundleUri = findBundle(folder) ?: return false
-      val snapshot = context.contentResolver.openInputStream(bundleUri)?.use { input ->
-        json.decodeFromStream(LibrarySnapshot.serializer(), input)
+      val snapshot = withContext(Dispatchers.IO) {
+        val bundleUri = findBundle(folder) ?: return@withContext null
+        context.contentResolver.openInputStream(bundleUri)?.use { input ->
+          json.decodeFromStream(LibrarySnapshot.serializer(), input)
+        }
       } ?: return false
-      if (ring.readAll().none { it.sequence >= snapshot.sequence }) {
-        ring.writeNext(snapshot)
+      // Only ingest genuine, compatible VoicePlus bundles.
+      if (snapshot.schemaVersion != LibrarySnapshot.SCHEMA_VERSION) {
+        Logger.w("Ignoring external backup with unexpected schemaVersion=${snapshot.schemaVersion}")
+        return false
       }
+      if (snapshot.dbVersion > AppDb.VERSION) {
+        Logger.w("Ignoring external backup from a newer dbVersion=${snapshot.dbVersion}")
+        return false
+      }
+      // The ring re-stamps a fresh local sequence; RestoreSelector still gates the actual DB mutation.
+      ring.writeNext(snapshot)
       restorer.restoreIfNeeded()
       true
     }.getOrElse {

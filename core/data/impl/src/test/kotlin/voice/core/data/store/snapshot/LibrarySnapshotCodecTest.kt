@@ -11,9 +11,15 @@ import java.time.Instant
 
 class LibrarySnapshotCodecTest {
 
-  private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+  private val json = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+  }
 
-  private fun book(id: String, active: Boolean): BookContent = BookContent(
+  private fun book(
+    id: String,
+    active: Boolean,
+  ): BookContent = BookContent(
     id = BookId(id), playbackSpeed = 1f, skipSilence = false, isActive = active,
     lastPlayedAt = Instant.ofEpochMilli(10), author = null, name = id,
     addedAt = Instant.ofEpochMilli(20), chapters = listOf(ChapterId("ch-$id")),

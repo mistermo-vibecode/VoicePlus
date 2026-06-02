@@ -60,7 +60,10 @@ class SnapshotWriterTest {
     backupRepository = noopBackup,
   )
 
-  private fun book(id: String, active: Boolean) = BookContent(
+  private fun book(
+    id: String,
+    active: Boolean,
+  ) = BookContent(
     id = BookId(id), playbackSpeed = 1f, skipSilence = false, isActive = active,
     lastPlayedAt = Instant.EPOCH, author = null, name = id, addedAt = Instant.EPOCH,
     chapters = listOf(ChapterId("c$id")), currentChapter = ChapterId("c$id"), positionInChapter = 0,

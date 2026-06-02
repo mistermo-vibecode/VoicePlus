@@ -6,6 +6,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.flow.first
+import voice.core.data.BookContent
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.internals.dao.BookCharacterDao
 import voice.core.data.repo.internals.dao.BookContentDao
@@ -36,21 +37,38 @@ internal class BackupRestorer(
     runCatching {
       val live = bookContentDao.all()
       val liveActiveIds = live.filter { it.isActive }.map { it.id.value }.toSet()
+      // Healthy library: nothing to restore. Skip the (expensive) snapshot JSON decodes.
+      if (live.isNotEmpty() && liveActiveIds.isNotEmpty()) return
       val excludedIds = excludedBooksStore.data.first()
       val candidate = RestoreSelector.select(live.size, liveActiveIds, excludedIds, ring.readAll()) ?: return
-      apply(candidate, excludedIds)
+      apply(candidate, excludedIds, live)
       contentRepo.invalidateCache()
       Logger.i("Restored library from snapshot generation ${candidate.sequence}")
     }.onFailure { Logger.e(it, "Snapshot restore failed; library is unaffected") }
   }
 
-  private suspend fun apply(snapshot: LibrarySnapshot, excludedIds: Set<String>) {
-    val books = snapshot.books.filter { it.id !in excludedIds }.mapNotNull { it.toBookContentOrNull() }
+  private suspend fun apply(
+    snapshot: LibrarySnapshot,
+    excludedIds: Set<String>,
+    live: List<BookContent>,
+  ) {
+    val liveById = live.associateBy { it.id.value }
+    val books = snapshot.books
+      .filter { it.id !in excludedIds }
+      .mapNotNull { dto -> dto.toBookContentOrNull()?.let { dto.id to it } }
     val bookmarks = snapshot.bookmarks.filter { it.bookId !in excludedIds }.map { it.toBookmark() }
     val characters = snapshot.characters.filter { it.bookId !in excludedIds }.map { it.toBookCharacter() }
     val overrides = snapshot.chapterNameOverrides.filter { it.bookId !in excludedIds }.map { it.toOverride() }
     appDb.transaction {
-      books.forEach { bookContentDao.insert(it) }
+      books.forEach { (id, snap) ->
+        val liveRow = liveById[id]
+        when {
+          // Missing live row, or the snapshot is at least as fresh -> take the snapshot copy.
+          liveRow == null || snap.lastPlayedAt >= liveRow.lastPlayedAt -> bookContentDao.insert(snap)
+          // The collapse was only an isActive flip; keep the fresher live progress, just re-activate.
+          !liveRow.isActive && snap.isActive -> bookContentDao.insert(liveRow.copy(isActive = true))
+        }
+      }
       bookmarks.forEach { bookmarkDao.addBookmark(it) }
       characters.forEach { bookCharacterDao.insert(it) }
       overrides.forEach { chapterNameOverrideDao.insert(it) }

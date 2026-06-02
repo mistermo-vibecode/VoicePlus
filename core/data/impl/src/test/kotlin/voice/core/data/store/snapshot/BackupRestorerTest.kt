@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -51,7 +52,10 @@ class BackupRestorerTest {
     contentRepo = contentRepo,
   )
 
-  private fun book(id: String, active: Boolean) = BookContent(
+  private fun book(
+    id: String,
+    active: Boolean,
+  ) = BookContent(
     id = BookId(id), playbackSpeed = 1f, skipSilence = false, isActive = active,
     lastPlayedAt = Instant.EPOCH, author = null, name = id, addedAt = Instant.EPOCH,
     chapters = listOf(ChapterId("c$id")), currentChapter = ChapterId("c$id"), positionInChapter = 0,
@@ -86,5 +90,29 @@ class BackupRestorerTest {
     slot0.updateData { snapshotOf("a", "b") }
     restorer().restoreIfNeeded()
     db.bookContentDao().all().map { it.id.value } shouldContainExactlyInAnyOrder listOf("live")
+  }
+
+  @Test
+  fun `unexplained collapse keeps fresher live progress and reactivates`() = runTest {
+    // Library collapsed to all-inactive, but the live row has fresher progress than the snapshot.
+    contentRepo.put(
+      book("a", active = false).copy(lastPlayedAt = Instant.ofEpochMilli(1000), positionInChapter = 5000),
+    )
+    slot0.updateData {
+      LibrarySnapshot(
+        schemaVersion = 1, dbVersion = AppDb.VERSION, sequence = 1, savedAtEpochMillis = 0,
+        totalCount = 1, activeCount = 1,
+        books = listOf(
+          book("a", active = true).copy(lastPlayedAt = Instant.EPOCH, positionInChapter = 0).toDto(),
+        ),
+        bookmarks = emptyList(), characters = emptyList(), chapterNameOverrides = emptyList(),
+      )
+    }
+
+    restorer().restoreIfNeeded()
+
+    val restored = db.bookContentDao().all().single { it.id.value == "a" }
+    restored.isActive shouldBe true
+    restored.positionInChapter shouldBe 5000L
   }
 }

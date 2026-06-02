@@ -5,7 +5,10 @@ import org.junit.Test
 
 class RotationGuardTest {
 
-  private fun snap(active: List<String>, inactive: List<String> = emptyList()): LibrarySnapshot {
+  private fun snap(
+    active: List<String>,
+    inactive: List<String> = emptyList(),
+  ): LibrarySnapshot {
     val books = (active.map { it to true } + inactive.map { it to false })
       .map { (id, isActive) -> dto(id, isActive) }
     return LibrarySnapshot(
@@ -15,7 +18,10 @@ class RotationGuardTest {
     )
   }
 
-  private fun dto(id: String, isActive: Boolean) = BookContentDto(
+  private fun dto(
+    id: String,
+    isActive: Boolean,
+  ) = BookContentDto(
     id = id, playbackSpeed = 1f, skipSilence = false, isActive = isActive,
     lastPlayedAtEpochMillis = 0, author = null, name = id, addedAtEpochMillis = 0,
     chapters = listOf("c"), currentChapter = "c", positionInChapter = 0, coverPath = null,
