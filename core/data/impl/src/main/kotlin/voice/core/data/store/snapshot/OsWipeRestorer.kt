@@ -60,10 +60,11 @@ internal class OsWipeRestorer(
   private val listeningSessionDao: ListeningSessionDao,
   @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
   private val appDb: RoomDatabase,
+  private val restoreGate: RestoreGate,
 ) {
 
   @IgnorableReturnValue
-  suspend fun run(snapshot: LibrarySnapshot): ReKeyResult {
+  suspend fun run(snapshot: LibrarySnapshot): ReKeyResult = restoreGate.withRestoreActive {
     // 1. Make the freshly-scanned, new-URI books exist AND the scan's setAllInactiveExcept reconcile complete
     // before we read them. scanAndAwait joins the actual scan job (not the racy scannerActive flag).
     scanWaiter.scanAndAwait(restartIfScanning = true)
@@ -126,7 +127,7 @@ internal class OsWipeRestorer(
     // 6. Refresh the fill-once content cache so the restored books render this session, not after a restart.
     contentRepo.invalidateCache()
     Logger.i("OS-wipe restore: ${result.matched.size} re-keyed, ${result.unmatched.size} surfaced")
-    return result
+    result
   }
 
   private fun toScannedBook(

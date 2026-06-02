@@ -10,6 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
 import voice.core.data.BookContent
@@ -40,20 +42,34 @@ internal class SnapshotWriter(
   @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
   @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
   private val backupRepository: BackupRepository,
+  private val restoreGate: RestoreGate,
 ) {
 
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
 
   fun start(scope: CoroutineScope) {
-    contentRepo.flow()
+    // Re-snapshot on any change to books OR user-authored data (bookmarks, character notes, chapter-name
+    // overrides, listening sessions). This keeps the on-device ring AND the external bundle current, so a
+    // user deletion is reflected promptly and never silently resurrected by a later restore reading a stale
+    // bundle. The count()/allSessions() flows fire on any insert/update/delete to their table.
+    merge(
+      contentRepo.flow().map { },
+      bookmarkDao.count().map { },
+      bookCharacterDao.count().map { },
+      chapterNameOverrideDao.count().map { },
+      listeningSessionDao.allSessions().map { },
+    )
       .debounce(DEBOUNCE)
-      .onEach { books -> writeSnapshot(books) }
+      .onEach { writeSnapshot(contentRepo.all()) }
       .launchIn(scope)
   }
 
   internal suspend fun writeSnapshot(books: List<BookContent>) {
     withContext(Dispatchers.IO) {
       runCatching {
+        // An OS-wipe restore is mid-flight: the live library is the freshly-scanned, not-yet-re-keyed set
+        // (active books, no user data). Writing it now would clobber the ring/bundle we are restoring from.
+        if (restoreGate.active.value) return@withContext
         val excludedIds = excludedBooksStore.data.first()
         val allChapters = chapterDao.all()
         val chapterById = allChapters.associateBy { it.id.value }

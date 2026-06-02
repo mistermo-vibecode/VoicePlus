@@ -33,6 +33,7 @@ class SnapshotWriterTest {
   private val noopBackup = object : BackupRepository {
     override val backupFolder = kotlinx.coroutines.flow.flowOf<android.net.Uri?>(null)
     override val lastBackupAt = kotlinx.coroutines.flow.flowOf<java.time.Instant?>(null)
+    override val lastRestore = kotlinx.coroutines.flow.flowOf<RestoreSummary?>(null)
     override suspend fun setBackupFolder(uri: android.net.Uri) {}
     override suspend fun clearBackupFolder() {}
     override suspend fun exportNow() {}
@@ -61,6 +62,7 @@ class SnapshotWriterTest {
     slot2 = slot2,
     excludedBooksStore = excluded,
     backupRepository = noopBackup,
+    restoreGate = RestoreGate(),
   )
 
   private fun book(

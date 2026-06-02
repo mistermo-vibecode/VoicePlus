@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import voice.core.data.store.snapshot.rekey.ReKeyResult
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -48,6 +50,10 @@ public class BackupRepositoryImpl internal constructor(
 
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
 
+  // Serialize import vs export vs a second import so they never interleave (a torn-read of a half-written
+  // bundle, or two restores double-inserting autoGenerate-PK rows).
+  private val mutex = Mutex()
+
   override val backupFolder: Flow<Uri?> = stateStore.data.map { it.folderUri?.toUri() }
   override val lastBackupAt: Flow<Instant?> = stateStore.data.map { state ->
     state.lastBackupMillis?.let(Instant::ofEpochMilli)
@@ -68,8 +74,12 @@ public class BackupRepositoryImpl internal constructor(
       return
     }
     stateStore.updateData { it.copy(folderUri = uri.toString()) }
-    importAndRestore()
-    exportNow()
+    // If a bundle was found and re-keyed, the SnapshotWriter exports the final re-keyed state shortly after
+    // (once the restore gate clears); exporting now would clobber the bundle with the not-yet-re-keyed ring.
+    // Only export immediately when nothing was restored (fresh setup), so the first backup is written promptly.
+    if (!importAndRestore()) {
+      exportNow()
+    }
   }
 
   override suspend fun clearBackupFolder() {
@@ -85,47 +95,51 @@ public class BackupRepositoryImpl internal constructor(
   }
 
   override suspend fun exportNow() {
-    runCatching {
-      val folder = activeFolder() ?: return
-      val snapshot = ring.best() ?: return
-      withContext(Dispatchers.IO) {
-        val bundleUri = findOrCreateBundle(folder) ?: return@withContext
-        context.contentResolver.openOutputStream(bundleUri, "wt")?.use { out ->
-          json.encodeToStream(LibrarySnapshot.serializer(), snapshot, out)
+    mutex.withLock {
+      runCatching {
+        val folder = activeFolder() ?: return
+        val snapshot = ring.best() ?: return
+        withContext(Dispatchers.IO) {
+          val bundleUri = findOrCreateBundle(folder) ?: return@withContext
+          context.contentResolver.openOutputStream(bundleUri, "wt")?.use { out ->
+            json.encodeToStream(LibrarySnapshot.serializer(), snapshot, out)
+          }
         }
-      }
-      stateStore.updateData { it.copy(lastBackupMillis = System.currentTimeMillis()) }
-    }.onFailure { Logger.w(it, "External backup export failed; library is unaffected") }
+        stateStore.updateData { it.copy(lastBackupMillis = System.currentTimeMillis()) }
+      }.onFailure { Logger.w(it, "External backup export failed; library is unaffected") }
+    }
   }
 
   override suspend fun importAndRestore(): Boolean {
-    return runCatching {
-      val folder = activeFolder() ?: return false
-      val snapshot = withContext(Dispatchers.IO) {
-        val bundleUri = findBundle(folder) ?: return@withContext null
-        context.contentResolver.openInputStream(bundleUri)?.use { input ->
-          json.decodeFromStream(LibrarySnapshot.serializer(), input)
+    return mutex.withLock {
+      runCatching {
+        val folder = activeFolder() ?: return false
+        val snapshot = withContext(Dispatchers.IO) {
+          val bundleUri = findBundle(folder) ?: return@withContext null
+          context.contentResolver.openInputStream(bundleUri)?.use { input ->
+            json.decodeFromStream(LibrarySnapshot.serializer(), input)
+          }
+        } ?: return false
+        // Only ingest genuine, compatible VoicePlus bundles. Accept this schema or older (older bundles decode
+        // via default-valued fields); refuse a NEWER schema rather than silently truncating fields we can't read.
+        if (snapshot.schemaVersion > LibrarySnapshot.SCHEMA_VERSION) {
+          Logger.w("Ignoring external backup from a newer schemaVersion=${snapshot.schemaVersion}")
+          return false
         }
-      } ?: return false
-      // Only ingest genuine, compatible VoicePlus bundles. Accept this schema or older (older bundles decode
-      // via default-valued fields); refuse a NEWER schema rather than silently truncating fields we can't read.
-      if (snapshot.schemaVersion > LibrarySnapshot.SCHEMA_VERSION) {
-        Logger.w("Ignoring external backup from a newer schemaVersion=${snapshot.schemaVersion}")
-        return false
+        if (snapshot.dbVersion > AppDb.VERSION) {
+          Logger.w("Ignoring external backup from a newer dbVersion=${snapshot.dbVersion}")
+          return false
+        }
+        // OS-wipe path: scan for the re-granted books under their NEW URIs, then re-key the bundle onto them.
+        // We deliberately do NOT write this (dead-URI) bundle to the on-device ring; the SnapshotWriter
+        // captures the freshly re-keyed (new-URI) state into the ring right after.
+        val result = osWipeRestorer.run(snapshot)
+        lastRestoreState.value = result.toSummary()
+        result.matched.isNotEmpty() || result.unmatched.isNotEmpty()
+      }.getOrElse {
+        Logger.w(it, "External backup import failed; library is unaffected")
+        false
       }
-      if (snapshot.dbVersion > AppDb.VERSION) {
-        Logger.w("Ignoring external backup from a newer dbVersion=${snapshot.dbVersion}")
-        return false
-      }
-      // OS-wipe path: scan for the re-granted books under their NEW URIs, then re-key the bundle onto them.
-      // We deliberately do NOT write this (dead-URI) bundle to the on-device ring; the SnapshotWriter
-      // captures the freshly re-keyed (new-URI) state into the ring right after.
-      val result = osWipeRestorer.run(snapshot)
-      lastRestoreState.value = result.toSummary()
-      result.matched.isNotEmpty() || result.unmatched.isNotEmpty()
-    }.getOrElse {
-      Logger.w(it, "External backup import failed; library is unaffected")
-      false
     }
   }
 

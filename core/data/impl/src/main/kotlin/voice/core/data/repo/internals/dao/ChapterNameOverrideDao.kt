@@ -27,4 +27,8 @@ public interface ChapterNameOverrideDao {
 
   @Query("SELECT * FROM chapter_name_overrides")
   public suspend fun all(): List<ChapterNameOverride>
+
+  // A change trigger for the snapshot writer: Room re-emits on any insert/update/delete to the table.
+  @Query("SELECT COUNT(*) FROM chapter_name_overrides")
+  public fun count(): Flow<Int>
 }

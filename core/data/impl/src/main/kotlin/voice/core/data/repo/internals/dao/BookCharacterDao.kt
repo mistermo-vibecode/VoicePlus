@@ -29,4 +29,8 @@ public interface BookCharacterDao {
 
   @Query("SELECT * FROM book_character")
   public suspend fun all(): List<BookCharacter>
+
+  // A change trigger for the snapshot writer: Room re-emits on any insert/update/delete to the table.
+  @Query("SELECT COUNT(*) FROM book_character")
+  public fun count(): Flow<Int>
 }

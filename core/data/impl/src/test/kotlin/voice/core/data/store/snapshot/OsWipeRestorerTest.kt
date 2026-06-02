@@ -69,6 +69,7 @@ class OsWipeRestorerTest {
     listeningSessionDao = db.listeningSessionDao(),
     excludedBooksStore = excluded,
     appDb = db,
+    restoreGate = RestoreGate(),
   )
 
   // --- URI schemes: same documentId tail under different tree-grant prefixes (= the OS-wipe re-grant) ---
