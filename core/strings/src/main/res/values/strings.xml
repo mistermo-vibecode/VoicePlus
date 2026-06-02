@@ -35,6 +35,9 @@
     <string name="backup_last_never">Never</string>
     <string name="backup_choose_folder">Choose backup folder</string>
     <string name="backup_restore_now">Restore from backup folder</string>
+    <string name="backup_restore_result">Restored %1$d books</string>
+    <string name="backup_restore_unmatched_title">%1$d books couldn\'t be matched automatically</string>
+    <string name="backup_restore_unmatched_hint">Re-grant the audiobook folder(s) and restore again, or these books may have moved or changed.</string>
     <string name="listening_stats">Listening Statistics</string>
     <string name="listening_stats_total_lifetime">Total Listening Time</string>
     <string name="listening_stats_today">Today</string>

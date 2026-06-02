@@ -16,6 +16,9 @@ public interface BackupRepository {
   /** When the external bundle was last written, or null if never. */
   public val lastBackupAt: Flow<Instant?>
 
+  /** The outcome of the most recent [importAndRestore], or null if none has run this session. */
+  public val lastRestore: Flow<RestoreSummary?>
+
   /** Persist [uri] as the export folder (taking a persistable read/write grant), import any existing bundle, then export. */
   public suspend fun setBackupFolder(uri: Uri)
 
@@ -29,3 +32,19 @@ public interface BackupRepository {
   @IgnorableReturnValue
   public suspend fun importAndRestore(): Boolean
 }
+
+/**
+ * The result of an OS-wipe restore. [restoredCount] books were re-attached to their freshly-scanned files;
+ * [unmatched] books could not be safely auto-matched (e.g. the folder wasn't re-granted, or its contents
+ * changed) and are surfaced rather than silently dropped or guessed onto another book.
+ */
+public data class RestoreSummary(
+  val restoredCount: Int,
+  val unmatched: List<UnmatchedBookInfo>,
+)
+
+public data class UnmatchedBookInfo(
+  val folderName: String,
+  val relPath: String,
+  val reason: String,
+)

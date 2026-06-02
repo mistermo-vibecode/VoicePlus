@@ -125,6 +125,17 @@ internal fun BackupScreen(
       ) {
         Text(stringResource(StringsR.string.backup_restore_now))
       }
+      val restore = viewState.lastRestore
+      if (restore != null) {
+        Text(stringResource(StringsR.string.backup_restore_result, restore.restoredCount))
+        if (restore.unmatched.isNotEmpty()) {
+          Text(stringResource(StringsR.string.backup_restore_unmatched_title, restore.unmatched.size))
+          Text(stringResource(StringsR.string.backup_restore_unmatched_hint))
+          restore.unmatched.take(10).forEach { info ->
+            Text("• ${info.folderName}")
+          }
+        }
+      }
     }
   }
 }

@@ -9,6 +9,7 @@ import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import voice.core.data.store.snapshot.BackupRepository
+import voice.core.data.store.snapshot.RestoreSummary
 import voice.navigation.Navigator
 import java.time.Instant
 
@@ -24,7 +25,8 @@ class BackupViewModel(
   fun viewState(): BackupViewState {
     val folder by remember { backupRepository.backupFolder }.collectAsState(initial = null)
     val lastBackup by remember { backupRepository.lastBackupAt }.collectAsState(initial = null)
-    return BackupViewState(folder = folder, lastBackup = lastBackup)
+    val lastRestore by remember { backupRepository.lastRestore }.collectAsState(initial = null)
+    return BackupViewState(folder = folder, lastBackup = lastBackup, lastRestore = lastRestore)
   }
 
   fun onFolderChosen(uri: Uri) {
@@ -43,4 +45,5 @@ class BackupViewModel(
 data class BackupViewState(
   val folder: Uri?,
   val lastBackup: Instant?,
+  val lastRestore: RestoreSummary?,
 )
