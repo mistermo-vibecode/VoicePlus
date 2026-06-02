@@ -15,9 +15,11 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
@@ -233,7 +236,16 @@ private fun Settings(
               contentDescription = stringResource(StringsR.string.pref_ignore_file_tags),
             )
           },
-          headlineContent = { Text(stringResource(StringsR.string.pref_ignore_file_tags)) },
+          headlineContent = {
+            Text(stringResource(StringsR.string.pref_ignore_file_tags))
+          },
+          supportingContent = {
+            Text(
+              text = stringResource(StringsR.string.experimental),
+              style = MaterialTheme.typography.labelMedium,
+              color = MaterialTheme.colorScheme.primary,
+            )
+          },
           trailingContent = {
             Row {
               IconButton(onClick = listener::onIgnoreFileTagsInfoClick) {
@@ -411,6 +423,28 @@ private fun Dialog(
         confirmButton = {
           TextButton(onClick = listener::dismissDialog) {
             Text(stringResource(StringsR.string.close))
+          }
+        },
+      )
+    }
+    is SettingsViewState.Dialog.IgnoreFileTagsConfirm -> {
+      val sourceLabel = if (dialog.newValue) {
+        stringResource(StringsR.string.file_tags)
+      } else {
+        stringResource(StringsR.string.folder_names)
+      }
+      AlertDialog(
+        onDismissRequest = listener::dismissDialog,
+        title = { Text(stringResource(StringsR.string.ignore_file_tags_confirm_title)) },
+        text = { Text(stringResource(StringsR.string.ignore_file_tags_confirm_message, sourceLabel)) },
+        confirmButton = {
+          Button(onClick = listener::confirmIgnoreFileTagsChange) {
+            Text(stringResource(StringsR.string.rescan))
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = listener::dismissDialog) {
+            Text(stringResource(StringsR.string.dialog_cancel))
           }
         },
       )

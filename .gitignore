@@ -30,10 +30,13 @@ releases
 /.idea/copilot.data.migration.ask.xml
 /.idea/copilot.data.migration.ask2agent.xml
 
-# Internal F-Droid planning — not for public release
+# Internal planning / design docs — not for public release
 docs/fdroid/
 docs/fdroid-release-plan.md
 docs/fdroid-release-howto.md
+docs/superpowers/
+docs/storage-resilience-analysis.md
+docs/SABP storage.md
 
 # IDE / editor config
 .vscode/

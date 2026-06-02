@@ -28,6 +28,8 @@ public data class BookContent(
   val narrator: String?,
   val series: String?,
   val part: String?,
+  @ColumnInfo(defaultValue = "0")
+  val chapterNameOffset: Int = 0,
 ) {
 
   @Ignore

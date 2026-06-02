@@ -86,6 +86,114 @@ class MediaScannerTest {
   }
 
   @Test
+  fun forceReParseReDerivesNamesPreservingPlayback() = test {
+    val audiobookFolder = folder("audiobooks")
+
+    val book1 = File(audiobookFolder, "book1")
+    val book1Id = BookId(book1.toUri())
+    audioFile(book1, "1.mp3")
+    audioFile(book1, "2.mp3")
+
+    scan(FolderType.Root, audiobookFolder)
+
+    bookContentRepo.get(book1Id)!!.name shouldBe "Book Name"
+
+    // Simulate user playback progress that must survive a re-parse.
+    val played = bookContentRepo.get(book1Id)!!.copy(
+      playbackSpeed = 1.5F,
+      positionInChapter = 500L,
+    )
+    bookContentRepo.put(played)
+
+    ignoreFileTags.value = true
+
+    // A routine (non-forced) scan must NOT touch the existing book's name.
+    scan(FolderType.Root, audiobookFolder)
+    bookContentRepo.get(book1Id)!!.name shouldBe "Book Name"
+
+    scan(FolderType.Root, audiobookFolder, forceReParse = true)
+    val updated = bookContentRepo.get(book1Id)!!
+    updated.name shouldBe "book1"
+    updated.author shouldBe null
+    updated.playbackSpeed shouldBe 1.5F
+    updated.positionInChapter shouldBe 500L
+  }
+
+  @Test
+  fun forceReParseKeepsChapterAndPositionWhenFileTemporarilyUnreadable() = test {
+    val audiobookFolder = folder("audiobooks")
+    val book1 = File(audiobookFolder, "book1")
+    val book1Id = BookId(book1.toUri())
+    val chapter1 = audioFile(book1, "1.mp3")
+    val chapter2 = audioFile(book1, "2.mp3")
+
+    scan(FolderType.Root, audiobookFolder)
+
+    // User is partway through chapter 2.
+    val content = bookContentRepo.get(book1Id)!!.copy(
+      currentChapter = ChapterId(chapter2.toUri()),
+      positionInChapter = 1234L,
+    )
+    bookContentRepo.put(content)
+
+    // Chapter 2's file is momentarily unreadable during a forced re-parse — it must be kept from
+    // the cache, not dropped (which would shrink the book and reset the playback position).
+    failToAnalyze(chapter2)
+    scan(FolderType.Root, audiobookFolder, forceReParse = true)
+
+    val updated = bookContentRepo.get(book1Id)!!
+    updated.chapters.shouldContainExactlyInAnyOrder(
+      ChapterId(chapter1.toUri()),
+      ChapterId(chapter2.toUri()),
+    )
+    updated.currentChapter shouldBe ChapterId(chapter2.toUri())
+    updated.positionInChapter shouldBe 1234L
+  }
+
+  @Test
+  fun partialScanKeepsBooksUnderAFolderThatReturnedNoEntries() = test {
+    val root1 = folder("audiobooks1")
+    val book1 = File(root1, "book1")
+    val chapter1 = audioFile(book1, "1.mp3")
+
+    val root2 = folder("audiobooks2")
+    val book2 = File(root2, "book2")
+    val chapter2 = audioFile(book2, "1.mp3")
+
+    scan(FolderType.Root, root1, root2)
+    assertBookContents(
+      BookContentView(book1, chapters = listOf(chapter1)),
+      BookContentView(book2, chapters = listOf(chapter2)),
+    )
+
+    // root2 comes back empty (e.g. a dropped SAF permission / unmounted volume). Its books must
+    // NOT be deactivated just because this single scan couldn't see them.
+    book2.deleteRecursively()
+    scan(FolderType.Root, root1, root2)
+
+    assertBookContents(
+      BookContentView(book1, chapters = listOf(chapter1)),
+      BookContentView(book2, chapters = listOf(chapter2)),
+    )
+  }
+
+  @Test
+  fun emptyScanKeepsExistingBooksActive() = test {
+    val audiobookFolder = folder("audiobooks")
+    val book1 = File(audiobookFolder, "book1")
+    val chapter = audioFile(book1, "1.mp3")
+
+    scan(FolderType.Root, audiobookFolder)
+    assertBookContents(BookContentView(book1, chapters = listOf(chapter)))
+
+    // A scan that finds nothing (e.g. a dropped folder permission) must NOT deactivate the library.
+    val emptyFolder = folder("empty")
+    scan(FolderType.Root, emptyFolder)
+
+    assertBookContents(BookContentView(book1, chapters = listOf(chapter)))
+  }
+
+  @Test
   fun multipleRoots() = test {
     val audiobookFolder1 = folder("audiobooks1")
 
@@ -196,20 +304,21 @@ class MediaScannerTest {
       .allowMainThreadQueries()
       .build()
     val bookContentRepo = BookContentRepoImpl(db.bookContentDao())
-    private val chapterRepo = ChapterRepoImpl(db.chapterDao())
+    val chapterRepo = ChapterRepoImpl(db.chapterDao())
+    val ignoreFileTags = MutableStateFlow(false)
     private val mediaAnalyzer = mockk<MediaAnalyzer>()
     private val scanner = MediaScanner(
       contentRepo = bookContentRepo,
       chapterParser = ChapterParser(
         chapterRepo = chapterRepo,
         mediaAnalyzer = mediaAnalyzer,
-        ignoreFileTagsStore = mockk { every { data } returns MutableStateFlow(false) },
+        ignoreFileTagsStore = mockk { every { data } returns ignoreFileTags },
       ),
       bookParser = BookParser(
         contentRepo = bookContentRepo,
         mediaAnalyzer = mediaAnalyzer,
         fileFactory = FileBasedDocumentFactory,
-        ignoreFileTagsStore = mockk { every { data } returns MutableStateFlow(false) },
+        ignoreFileTagsStore = mockk { every { data } returns ignoreFileTags },
       ),
       deviceHasPermissionBug = mockk(),
       excludedBooksStore = mockk { every { data } returns kotlinx.coroutines.flow.MutableStateFlow(emptySet()) },
@@ -222,8 +331,9 @@ class MediaScannerTest {
     suspend fun scan(
       type: FolderType = FolderType.Root,
       vararg roots: File,
+      forceReParse: Boolean = false,
     ) {
-      scanner.scan(mapOf(type to roots.map(::FileBasedDocumentFile)))
+      scanner.scan(mapOf(type to roots.map(::FileBasedDocumentFile)), forceReParse)
     }
 
     @IgnorableReturnValue
@@ -258,6 +368,11 @@ class MediaScannerTest {
     fun folder(name: String): File {
       return File(root, name)
         .also { it.mkdirs() }
+    }
+
+    /** Make the analyzer return null for [file] only, simulating a transient read failure. */
+    fun failToAnalyze(file: File) {
+      coEvery { mediaAnalyzer.analyze(match { it.uri == file.toUri() }) } returns null
     }
 
     suspend fun assertBookContents(vararg expected: BookContentView) {

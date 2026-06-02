@@ -9,13 +9,16 @@ import androidx.media3.session.MediaSession.MediaItemsWithStartPosition
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookComparator
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
+import voice.core.data.byMarkKey
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.BookRepository
+import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.repo.ChapterRepo
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.toUri
@@ -28,6 +31,7 @@ class MediaItemProvider(
   private val application: Application,
   private val chapterRepo: ChapterRepo,
   private val contentRepo: BookContentRepo,
+  private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   private val imageFileProvider: ImageFileProvider,
   @CurrentBookStore
   private val currentBookStoreId: DataStore<BookId?>,
@@ -59,7 +63,7 @@ class MediaItemProvider(
       is MediaId.Chapter -> {
         val content = contentRepo.get(mediaId.bookId) ?: return null
         chapterRepo.get(mediaId.chapterId)?.let {
-          mediaItem(it, content)
+          mediaItem(it, content, overrideMapFor(content.id))
         }
       }
       MediaId.Recent -> recent()
@@ -89,11 +93,13 @@ class MediaItemProvider(
     return chapters(book)
   }
 
-  internal fun chapters(book: Book): List<MediaItem> {
+  internal suspend fun chapters(book: Book): List<MediaItem> {
+    val overrideMap = overrideMapFor(book.content.id)
     return book.chapters.map { chapter ->
       mediaItem(
         chapter = chapter,
         content = book.content,
+        overrideMap = overrideMap,
       )
     }
   }
@@ -132,16 +138,31 @@ class MediaItemProvider(
   private fun mediaItem(
     chapter: Chapter,
     content: BookContent,
-  ) = MediaItem(
-    title = chapter.name ?: chapter.id.value,
-    mediaId = MediaId.Chapter(bookId = content.id, chapterId = chapter.id),
-    browsable = false,
-    isPlayable = true,
-    sourceUri = chapter.id.toUri(),
-    imageUri = content.cover?.toProvidedUri(),
-    artist = content.author,
-    mediaType = MediaType.AudioBookChapter,
-  )
+    overrideMap: Map<Pair<String, Long>, String>,
+  ): MediaItem {
+    // One MediaItem represents the whole file/chapter; its title is shown statically in the
+    // notification/lockscreen. Only apply a per-mark override when the chapter has exactly one mark
+    // (the multi-file case, one file per chapter). For a single-file book with several embedded
+    // marks there is no single "current" mark here, so keep the whole-file name rather than letting
+    // one mark's override (or "Chapter 1") stand in for the entire file.
+    val override = chapter.chapterMarks.singleOrNull()?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
+    val title = resolveChapterName(chapter.name ?: "", content.chapterNameOffset, override)
+      .ifBlank { chapter.id.value }
+    return MediaItem(
+      title = title,
+      mediaId = MediaId.Chapter(bookId = content.id, chapterId = chapter.id),
+      browsable = false,
+      isPlayable = true,
+      sourceUri = chapter.id.toUri(),
+      imageUri = content.cover?.toProvidedUri(),
+      artist = content.author,
+      mediaType = MediaType.AudioBookChapter,
+    )
+  }
+
+  private suspend fun overrideMapFor(bookId: BookId): Map<Pair<String, Long>, String> {
+    return chapterNameOverrideRepo.overridesForBook(bookId).first().byMarkKey()
+  }
 
   private fun File.toProvidedUri(): Uri = imageFileProvider.uri(this)
 }

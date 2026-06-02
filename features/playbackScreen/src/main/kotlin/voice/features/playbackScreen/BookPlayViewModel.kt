@@ -17,13 +17,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
+import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
+import voice.core.data.byMarkKey
 import voice.core.data.durationMs
 import voice.core.data.markForPosition
 import voice.core.data.repo.BookCharacterRepo
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.BookmarkRepo
+import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.SleepTimerPreferenceStore
@@ -62,6 +65,7 @@ class BookPlayViewModel(
   private val navigator: Navigator,
   private val bookmarkRepository: BookmarkRepo,
   private val characterRepo: BookCharacterRepo,
+  private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   private val volumeGainFormatter: VolumeGainFormatter,
   private val batteryOptimization: BatteryOptimization,
   dispatcherProvider: DispatcherProvider,
@@ -124,17 +128,29 @@ class BookPlayViewModel(
 
     val sleepTime = remember { sleepTimer.state }.collectAsState().value
     val hasMoreThanOneChapter = book.chapters.sumOf { it.chapterMarks.count() } > 1
+
+    val overrides by remember(persistedBook.content.id) {
+      chapterNameOverrideRepo.overridesForBook(persistedBook.content.id)
+    }.collectAsState(emptyList())
+    val overrideMap = overrides.byMarkKey()
+    val offset = persistedBook.content.chapterNameOffset
+    val currentOverride = overrideMap[Pair(book.currentChapter.id.value, currentMark.startMs)]
+    val chapterName = resolveChapterName(currentMark.name ?: "", offset, currentOverride)
+
     return BookPlayViewState(
       sleepTimerState = sleepTime.toViewState(),
       playing = isPlaying,
       title = book.content.name,
       showPreviousNextButtons = hasMoreThanOneChapter,
-      chapterName = currentMark.name.takeIf { hasMoreThanOneChapter },
+      chapterName = chapterName.takeIf { hasMoreThanOneChapter },
       duration = currentMark.durationMs.milliseconds,
       playedTime = positionInCurrentMark.milliseconds,
       cover = book.content.cover?.let(::ImmutableFile),
       skipSilence = book.content.skipSilence,
       characterCount = characterCount,
+      // Gate on chapter MARKS (what the editor actually lists), not raw markData — otherwise the
+      // entry is hidden for the common one-file-per-chapter book whose files carry no embedded marks.
+      editChapterNamesVisible = hasMoreThanOneChapter,
     )
   }
 
@@ -280,16 +296,27 @@ class BookPlayViewModel(
     navigator.goBack()
   }
 
+  fun onEditChapterNamesClick() {
+    scope.launch {
+      val book = currentBook() ?: return@launch
+      navigator.goTo(Destination.ChapterEditor(book.content.id))
+    }
+  }
+
   fun onCurrentChapterClick() {
     scope.launch {
       val book = currentBook() ?: return@launch
+      val offset = book.content.chapterNameOffset
+      val overrideList = chapterNameOverrideRepo.overridesForBook(book.content.id).first()
+      val overrideMap = overrideList.byMarkKey()
       _dialogState.value = BookPlayDialogViewState.SelectChapterDialog(
         items = book.chapters.flatMapIndexed { chapterIndex, chapter ->
           chapter.chapterMarks.mapIndexed { markIndex, chapterMark ->
             val previousChapters = book.chapters.take(chapterIndex)
+            val override = overrideMap[Pair(chapter.id.value, chapterMark.startMs)]
             BookPlayDialogViewState.SelectChapterDialog.ItemViewState(
               number = previousChapters.sumOf { it.chapterMarks.count() } + markIndex + 1,
-              name = chapterMark.name ?: "",
+              name = resolveChapterName(chapterMark.name ?: "", offset, override),
               active = chapterMark == book.currentMark && chapter == book.currentChapter,
               time = formatTime(previousChapters.sumOf { it.duration } + chapterMark.startMs),
             )

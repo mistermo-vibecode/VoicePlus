@@ -1,0 +1,2 @@
+* New: Edit chapter names from the playback menu. Fix off-by-one chapter numbers with a single offset (digits or number words), or rename chapters individually. Corrections survive re-scans and never touch your files.
+* "Use folder names instead of file tags" now updates your existing books right away when toggled (experimental).

@@ -22,6 +22,7 @@ import voice.core.data.GridMode
 import voice.core.data.MediaButtonClickAction
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.featureflag.MemoryFeatureFlag
+import voice.core.scanner.MediaScanTrigger
 import voice.core.ui.GridCount
 import voice.navigation.Navigator
 
@@ -47,6 +48,7 @@ class SettingsViewModelTest {
   private val mediaButtonTripleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_BACKWARD)
   private val experimentalPlaybackPersistenceStore = MemoryDataStore(false)
   private val ignoreFileTagsStore = MemoryDataStore(false)
+  private val mediaScanTrigger = mockk<MediaScanTrigger>(relaxed = true)
 
   private val viewModel = SettingsViewModel(
     useDarkThemeStore = useDarkThemeStore,
@@ -62,6 +64,7 @@ class SettingsViewModelTest {
     mediaButtonTripleClickHandlerStore = mediaButtonTripleClickHandlerStore,
     experimentalPlaybackPersistenceStore = experimentalPlaybackPersistenceStore,
     ignoreFileTagsStore = ignoreFileTagsStore,
+    mediaScanTrigger = mediaScanTrigger,
     dispatcherProvider = DispatcherProvider(scope.coroutineContext, scope.coroutineContext, scope.coroutineContext),
   )
 

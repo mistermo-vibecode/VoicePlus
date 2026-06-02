@@ -18,6 +18,7 @@ data class BookPlayViewState(
   val cover: ImmutableFile?,
   val skipSilence: Boolean,
   val characterCount: Int,
+  val editChapterNamesVisible: Boolean,
 ) {
 
   sealed interface SleepTimerViewState {

@@ -15,7 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
-import voice.core.strings.R
+import voice.core.strings.R as StringsR
 
 @Composable
 internal fun OverflowMenu(
@@ -24,6 +24,7 @@ internal fun OverflowMenu(
   onVolumeBoostClick: () -> Unit,
   onListeningLogClick: () -> Unit,
   onCharacterListClick: () -> Unit,
+  onEditChapterNamesClick: (() -> Unit)? = null,
 ) {
   Box {
     var expanded by remember { mutableStateOf(false) }
@@ -34,7 +35,7 @@ internal fun OverflowMenu(
     ) {
       Icon(
         imageVector = Icons.Outlined.MoreVert,
-        contentDescription = stringResource(id = R.string.more),
+        contentDescription = stringResource(id = StringsR.string.more),
       )
     }
     DropdownMenu(
@@ -47,7 +48,7 @@ internal fun OverflowMenu(
           onSkipSilenceClick()
         },
         text = {
-          Text(text = stringResource(id = R.string.skip_silence))
+          Text(text = stringResource(id = StringsR.string.skip_silence))
         },
         trailingIcon = {
           Checkbox(
@@ -65,7 +66,7 @@ internal fun OverflowMenu(
           onVolumeBoostClick()
         },
         text = {
-          Text(text = stringResource(id = R.string.volume_boost))
+          Text(text = stringResource(id = StringsR.string.volume_boost))
         },
       )
       DropdownMenuItem(
@@ -74,7 +75,7 @@ internal fun OverflowMenu(
           onListeningLogClick()
         },
         text = {
-          Text(text = stringResource(id = R.string.listening_log))
+          Text(text = stringResource(id = StringsR.string.listening_log))
         },
       )
       DropdownMenuItem(
@@ -83,9 +84,18 @@ internal fun OverflowMenu(
           onCharacterListClick()
         },
         text = {
-          Text(text = stringResource(id = R.string.character_list))
+          Text(text = stringResource(id = StringsR.string.character_list))
         },
       )
+      onEditChapterNamesClick?.let { onClick ->
+        DropdownMenuItem(
+          text = { Text(stringResource(StringsR.string.edit_chapter_names)) },
+          onClick = {
+            expanded = false
+            onClick()
+          },
+        )
+      }
     }
   }
 }
