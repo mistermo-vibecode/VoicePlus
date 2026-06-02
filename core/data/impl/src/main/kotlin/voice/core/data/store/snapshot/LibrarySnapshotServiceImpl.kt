@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 @ContributesBinding(AppScope::class)
 public class LibrarySnapshotServiceImpl internal constructor(
   private val writer: SnapshotWriter,
+  private val restorer: BackupRestorer,
   private val scope: CoroutineScope,
 ) : LibrarySnapshotService {
 
@@ -16,9 +17,7 @@ public class LibrarySnapshotServiceImpl internal constructor(
     writer.start(scope)
   }
 
-  // Filled in Phase 1a-2 (read-time restore). Intentionally a no-op now so wiring it into
-  // App.onCreate() in 1a-2 is safe and tests are unaffected.
   override suspend fun restoreIfNeeded() {
-    // no-op until Phase 1a-2
+    restorer.restoreIfNeeded()
   }
 }

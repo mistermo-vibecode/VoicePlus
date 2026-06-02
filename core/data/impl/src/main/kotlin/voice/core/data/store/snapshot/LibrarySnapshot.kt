@@ -14,6 +14,7 @@ import java.util.UUID
 @Serializable
 internal data class LibrarySnapshot(
   val schemaVersion: Int,
+  val dbVersion: Int = 0,
   val sequence: Long,
   val savedAtEpochMillis: Long,
   val totalCount: Int,

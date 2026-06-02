@@ -4,6 +4,7 @@ import android.app.Application
 import dev.zacsweers.metro.HasMemberInjections
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.createGraphFactory
+import kotlinx.coroutines.runBlocking
 import voice.core.common.rootGraph
 import voice.core.data.store.snapshot.LibrarySnapshotService
 import voice.core.initializer.AppInitializer
@@ -25,6 +26,7 @@ open class App : Application() {
         graph.inject(this)
       }
 
+    runBlocking { librarySnapshotService.restoreIfNeeded() }
     librarySnapshotService.start()
 
     appInitializers.forEach {

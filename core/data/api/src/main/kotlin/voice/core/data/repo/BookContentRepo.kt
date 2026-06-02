@@ -15,6 +15,9 @@ public interface BookContentRepo {
   public suspend fun setAllInactiveExcept(ids: List<BookId>)
 
   public suspend fun put(content: BookContent)
+
+  /** Re-read the backing store into the in-memory cache (used after an out-of-band restore). */
+  public suspend fun invalidateCache()
 }
 
 public suspend inline fun BookContentRepo.getOrPut(

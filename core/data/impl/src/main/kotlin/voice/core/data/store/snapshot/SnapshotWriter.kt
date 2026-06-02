@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import voice.core.data.BookContent
 import voice.core.data.repo.BookContentRepo
+import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.dao.BookCharacterDao
 import voice.core.data.repo.internals.dao.BookmarkDao
 import voice.core.data.repo.internals.dao.ChapterNameOverrideDao
@@ -45,6 +46,7 @@ internal class SnapshotWriter(
       val excludedIds = excludedBooksStore.data.first()
       val snapshot = LibrarySnapshot(
         schemaVersion = LibrarySnapshot.SCHEMA_VERSION,
+        dbVersion = AppDb.VERSION,
         sequence = 0L, // assigned by the ring
         savedAtEpochMillis = System.currentTimeMillis(),
         totalCount = books.size,

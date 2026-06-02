@@ -77,4 +77,11 @@ public class BookContentRepoImpl(private val dao: BookContentDao) : BookContentR
       newContents
     }
   }
+
+  override suspend fun invalidateCache() {
+    cacheMutex.withLock {
+      cache.value = dao.all()
+      cacheFilled = true
+    }
+  }
 }
