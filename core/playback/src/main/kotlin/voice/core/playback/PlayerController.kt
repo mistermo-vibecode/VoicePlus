@@ -167,6 +167,8 @@ class PlayerController(
   }
 
   fun pauseWithRewind(rewind: Duration) = executeAfterPrepare { controller ->
+    // Must precede pause() so the recorder sees the sleep flag when onIsPlayingChanged fires.
+    controller.sendCustomCommand(CustomCommand.MarkNextPauseAsSleep)
     controller.pause()
     controller.seekTo((controller.currentPosition - rewind.inWholeMilliseconds).coerceAtLeast(0))
   }

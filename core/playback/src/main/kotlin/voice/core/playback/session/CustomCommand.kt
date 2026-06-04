@@ -22,6 +22,9 @@ internal sealed interface CustomCommand {
   @Serializable
   data class SetGain(val gain: Decibel) : CustomCommand
 
+  @Serializable
+  data object MarkNextPauseAsSleep : CustomCommand
+
   companion object {
 
     const val CUSTOM_COMMAND_ACTION = "voiceCommandAction"

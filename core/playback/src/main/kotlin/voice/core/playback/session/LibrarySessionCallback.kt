@@ -37,6 +37,7 @@ import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.MediaButtonDoubleClickHandlerStore
 import voice.core.data.store.MediaButtonTripleClickHandlerStore
 import voice.core.logging.api.Logger
+import voice.core.playback.history.PlaybackIntentHolder
 import voice.core.playback.player.VoicePlayer
 import voice.core.playback.session.search.BookSearchHandler
 import voice.core.playback.session.search.BookSearchParser
@@ -56,6 +57,7 @@ class LibrarySessionCallback(
   @MediaButtonTripleClickHandlerStore
   private val tripleClickHandlerStore: DataStore<MediaButtonClickAction>,
   private val bookmarkRepo: BookmarkRepo,
+  private val intentHolder: PlaybackIntentHolder,
 ) : MediaLibrarySession.Callback {
 
   private var mediaButtonClickCount = 0
@@ -229,6 +231,9 @@ class LibrarySessionCallback(
       }
       is CustomCommand.SetGain -> {
         player.setGain(command.gain)
+      }
+      CustomCommand.MarkNextPauseAsSleep -> {
+        intentHolder.stoppedBySleepTimer = true
       }
     }
 

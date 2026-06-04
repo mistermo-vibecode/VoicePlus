@@ -332,6 +332,8 @@ class VoicePlayer(
           sleepTimer.onChapterBoundaryReached()
           if (sleepTimer.state.value == SleepTimerState.Disabled) {
             player.seekTo(payload.chapterIndex, payload.positionMs)
+            // Direct write is safe: this handler runs on the media3 main looper, same process as the recorder.
+            intentHolder.stoppedBySleepTimer = true
             player.pause()
           }
         }
