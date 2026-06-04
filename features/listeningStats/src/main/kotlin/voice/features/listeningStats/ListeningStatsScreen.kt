@@ -1,4 +1,4 @@
-package voice.features.settings.stats
+package voice.features.listeningStats
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement

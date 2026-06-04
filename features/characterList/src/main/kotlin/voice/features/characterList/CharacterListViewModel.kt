@@ -1,4 +1,4 @@
-package voice.features.playbackScreen.characterlist
+package voice.features.characterList
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState

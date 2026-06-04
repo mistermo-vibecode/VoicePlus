@@ -1,4 +1,4 @@
-package voice.features.settings.backup
+package voice.features.backup
 
 import android.content.ActivityNotFoundException
 import android.net.Uri
@@ -29,9 +29,15 @@ import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
+import voice.core.data.store.snapshot.BackupStatus
+import voice.core.data.store.snapshot.BackupStatusKind
 import voice.core.logging.api.Logger
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import voice.core.strings.R as StringsR
 
 @ContributesTo(AppScope::class)
@@ -59,6 +65,7 @@ fun BackupScreen() {
     viewState = viewState,
     onClose = viewModel::onClose,
     onChooseFolder = viewModel::onFolderChosen,
+    onBackupNow = viewModel::backupNow,
     onRestoreNow = viewModel::restoreNow,
   )
 }
@@ -68,6 +75,7 @@ internal fun BackupScreen(
   viewState: BackupViewState,
   onClose: () -> Unit,
   onChooseFolder: (Uri) -> Unit,
+  onBackupNow: () -> Unit,
   onRestoreNow: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -95,19 +103,34 @@ internal fun BackupScreen(
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       ListItem(
-        headlineContent = { Text(stringResource(StringsR.string.backup_folder)) },
+        headlineContent = {
+          Text(
+            if (viewState.folder == null) {
+              stringResource(StringsR.string.backup_folder_none)
+            } else {
+              stringResource(StringsR.string.backup_enabled)
+            },
+          )
+        },
         supportingContent = {
-          Text(viewState.folder?.toString() ?: stringResource(StringsR.string.backup_folder_none))
+          viewState.folder?.let { Text(it.toString()) }
         },
       )
       ListItem(
         headlineContent = { Text(stringResource(StringsR.string.backup_last)) },
         supportingContent = {
-          Text(viewState.lastBackup?.toString() ?: stringResource(StringsR.string.backup_last_never))
+          Text(viewState.lastBackup?.formatBackupTime() ?: stringResource(StringsR.string.backup_last_never))
         },
       )
+      viewState.status?.let { status ->
+        Text(status.message())
+      }
+      if (viewState.busy) {
+        Text(stringResource(StringsR.string.backup_busy))
+      }
       OutlinedButton(
         modifier = Modifier.fillMaxWidth(),
+        enabled = !viewState.busy,
         onClick = {
           try {
             pickFolder.launch(null)
@@ -120,22 +143,67 @@ internal fun BackupScreen(
       }
       Button(
         modifier = Modifier.fillMaxWidth(),
-        enabled = viewState.folder != null,
+        enabled = viewState.folder != null && !viewState.busy,
+        onClick = onBackupNow,
+      ) {
+        Text(stringResource(StringsR.string.backup_now))
+      }
+      Button(
+        modifier = Modifier.fillMaxWidth(),
+        enabled = viewState.folder != null && !viewState.busy,
         onClick = onRestoreNow,
       ) {
         Text(stringResource(StringsR.string.backup_restore_now))
       }
-      val restore = viewState.lastRestore
-      if (restore != null) {
-        Text(stringResource(StringsR.string.backup_restore_result, restore.restoredCount))
-        if (restore.unmatched.isNotEmpty()) {
+      viewState.lastRestore?.let { restore ->
+        if (restore.refusedNewerBackup) {
+          Text(stringResource(StringsR.string.backup_restore_refused_newer))
+        } else if (restore.unmatched.isNotEmpty()) {
           Text(stringResource(StringsR.string.backup_restore_unmatched_title, restore.unmatched.size))
           Text(stringResource(StringsR.string.backup_restore_unmatched_hint))
-          restore.unmatched.take(10).forEach { info ->
-            Text("• ${info.folderName}")
+          restore.unmatched.take(5).forEach { info ->
+            Text("- ${info.folderName}: ${info.reason.restoreReasonLabel()}")
           }
         }
       }
     }
+  }
+}
+
+@Composable
+private fun BackupStatus.message(): String {
+  return when (kind) {
+    BackupStatusKind.NoBackupFound -> stringResource(StringsR.string.backup_status_no_backup_found)
+    BackupStatusKind.BackupFound -> stringResource(StringsR.string.backup_status_backup_found)
+    BackupStatusKind.BackupSaved -> stringResource(StringsR.string.backup_status_backup_saved)
+    BackupStatusKind.BackupUnreadable -> stringResource(StringsR.string.backup_status_backup_unreadable)
+    BackupStatusKind.BackupFailed -> stringResource(StringsR.string.backup_status_backup_failed)
+    BackupStatusKind.RestoreComplete -> stringResource(StringsR.string.backup_status_restore_complete, restoredCount)
+    BackupStatusKind.RestorePartial -> {
+      stringResource(StringsR.string.backup_status_restore_partial, restoredCount, unmatchedCount)
+    }
+    BackupStatusKind.RestoreNoMatch -> stringResource(StringsR.string.backup_status_restore_no_match, unmatchedCount)
+    BackupStatusKind.RefusedNewerBackup -> stringResource(StringsR.string.backup_restore_refused_newer)
+    BackupStatusKind.PermissionDenied -> stringResource(StringsR.string.backup_status_permission_denied)
+  }
+}
+
+private fun Instant.formatBackupTime(): String {
+  return DateTimeFormatter
+    .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+    .withZone(ZoneId.systemDefault())
+    .format(this)
+}
+
+@Composable
+private fun String.restoreReasonLabel(): String {
+  return when (this) {
+    "OPAQUE_PROVIDER" -> stringResource(StringsR.string.backup_reason_opaque_provider)
+    "SINGLE_FILE" -> stringResource(StringsR.string.backup_reason_single_file)
+    "NO_PATH_MATCH" -> stringResource(StringsR.string.backup_reason_no_path_match)
+    "AMBIGUOUS" -> stringResource(StringsR.string.backup_reason_ambiguous)
+    "CONTENT_CHANGED" -> stringResource(StringsR.string.backup_reason_content_changed)
+    "INVALID" -> stringResource(StringsR.string.backup_reason_invalid)
+    else -> this
   }
 }

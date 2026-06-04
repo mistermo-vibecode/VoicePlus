@@ -1,4 +1,4 @@
-package voice.features.playbackScreen.listeninglog
+package voice.features.listeningLog
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

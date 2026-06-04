@@ -1,4 +1,4 @@
-package voice.features.playbackScreen.listeninglog
+package voice.features.listeningLog
 
 import app.cash.molecule.RecompositionMode
 import app.cash.molecule.launchMolecule

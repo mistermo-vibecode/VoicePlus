@@ -33,7 +33,7 @@ android {
 
   defaultConfig {
     applicationId = "com.github.mistermo_vibecode.voiceplus"
-    versionName = "1.23"
+    versionName = "1.30"
     versionCode = 5404012
 
     testInstrumentationRunner = "voice.app.VoiceJUnitRunner"
@@ -143,6 +143,11 @@ dependencies {
   implementation(projects.core.search)
   implementation(projects.features.cover)
   implementation(projects.features.chapterEditor)
+  implementation(projects.features.backup)
+  implementation(projects.features.characterList)
+  implementation(projects.features.hiddenBooks)
+  implementation(projects.features.listeningLog)
+  implementation(projects.features.listeningStats)
   implementation(projects.core.documentfile)
   implementation(projects.features.onboarding)
   implementation(projects.features.bookmark)

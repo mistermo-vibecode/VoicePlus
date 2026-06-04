@@ -1,4 +1,4 @@
-package voice.features.playbackScreen.characterlist
+package voice.features.characterList
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable

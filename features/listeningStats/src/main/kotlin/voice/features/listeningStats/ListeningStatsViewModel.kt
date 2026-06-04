@@ -1,4 +1,4 @@
-package voice.features.settings.stats
+package voice.features.listeningStats
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState

@@ -1,4 +1,4 @@
-package voice.features.settings.hiddenbooks
+package voice.features.hiddenBooks
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState

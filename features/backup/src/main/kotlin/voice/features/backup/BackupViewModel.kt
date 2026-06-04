@@ -1,4 +1,4 @@
-package voice.features.settings.backup
+package voice.features.backup
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
@@ -9,6 +9,7 @@ import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import voice.core.data.store.snapshot.BackupRepository
+import voice.core.data.store.snapshot.BackupStatus
 import voice.core.data.store.snapshot.RestoreSummary
 import voice.navigation.Navigator
 import java.time.Instant
@@ -26,7 +27,15 @@ class BackupViewModel(
     val folder by remember { backupRepository.backupFolder }.collectAsState(initial = null)
     val lastBackup by remember { backupRepository.lastBackupAt }.collectAsState(initial = null)
     val lastRestore by remember { backupRepository.lastRestore }.collectAsState(initial = null)
-    return BackupViewState(folder = folder, lastBackup = lastBackup, lastRestore = lastRestore)
+    val status by remember { backupRepository.status }.collectAsState(initial = null)
+    val busy by remember { backupRepository.busy }.collectAsState(initial = false)
+    return BackupViewState(
+      folder = folder,
+      lastBackup = lastBackup,
+      lastRestore = lastRestore,
+      status = status,
+      busy = busy,
+    )
   }
 
   fun onFolderChosen(uri: Uri) {
@@ -35,6 +44,12 @@ class BackupViewModel(
 
   fun restoreNow() {
     scope.launch { backupRepository.importAndRestore() }
+  }
+
+  fun backupNow() {
+    scope.launch {
+      backupRepository.exportNow().let { }
+    }
   }
 
   fun onClose() {
@@ -46,4 +61,6 @@ data class BackupViewState(
   val folder: Uri?,
   val lastBackup: Instant?,
   val lastRestore: RestoreSummary?,
+  val status: BackupStatus?,
+  val busy: Boolean,
 )

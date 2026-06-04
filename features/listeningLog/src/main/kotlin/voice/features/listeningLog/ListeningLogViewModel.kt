@@ -1,4 +1,4 @@
-package voice.features.playbackScreen.listeninglog
+package voice.features.listeningLog
 
 import android.content.Context
 import androidx.compose.runtime.Composable
