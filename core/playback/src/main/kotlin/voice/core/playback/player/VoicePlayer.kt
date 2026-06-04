@@ -16,6 +16,7 @@ import kotlinx.coroutines.runBlocking
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
+import voice.core.data.ListeningEventType
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterRepo
 import voice.core.data.store.AutoRewindAmountStore
@@ -54,6 +55,8 @@ class VoicePlayer(
 ) : ForwardingPlayer(player) {
 
   fun forceSeekToNext() {
+    // Tag as a next-chapter (Next) seek so the recorder can label the resulting discontinuity.
+    intentHolder.pendingSeekIntent = ListeningEventType.Next
     scope.launch {
       val bookId = currentBookStoreId.data.first() ?: return@launch
       val book = repo.get(bookId) ?: return@launch
@@ -82,6 +85,8 @@ class VoicePlayer(
   }
 
   fun forceSeekToPrevious() {
+    // Tag as a previous-chapter (Previous) seek so the recorder can label the resulting discontinuity.
+    intentHolder.pendingSeekIntent = ListeningEventType.Previous
     scope.launch {
       val bookId = currentBookStoreId.data.first() ?: return@launch
       val book = repo.get(bookId) ?: return@launch
@@ -150,6 +155,8 @@ class VoicePlayer(
   }
 
   override fun seekBack() {
+    // Tag as a rewind (Back) seek so the recorder can label the resulting discontinuity.
+    intentHolder.pendingSeekIntent = ListeningEventType.Back
     sleepTimer.reset()
     scope.launch {
       val skipAmount = seekTimeStore.data.first().seconds
@@ -177,6 +184,8 @@ class VoicePlayer(
   }
 
   override fun seekForward() {
+    // Tag as a fast-forward (Forward) seek so the recorder can label the resulting discontinuity.
+    intentHolder.pendingSeekIntent = ListeningEventType.Forward
     sleepTimer.reset()
     scope.launch {
       val skipAmount = seekTimeStore.data.first().seconds

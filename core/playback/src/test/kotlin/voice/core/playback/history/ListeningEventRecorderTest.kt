@@ -1,5 +1,6 @@
 package voice.core.playback.history
 
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import io.kotest.matchers.collections.shouldHaveSize
@@ -14,6 +15,8 @@ import kotlinx.serialization.json.Json
 import org.junit.Test
 import voice.core.data.BookId
 import voice.core.data.ChapterId
+import voice.core.data.ListeningEvent
+import voice.core.data.ListeningEventType
 import voice.core.data.ListeningSession
 import voice.core.data.ListeningSessionEndReason
 import voice.core.data.repo.ListeningEventRepo
@@ -30,7 +33,10 @@ class ListeningEventRecorderTest {
   private val sessionRepo: ListeningSessionRepo = mockk {
     coEvery { addSession(any()) } answers { saved += firstArg<ListeningSession>() }
   }
-  private val eventRepo: ListeningEventRepo = mockk(relaxed = true)
+  private val events = mutableListOf<ListeningEvent>()
+  private val eventRepo: ListeningEventRepo = mockk {
+    coEvery { addEvent(any()) } answers { events += firstArg<ListeningEvent>() }
+  }
   private val holder = PlaybackIntentHolder()
 
   private val chapterMediaId =
@@ -146,5 +152,71 @@ class ListeningEventRecorderTest {
     saved shouldHaveSize 1
     saved.single().endPositionMs shouldBe 42_000L
     holder.pendingPauseEndPositionMs shouldBe null
+  }
+
+  private fun posInfo(positionMs: Long) = Player.PositionInfo(null, 0, null, null, 0, positionMs, positionMs, C.INDEX_UNSET, C.INDEX_UNSET)
+
+  @Test
+  fun `suppressed seek emits no event and resets flag`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    recorder.attachTo(mockPlayer { 0L })
+    holder.suppressNextSeek = true
+
+    recorder.onPositionDiscontinuity(posInfo(60_000), posInfo(55_000), Player.DISCONTINUITY_REASON_SEEK)
+
+    events shouldHaveSize 0
+    holder.suppressNextSeek shouldBe false
+  }
+
+  @Test
+  fun `tagged back seek emits back event and clears intent`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    recorder.attachTo(mockPlayer { 0L })
+    holder.pendingSeekIntent = ListeningEventType.Back
+
+    recorder.onPositionDiscontinuity(posInfo(30_000), posInfo(10_000), Player.DISCONTINUITY_REASON_SEEK)
+
+    events shouldHaveSize 1
+    val event = events.single()
+    event.type shouldBe ListeningEventType.Back.id
+    event.fromPositionMs shouldBe 30_000L
+    event.positionMs shouldBe 10_000L
+    event.bookId shouldBe bookId
+    event.chapterId shouldBe chapterId
+    holder.pendingSeekIntent shouldBe null
+  }
+
+  @Test
+  fun `untagged seek emits set position event`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    recorder.attachTo(mockPlayer { 0L })
+
+    recorder.onPositionDiscontinuity(posInfo(10_000), posInfo(120_000), Player.DISCONTINUITY_REASON_SEEK)
+
+    events shouldHaveSize 1
+    events.single().type shouldBe ListeningEventType.SetPosition.id
+  }
+
+  @Test
+  fun `auto transition emits auto advance event without intent`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    recorder.attachTo(mockPlayer { 0L })
+
+    recorder.onPositionDiscontinuity(posInfo(180_000), posInfo(0), Player.DISCONTINUITY_REASON_AUTO_TRANSITION)
+
+    events shouldHaveSize 1
+    events.single().type shouldBe ListeningEventType.AutoAdvance.id
+  }
+
+  @Test
+  fun `tagged forward seek emits forward event`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    recorder.attachTo(mockPlayer { 0L })
+    holder.pendingSeekIntent = ListeningEventType.Forward
+
+    recorder.onPositionDiscontinuity(posInfo(10_000), posInfo(40_000), Player.DISCONTINUITY_REASON_SEEK)
+
+    events shouldHaveSize 1
+    events.single().type shouldBe ListeningEventType.Forward.id
   }
 }

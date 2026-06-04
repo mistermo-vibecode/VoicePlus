@@ -7,6 +7,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import voice.core.data.BookId
 import voice.core.data.ChapterId
+import voice.core.data.ListeningEvent
+import voice.core.data.ListeningEventType
 import voice.core.data.ListeningSession
 import voice.core.data.ListeningSessionEndReason
 import voice.core.data.repo.ListeningEventRepo
@@ -20,7 +22,7 @@ import java.time.Instant
 @SingleIn(PlaybackScope::class)
 class ListeningEventRecorder(
   private val sessionRepo: ListeningSessionRepo,
-  private val eventRepo: ListeningEventRepo, // unused this task; wired now for the next task
+  private val eventRepo: ListeningEventRepo,
   private val holder: PlaybackIntentHolder,
   private val scope: CoroutineScope,
 ) : Player.Listener {
@@ -50,6 +52,40 @@ class ListeningEventRecorder(
     }
   }
 
+  override fun onPositionDiscontinuity(
+    oldPosition: Player.PositionInfo,
+    newPosition: Player.PositionInfo,
+    reason: Int,
+  ) {
+    if (holder.suppressNextSeek) {
+      // The pause auto-rewind seek, not a user action — swallow it.
+      holder.suppressNextSeek = false
+      return
+    }
+    val loc = currentLocation() ?: return
+
+    val intent = holder.pendingSeekIntent
+    val type = when {
+      reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION -> ListeningEventType.AutoAdvance
+      intent != null -> intent.also { holder.pendingSeekIntent = null }
+      reason == Player.DISCONTINUITY_REASON_SEEK -> ListeningEventType.SetPosition
+      else -> return
+    }
+
+    scope.launch {
+      eventRepo.addEvent(
+        ListeningEvent(
+          bookId = loc.bookId,
+          type = type.id,
+          chapterId = loc.chapterId,
+          positionMs = newPosition.positionMs,
+          fromPositionMs = oldPosition.positionMs,
+          at = clock(),
+        ),
+      )
+    }
+  }
+
   private fun open() {
     if (openSession != null) return
     val location = currentLocation() ?: return
@@ -68,8 +104,7 @@ class ListeningEventRecorder(
     val endedAt = clock()
     val durationMs = endedAt.toEpochMilli() - open.startedAt.toEpochMilli()
     if (durationMs < MIN_SESSION_MS) {
-      holder.pendingPauseEndPositionMs = null
-      holder.stoppedBySleepTimer = false
+      clearPauseFlags()
       return
     }
 
@@ -87,10 +122,14 @@ class ListeningEventRecorder(
       endReason = endReason.id,
     )
 
-    holder.pendingPauseEndPositionMs = null
-    holder.stoppedBySleepTimer = false
+    clearPauseFlags()
 
     scope.launch { sessionRepo.addSession(session) }
+  }
+
+  private fun clearPauseFlags() {
+    holder.pendingPauseEndPositionMs = null
+    holder.stoppedBySleepTimer = false
   }
 
   private fun currentLocation(): Location? {
