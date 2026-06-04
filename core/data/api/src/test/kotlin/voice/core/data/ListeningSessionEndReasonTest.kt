@@ -7,6 +7,7 @@ class ListeningSessionEndReasonTest {
 
   @Test
   fun `each entry has the expected stable id`() {
+    ListeningSessionEndReason.entries.size shouldBe 4
     ListeningSessionEndReason.Paused.id shouldBe 0
     ListeningSessionEndReason.Sleep.id shouldBe 1
     ListeningSessionEndReason.EndOfBook.id shouldBe 2
