@@ -23,4 +23,5 @@ public data class ListeningSession(
   val startPositionMs: Long,
   val endPositionMs: Long,
   val endChapterId: ChapterId? = null,
+  val endReason: Int? = null,
 )

@@ -9,6 +9,7 @@ import voice.core.data.BookContent
 import voice.core.data.Bookmark
 import voice.core.data.Chapter
 import voice.core.data.ChapterNameOverride
+import voice.core.data.ListeningEvent
 import voice.core.data.ListeningSession
 import voice.core.data.RecentBookSearch
 import voice.core.data.repo.internals.dao.BookCharacterDao
@@ -17,6 +18,7 @@ import voice.core.data.repo.internals.dao.BookSearchFts
 import voice.core.data.repo.internals.dao.BookmarkDao
 import voice.core.data.repo.internals.dao.ChapterDao
 import voice.core.data.repo.internals.dao.ChapterNameOverrideDao
+import voice.core.data.repo.internals.dao.ListeningEventDao
 import voice.core.data.repo.internals.dao.ListeningSessionDao
 import voice.core.data.repo.internals.dao.RecentBookSearchDao
 import voice.core.data.repo.internals.migrations.Migration56
@@ -29,6 +31,7 @@ import voice.core.data.repo.internals.migrations.Migration56
     BookSearchFts::class,
     RecentBookSearch::class,
     ListeningSession::class,
+    ListeningEvent::class,
     BookCharacter::class,
     ChapterNameOverride::class,
   ],
@@ -46,6 +49,7 @@ import voice.core.data.repo.internals.migrations.Migration56
     AutoMigration(from = 61, to = 62),
     AutoMigration(from = 62, to = 63),
     AutoMigration(from = 63, to = 64),
+    AutoMigration(from = 64, to = 65),
   ],
 )
 @TypeConverters(Converters::class)
@@ -55,13 +59,14 @@ public abstract class AppDb : RoomDatabase() {
   public abstract fun bookContentDao(): BookContentDao
   public abstract fun bookmarkDao(): BookmarkDao
   public abstract fun listeningSessionDao(): ListeningSessionDao
+  public abstract fun listeningEventDao(): ListeningEventDao
   public abstract fun bookCharacterDao(): BookCharacterDao
 
   public abstract fun recentBookSearchDao(): RecentBookSearchDao
   public abstract fun chapterNameOverrideDao(): ChapterNameOverrideDao
 
   internal companion object {
-    const val VERSION = 64
+    const val VERSION = 65
     const val DATABASE_NAME = "autoBookDB"
   }
 }
