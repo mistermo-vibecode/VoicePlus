@@ -14,11 +14,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +42,7 @@ import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +55,8 @@ import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
 import voice.core.data.BookId
+import voice.core.data.ListeningEventType
+import voice.core.data.ListeningSessionEndReason
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
 import voice.core.strings.R as StringsR
@@ -232,16 +242,17 @@ private fun EventCard(
               style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.Bold,
             )
+            EndReasonBadge(entry.endReason)
           }
-          is ListeningLogEntry.Skip -> {
+          is ListeningLogEntry.Transport -> {
             Icon(
-              imageVector = Icons.Default.FastForward,
+              imageVector = entry.type.icon(),
               contentDescription = null,
               modifier = Modifier.size(18.dp),
               tint = MaterialTheme.colorScheme.tertiary,
             )
             Text(
-              text = stringResource(StringsR.string.listening_log_event_skip),
+              text = stringResource(entry.type.labelRes()),
               style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.Bold,
             )
@@ -267,7 +278,7 @@ private fun EventCard(
         val timeLabel = when (entry) {
           is ListeningLogEntry.Play -> entry.timeLabel
           is ListeningLogEntry.Pause -> entry.timeLabel
-          is ListeningLogEntry.Skip -> ""
+          is ListeningLogEntry.Transport -> ""
         }
         Text(
           text = timeLabel,
@@ -289,4 +300,40 @@ private fun EventCard(
       }
     }
   }
+}
+
+@Composable
+private fun EndReasonBadge(endReason: ListeningSessionEndReason?) {
+  val labelRes = when (endReason) {
+    ListeningSessionEndReason.Sleep -> StringsR.string.listening_log_end_sleep
+    ListeningSessionEndReason.EndOfBook -> StringsR.string.listening_log_end_finished
+    // Paused and BookSwitch intentionally show no badge.
+    else -> return
+  }
+  AssistChip(
+    onClick = {},
+    enabled = false,
+    label = { Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall) },
+    colors = AssistChipDefaults.assistChipColors(
+      disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ),
+  )
+}
+
+private fun ListeningEventType.icon(): ImageVector = when (this) {
+  ListeningEventType.Back -> Icons.Default.Replay
+  ListeningEventType.Forward -> Icons.Default.FastForward
+  ListeningEventType.Next -> Icons.Default.SkipNext
+  ListeningEventType.Previous -> Icons.Default.SkipPrevious
+  ListeningEventType.SetPosition -> Icons.Default.MyLocation
+  ListeningEventType.AutoAdvance -> Icons.Default.AutoMode
+}
+
+private fun ListeningEventType.labelRes(): Int = when (this) {
+  ListeningEventType.Back -> StringsR.string.rewind
+  ListeningEventType.Forward -> StringsR.string.fast_forward
+  ListeningEventType.Next -> StringsR.string.listening_log_event_next
+  ListeningEventType.Previous -> StringsR.string.listening_log_event_previous
+  ListeningEventType.SetPosition -> StringsR.string.listening_log_event_seek
+  ListeningEventType.AutoAdvance -> StringsR.string.listening_log_event_auto_advance
 }

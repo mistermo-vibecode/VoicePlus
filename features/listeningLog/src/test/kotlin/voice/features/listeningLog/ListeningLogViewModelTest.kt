@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -23,10 +24,14 @@ import voice.core.data.BookId
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.ChapterNameOverride
+import voice.core.data.ListeningEvent
+import voice.core.data.ListeningEventType
 import voice.core.data.ListeningSession
+import voice.core.data.ListeningSessionEndReason
 import voice.core.data.MarkData
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterNameOverrideRepo
+import voice.core.data.repo.ListeningEventRepo
 import voice.core.data.repo.ListeningSessionRepo
 import java.time.Instant
 
@@ -79,24 +84,53 @@ class ListeningLogViewModelTest {
     )
   }
 
-  private fun session(): ListeningSession = ListeningSession(
-    id = 1L,
+  private fun session(
+    id: Long = 1L,
+    startedAt: Instant = Instant.EPOCH,
+    endedAt: Instant = Instant.EPOCH.plusSeconds(60),
+    startPositionMs: Long = 0L,
+    endPositionMs: Long = 0L,
+    endReason: Int? = null,
+  ): ListeningSession = ListeningSession(
+    id = id,
     bookId = bookId,
     chapterId = chapterId,
-    startedAt = Instant.EPOCH,
-    endedAt = Instant.EPOCH.plusSeconds(60),
-    durationMs = 60_000L,
-    startPositionMs = 0L,
-    endPositionMs = 0L,
+    startedAt = startedAt,
+    endedAt = endedAt,
+    durationMs = endedAt.toEpochMilli() - startedAt.toEpochMilli(),
+    startPositionMs = startPositionMs,
+    endPositionMs = endPositionMs,
     endChapterId = null,
+    endReason = endReason,
+  )
+
+  private fun event(
+    id: Long,
+    type: ListeningEventType,
+    at: Instant,
+    positionMs: Long = 0L,
+    fromPositionMs: Long? = null,
+  ): ListeningEvent = ListeningEvent(
+    id = id,
+    bookId = bookId,
+    type = type.id,
+    chapterId = chapterId,
+    positionMs = positionMs,
+    fromPositionMs = fromPositionMs,
+    at = at,
   )
 
   private fun viewModel(
     book: Book,
     overrides: List<ChapterNameOverride> = emptyList(),
+    sessions: List<ListeningSession> = listOf(session()),
+    events: List<ListeningEvent> = emptyList(),
   ): ListeningLogViewModel {
     val sessionRepo = mockk<ListeningSessionRepo>(relaxed = true) {
-      every { sessions(bookId) } returns MutableStateFlow(listOf(session()))
+      every { sessions(bookId) } returns MutableStateFlow(sessions)
+    }
+    val eventRepo = mockk<ListeningEventRepo>(relaxed = true) {
+      every { events(bookId) } returns MutableStateFlow(events)
     }
     val bookRepo = mockk<BookRepository>(relaxed = true) {
       every { flow(bookId) } returns MutableStateFlow(book)
@@ -106,6 +140,7 @@ class ListeningLogViewModelTest {
     }
     return ListeningLogViewModel(
       sessionRepo = sessionRepo,
+      eventRepo = eventRepo,
       bookRepo = bookRepo,
       chapterNameOverrideRepo = overrideRepo,
       playerController = mockk(relaxed = true),
@@ -145,5 +180,114 @@ class ListeningLogViewModelTest {
       val names = state.groups.flatMap { it.entries }.map { it.chapterName }
       assertTrue("expected all entries to be 'Finale' but was $names", names.all { it == "Finale" })
     }
+  }
+
+  @Test
+  fun `a back event shows as a transport entry in time order`() = runTest {
+    val vm = viewModel(
+      book(offset = 0),
+      events = listOf(event(id = 1L, type = ListeningEventType.Back, at = Instant.EPOCH.plusSeconds(30))),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      val entries = awaitEntries { it.any { e -> e is ListeningLogEntry.Transport } }
+      val transports = entries.filterIsInstance<ListeningLogEntry.Transport>()
+      assertEquals(1, transports.size)
+      assertEquals(ListeningEventType.Back, transports.single().type)
+      // Time-sorted DESC: Pause(@60s) > Back(@30s) > Play(@0s)
+      assertEquals(
+        listOf(
+          ListeningLogEntry.Pause::class,
+          ListeningLogEntry.Transport::class,
+          ListeningLogEntry.Play::class,
+        ),
+        entries.map { it::class },
+      )
+    }
+  }
+
+  @Test
+  fun `no fabricated skip from a position gap between sessions`() = runTest {
+    val first = session(id = 1L, startedAt = Instant.EPOCH, endedAt = Instant.EPOCH.plusSeconds(60))
+    // Second session starts far later in the book; the old code fabricated a "Skip" for the gap.
+    val second = session(
+      id = 2L,
+      startedAt = Instant.EPOCH.plusSeconds(120),
+      endedAt = Instant.EPOCH.plusSeconds(180),
+      startPositionMs = 600_000L,
+      endPositionMs = 600_000L,
+    )
+    val vm = viewModel(book(offset = 0), sessions = listOf(first, second))
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      val entries = awaitEntries { it.count { e -> e is ListeningLogEntry.Play } == 2 }
+      assertTrue("expected no Transport entries but was $entries", entries.none { it is ListeningLogEntry.Transport })
+    }
+  }
+
+  @Test
+  fun `adjacent back events coalesce within the window but not beyond it`() = runTest {
+    val close = viewModel(
+      book(offset = 0),
+      events = listOf(
+        event(id = 1L, type = ListeningEventType.Back, at = Instant.EPOCH.plusSeconds(10)),
+        event(id = 2L, type = ListeningEventType.Back, at = Instant.EPOCH.plusSeconds(11)),
+      ),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { close.viewState() }.test {
+      val entries = awaitEntries { it.any { e -> e is ListeningLogEntry.Transport } }
+      assertEquals(1, entries.count { it is ListeningLogEntry.Transport })
+    }
+
+    val far = viewModel(
+      book(offset = 0),
+      events = listOf(
+        event(id = 1L, type = ListeningEventType.Back, at = Instant.EPOCH.plusSeconds(10)),
+        event(id = 2L, type = ListeningEventType.Back, at = Instant.EPOCH.plusSeconds(15)),
+      ),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { far.viewState() }.test {
+      val entries = awaitEntries { it.count { e -> e is ListeningLogEntry.Transport } == 2 }
+      assertEquals(2, entries.count { it is ListeningLogEntry.Transport })
+    }
+  }
+
+  @Test
+  fun `an event with an unknown type is dropped and produces no Transport entry`() = runTest {
+    val unknownTypeEvent = ListeningEvent(
+      id = 99L,
+      bookId = bookId,
+      type = 99,
+      chapterId = chapterId,
+      positionMs = 0L,
+      fromPositionMs = null,
+      at = Instant.EPOCH.plusSeconds(30),
+    )
+    val vm = viewModel(book(offset = 0), events = listOf(unknownTypeEvent))
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      // Wait for a stable state that has the session's Play and Pause entries.
+      val entries = awaitEntries { it.count { e -> e is ListeningLogEntry.Play } == 1 }
+      assertTrue("expected no Transport entries but was $entries", entries.none { it is ListeningLogEntry.Transport })
+    }
+  }
+
+  @Test
+  fun `a session ended by the sleep timer carries the sleep end reason`() = runTest {
+    val vm = viewModel(
+      book(offset = 0),
+      sessions = listOf(session(endReason = ListeningSessionEndReason.Sleep.id)),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      val entries = awaitEntries { it.any { e -> e is ListeningLogEntry.Pause } }
+      val pause = entries.filterIsInstance<ListeningLogEntry.Pause>().single()
+      assertEquals(ListeningSessionEndReason.Sleep, pause.endReason)
+    }
+  }
+}
+
+private suspend fun app.cash.turbine.ReceiveTurbine<ListeningLogViewState>.awaitEntries(
+  predicate: (List<ListeningLogEntry>) -> Boolean,
+): List<ListeningLogEntry> {
+  while (true) {
+    val entries = awaitItem().groups.flatMap { it.entries }
+    if (predicate(entries)) return entries
   }
 }
