@@ -13,7 +13,6 @@ import io.kotest.matchers.MatcherResult
 import io.kotest.matchers.should
 import io.mockk.Runs
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -30,10 +29,10 @@ import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.ChapterMark
 import voice.core.data.MarkData
-import voice.core.data.repo.ListeningSessionRepo
 import voice.core.logging.api.LogWriter
 import voice.core.logging.api.Logger
 import voice.core.playback.MemoryDataStore
+import voice.core.playback.history.PlaybackIntentHolder
 import voice.core.playback.session.MediaId
 import voice.core.playback.session.MediaItemProvider
 import voice.core.playback.session.search.book
@@ -98,7 +97,6 @@ class VoicePlayerTest {
   )
   private val bookId = BookId(UUID.randomUUID().toString())
   private lateinit var currentBook: Book
-  private val listeningSessionRepo = mockk<ListeningSessionRepo>(relaxed = true)
   private val player = VoicePlayer(
     player = internalPlayer,
     repo = mockk {
@@ -119,7 +117,7 @@ class VoicePlayerTest {
     mediaItemProvider = mediaItemProvider,
     volumeGain = mockk(relaxed = true),
     sleepTimer = mockk(relaxed = true),
-    listeningSessionRepo = listeningSessionRepo,
+    intentHolder = PlaybackIntentHolder(),
   )
 
   @Test
@@ -326,41 +324,6 @@ class VoicePlayerTest {
     player.seekTo(1, 5_000)
     player.forceSeekToPrevious()
     player.shouldHavePosition(1, 0)
-  }
-
-  @Test
-  fun `flushListeningSessionNow persists the in-flight session`() = scope.runTest {
-    player.now = { Instant.ofEpochMilli(0) }
-    setMediaItems(
-      listOf(chapter(ChapterMark(startMs = 0, endMs = 30_000, name = null))),
-    )
-    player.prepare()
-    awaitReady()
-
-    player.play()
-    runCurrent()
-
-    player.now = { Instant.ofEpochMilli(5_000) }
-    player.flushListeningSessionNow()
-
-    coVerify(exactly = 1) {
-      listeningSessionRepo.addSession(
-        match { it.bookId == bookId && it.durationMs == 5_000L },
-      )
-    }
-  }
-
-  @Test
-  fun `flushListeningSessionNow is a no-op when no session is active`() = scope.runTest {
-    setMediaItems(
-      listOf(chapter(ChapterMark(startMs = 0, endMs = 30_000, name = null))),
-    )
-    player.prepare()
-    awaitReady()
-
-    player.flushListeningSessionNow()
-
-    coVerify(exactly = 0) { listeningSessionRepo.addSession(any()) }
   }
 
   private fun chapter(vararg marks: ChapterMark): Chapter {

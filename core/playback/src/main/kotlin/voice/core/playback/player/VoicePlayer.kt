@@ -16,15 +16,13 @@ import kotlinx.coroutines.runBlocking
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
-import voice.core.data.ChapterId
-import voice.core.data.ListeningSession
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterRepo
-import voice.core.data.repo.ListeningSessionRepo
 import voice.core.data.store.AutoRewindAmountStore
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.SeekTimeStore
 import voice.core.logging.api.Logger
+import voice.core.playback.history.PlaybackIntentHolder
 import voice.core.playback.misc.Decibel
 import voice.core.playback.misc.VolumeGain
 import voice.core.playback.session.MediaId
@@ -52,15 +50,8 @@ class VoicePlayer(
   private val chapterRepo: ChapterRepo,
   private val volumeGain: VolumeGain,
   private val sleepTimer: SleepTimer,
-  private val listeningSessionRepo: ListeningSessionRepo,
+  private val intentHolder: PlaybackIntentHolder,
 ) : ForwardingPlayer(player) {
-
-  private var sessionStartTime: Instant? = null
-  private var sessionStartPosition: Long = 0L
-  private var sessionStartChapterId: ChapterId? = null
-
-  // Test seam: overridden in tests so session-duration gating is deterministic.
-  internal var now: () -> Instant = { Instant.now() }
 
   fun forceSeekToNext() {
     scope.launch {
@@ -216,70 +207,20 @@ class VoicePlayer(
 
   override fun setPlayWhenReady(playWhenReady: Boolean) {
     Logger.d("setPlayWhenReady=$playWhenReady")
-
     if (playWhenReady) {
       updateLastPlayedAt()
-      sessionStartTime = now()
-      sessionStartPosition = player.currentPosition.takeUnless { it == C.TIME_UNSET } ?: 0L
-      sessionStartChapterId = currentChapterId()
     } else {
       val currentPosition = player.currentPosition.takeUnless { it == C.TIME_UNSET }?.milliseconds ?: ZERO
-      saveSessionIfActive(endPositionMs = currentPosition.inWholeMilliseconds)
+      // Stash the true end position before the auto-rewind seek moves it; the recorder reads this on pause.
+      intentHolder.pendingPauseEndPositionMs = currentPosition.inWholeMilliseconds
       if (currentPosition > ZERO) {
         val autoRewindAmount = runBlocking { autoRewindAmountStore.data.first().seconds }
-        seekTo(
-          (currentPosition - autoRewindAmount)
-            .coerceAtLeast(ZERO)
-            .inWholeMilliseconds,
-        )
+        // The imminent auto-rewind seek is internal bookkeeping, not a user action — tell the recorder to ignore it.
+        intentHolder.suppressNextSeek = true
+        seekTo((currentPosition - autoRewindAmount).coerceAtLeast(ZERO).inWholeMilliseconds)
       }
     }
     super.setPlayWhenReady(playWhenReady)
-  }
-
-  private fun currentChapterId(): ChapterId? {
-    val bookId = runBlocking { currentBookStoreId.data.first() } ?: return null
-    val book = runBlocking { repo.get(bookId) } ?: return null
-    return book.chapters.getOrNull(player.currentMediaItemIndex)?.id
-  }
-
-  // Builds and CLEARS the in-flight session synchronously; returns the row to persist,
-  // or null if there is no active session or it was too short to record.
-  private fun buildSessionIfActive(endPositionMs: Long): ListeningSession? {
-    val startTime = sessionStartTime ?: return null
-    val chapterId = sessionStartChapterId ?: return null
-    val endTime = now()
-    val duration = endTime.toEpochMilli() - startTime.toEpochMilli()
-    if (duration < MIN_SESSION_DURATION_MS) return null
-    sessionStartTime = null
-    val bookId = runBlocking { currentBookStoreId.data.first() } ?: return null
-    return ListeningSession(
-      bookId = bookId,
-      chapterId = chapterId,
-      startedAt = startTime,
-      endedAt = endTime,
-      durationMs = duration,
-      startPositionMs = sessionStartPosition,
-      endPositionMs = endPositionMs,
-      endChapterId = currentChapterId(),
-    )
-  }
-
-  private fun saveSessionIfActive(endPositionMs: Long) {
-    val session = buildSessionIfActive(endPositionMs) ?: return
-    scope.launch { listeningSessionRepo.addSession(session) }
-  }
-
-  /**
-   * Persists the in-flight listening session immediately, suspending until the write completes.
-   * For teardown paths (onDestroy / onTaskRemoved) where the player scope is about to be cancelled
-   * and a fire-and-forget save would be dropped. Idempotent: a second call after the session was
-   * already flushed returns without writing (buildSessionIfActive clears the start time).
-   */
-  suspend fun flushListeningSessionNow() {
-    val endPositionMs = player.currentPosition.takeUnless { it == C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
-    val session = buildSessionIfActive(endPositionMs) ?: return
-    listeningSessionRepo.addSession(session)
   }
 
   override fun pause() {
@@ -438,4 +379,3 @@ class VoicePlayer(
 }
 
 private const val THRESHOLD_FOR_BACK_SEEK_MS = 2000
-private const val MIN_SESSION_DURATION_MS = 3_000L

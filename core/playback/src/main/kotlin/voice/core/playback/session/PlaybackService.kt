@@ -10,6 +10,7 @@ import kotlinx.coroutines.runBlocking
 import voice.core.common.rootGraphAs
 import voice.core.logging.api.Logger
 import voice.core.playback.di.PlaybackGraph
+import voice.core.playback.history.ListeningEventRecorder
 import voice.core.playback.player.VoicePlayer
 import voice.core.playback.playstate.PositionUpdater
 
@@ -28,6 +29,9 @@ class PlaybackService : MediaLibraryService() {
   lateinit var positionUpdater: PositionUpdater
 
   @Inject
+  lateinit var listeningEventRecorder: ListeningEventRecorder
+
+  @Inject
   lateinit var voiceNotificationProvider: VoiceMediaNotificationProvider
 
   override fun onCreate() {
@@ -42,9 +46,9 @@ class PlaybackService : MediaLibraryService() {
   private fun release() {
     runBlocking {
       positionUpdater.flushPositionNow()
-      player.flushListeningSessionNow()
     }
     positionUpdater.release()
+    listeningEventRecorder.release()
     player.release()
     session.release()
     scope.cancel()
@@ -59,7 +63,6 @@ class PlaybackService : MediaLibraryService() {
     Logger.d("onTaskRemoved: persisting in-flight position and session")
     runBlocking {
       positionUpdater.flushPositionNow()
-      player.flushListeningSessionNow()
     }
     super.onTaskRemoved(rootIntent)
   }
