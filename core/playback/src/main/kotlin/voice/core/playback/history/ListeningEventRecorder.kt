@@ -97,15 +97,15 @@ class ListeningEventRecorder(
     )
   }
 
-  private fun close(defaultReason: ListeningSessionEndReason) {
-    val open = openSession ?: return
+  private fun buildClosedSession(defaultReason: ListeningSessionEndReason): ListeningSession? {
+    val open = openSession ?: return null
     openSession = null
 
     val endedAt = clock()
     val durationMs = endedAt.toEpochMilli() - open.startedAt.toEpochMilli()
     if (durationMs < MIN_SESSION_MS) {
       clearPauseFlags()
-      return
+      return null
     }
 
     val location = currentLocation()
@@ -124,7 +124,22 @@ class ListeningEventRecorder(
 
     clearPauseFlags()
 
+    return session
+  }
+
+  private fun close(defaultReason: ListeningSessionEndReason) {
+    val session = buildClosedSession(defaultReason) ?: return
     scope.launch { sessionRepo.addSession(session) }
+  }
+
+  /**
+   * Synchronously closes and persists the current open session, if any. Uses
+   * [ListeningSessionEndReason.Paused] as the fallback end reason; [ListeningSessionEndReason.Sleep]
+   * takes precedence if the sleep-timer flag is set. Idempotent after the first call.
+   */
+  suspend fun flushOpenSessionNow() {
+    val session = buildClosedSession(ListeningSessionEndReason.Paused) ?: return
+    sessionRepo.addSession(session)
   }
 
   private fun clearPauseFlags() {

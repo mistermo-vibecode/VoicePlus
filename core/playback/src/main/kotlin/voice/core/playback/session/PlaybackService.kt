@@ -34,6 +34,8 @@ class PlaybackService : MediaLibraryService() {
   @Inject
   lateinit var voiceNotificationProvider: VoiceMediaNotificationProvider
 
+  private var released = false
+
   override fun onCreate() {
     super.onCreate()
     rootGraphAs<PlaybackGraph.Provider>()
@@ -44,14 +46,24 @@ class PlaybackService : MediaLibraryService() {
   }
 
   private fun release() {
+    if (released) return
+    released = true
+    // Flush before releasing: both suspending writes need the scope alive.
     runBlocking {
       positionUpdater.flushPositionNow()
+      listeningEventRecorder.flushOpenSessionNow()
     }
     positionUpdater.release()
     listeningEventRecorder.release()
     player.release()
     session.release()
     scope.cancel()
+  }
+
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    // Don't call super: MediaSessionService.onTaskRemoved calls stopSelf(), which would stop
+    // the service even if another controller is still connected. release() does the full teardown.
+    release()
   }
 
   override fun onDestroy() {

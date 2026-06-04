@@ -154,6 +154,61 @@ class ListeningEventRecorderTest {
     holder.pendingPauseEndPositionMs shouldBe null
   }
 
+  @Test
+  fun `flushOpenSessionNow writes one paused session for the open session`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    recorder.attachTo(player)
+
+    val start = Instant.ofEpochMilli(1_000_000)
+    recorder.clock = { start }
+    position = 0L
+    recorder.onIsPlayingChanged(true)
+
+    recorder.clock = { start.plusMillis(60_000) }
+    position = 60_000L
+    recorder.flushOpenSessionNow()
+
+    saved shouldHaveSize 1
+    val session = saved.single()
+    session.endReason shouldBe ListeningSessionEndReason.Paused.id
+    session.startPositionMs shouldBe 0L
+    session.endPositionMs shouldBe 60_000L
+    session.chapterId shouldBe chapterId
+    session.endChapterId shouldBe chapterId
+    session.durationMs shouldBe 60_000L
+  }
+
+  @Test
+  fun `flushOpenSessionNow is idempotent`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    recorder.attachTo(player)
+
+    val start = Instant.ofEpochMilli(1_000_000)
+    recorder.clock = { start }
+    recorder.onIsPlayingChanged(true)
+
+    recorder.clock = { start.plusMillis(60_000) }
+    position = 60_000L
+    recorder.flushOpenSessionNow()
+    recorder.flushOpenSessionNow()
+
+    saved shouldHaveSize 1
+  }
+
+  @Test
+  fun `flushOpenSessionNow with no open session writes nothing`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    recorder.attachTo(mockPlayer { 0L })
+
+    recorder.flushOpenSessionNow()
+
+    saved shouldHaveSize 0
+  }
+
   private fun posInfo(positionMs: Long) = Player.PositionInfo(null, 0, null, null, 0, positionMs, positionMs, C.INDEX_UNSET, C.INDEX_UNSET)
 
   @Test
