@@ -1,0 +1,22 @@
+.md-typeset .grid.cards > :is(ul, ol) > li,
+.md-typeset .grid > .card {
+  border-radius: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.md-typeset .grid.cards > :is(ul, ol) > li:hover,
+.md-typeset .grid > .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.md-typeset .md-button {
+  margin: 0.25rem 0.25rem 0.25rem 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset .grid.cards > :is(ul, ol) > li,
+  .md-typeset .grid > .card {
+    transition: none;
+  }
+}
