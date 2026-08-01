@@ -28,6 +28,7 @@ import voice.core.data.BookId
 import voice.core.data.Bookmark
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
+import voice.core.data.ListeningEventType
 import voice.core.data.MarkData
 import voice.core.data.repo.BookCharacterRepo
 import voice.core.data.sleeptimer.SleepTimerPreference
@@ -226,7 +227,7 @@ class BookPlayViewModelTest {
 
   @Test
   fun onChapterClickSetsPositionAndDismissesDialog() = scope.runTest {
-    every { player.setPosition(any(), any()) } just Runs
+    every { player.setPosition(any(), any(), any()) } just Runs
 
     viewModel.onCurrentChapterClick()
     yield()
@@ -239,7 +240,7 @@ class BookPlayViewModelTest {
     // Verify player.setPosition was called with correct parameters
     // The second mark starts at 2 minutes position in the first chapter
     verify(exactly = 1) {
-      player.setPosition(time = 2.minutes.inWholeMilliseconds, id = book.chapters.first().id)
+      player.setPosition(time = 2.minutes.inWholeMilliseconds, id = book.chapters.first().id, tag = ListeningEventType.GoToChapter)
     }
 
     viewModel.dialogState.value shouldBe null

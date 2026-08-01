@@ -281,6 +281,73 @@ class ListeningLogViewModelTest {
       assertEquals(ListeningSessionEndReason.Sleep, pause.endReason)
     }
   }
+
+  @Test
+  fun `a play shortly after a sleep stop is marked resumed-after-sleep`() = runTest {
+    val sleepEnd = Instant.EPOCH.plusSeconds(60)
+    val vm = viewModel(
+      book(offset = 0),
+      sessions = listOf(
+        session(id = 1, endedAt = sleepEnd, endReason = ListeningSessionEndReason.Sleep.id),
+        // Half-asleep resume 5 minutes later.
+        session(id = 2, startedAt = sleepEnd.plusSeconds(300), endedAt = sleepEnd.plusSeconds(900)),
+      ),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      val entries = awaitEntries { it.count { e -> e is ListeningLogEntry.Play } == 2 }
+      val plays = entries.filterIsInstance<ListeningLogEntry.Play>()
+      assertEquals(true, plays.single { it.id == "s2-play" }.resumedAfterSleep)
+      assertEquals(false, plays.single { it.id == "s1-play" }.resumedAfterSleep)
+    }
+  }
+
+  @Test
+  fun `a play long after a sleep stop is not marked`() = runTest {
+    val sleepEnd = Instant.EPOCH.plusSeconds(60)
+    val vm = viewModel(
+      book(offset = 0),
+      sessions = listOf(
+        session(id = 1, endedAt = sleepEnd, endReason = ListeningSessionEndReason.Sleep.id),
+        // Next morning, two hours later: a fresh awake session.
+        session(id = 2, startedAt = sleepEnd.plusSeconds(7_200), endedAt = sleepEnd.plusSeconds(7_800)),
+      ),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      val entries = awaitEntries { it.count { e -> e is ListeningLogEntry.Play } == 2 }
+      assertTrue(entries.filterIsInstance<ListeningLogEntry.Play>().none { it.resumedAfterSleep })
+    }
+  }
+
+  @Test
+  fun `a play after a normal pause is not marked`() = runTest {
+    val pauseEnd = Instant.EPOCH.plusSeconds(60)
+    val vm = viewModel(
+      book(offset = 0),
+      sessions = listOf(
+        session(id = 1, endedAt = pauseEnd, endReason = ListeningSessionEndReason.Paused.id),
+        session(id = 2, startedAt = pauseEnd.plusSeconds(300), endedAt = pauseEnd.plusSeconds(900)),
+      ),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      val entries = awaitEntries { it.count { e -> e is ListeningLogEntry.Play } == 2 }
+      assertTrue(entries.filterIsInstance<ListeningLogEntry.Play>().none { it.resumedAfterSleep })
+    }
+  }
+
+  @Test
+  fun `a go-to-chapter event renders as its own transport entry`() = runTest {
+    val vm = viewModel(
+      book(offset = 0),
+      events = listOf(event(id = 1L, type = ListeningEventType.GoToChapter, at = Instant.EPOCH.plusSeconds(30))),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      val entries = awaitEntries { it.any { e -> e is ListeningLogEntry.Transport } }
+      assertEquals(
+        ListeningEventType.GoToChapter,
+        entries.filterIsInstance<ListeningLogEntry.Transport>().single().type,
+      )
+    }
+  }
 }
 
 private suspend fun app.cash.turbine.ReceiveTurbine<ListeningLogViewState>.awaitEntries(

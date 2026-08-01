@@ -20,6 +20,7 @@ import voice.core.common.MainScope
 import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
+import voice.core.data.ListeningEventType
 import voice.core.data.byMarkKey
 import voice.core.data.durationMs
 import voice.core.data.markForPosition
@@ -334,7 +335,7 @@ class BookPlayViewModel(
         chapter.chapterMarks.forEach { mark ->
           currentIndex++
           if (currentIndex == number - 1) {
-            player.setPosition(mark.startMs, chapter.id)
+            player.setPosition(mark.startMs, chapter.id, tag = ListeningEventType.GoToChapter)
             _dialogState.value = null
             return@launch
           }

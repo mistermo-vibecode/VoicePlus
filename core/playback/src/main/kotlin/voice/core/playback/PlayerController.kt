@@ -24,6 +24,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import voice.core.data.BookId
 import voice.core.data.ChapterId
+import voice.core.data.ListeningEventType
 import voice.core.data.repo.BookRepository
 import voice.core.data.store.CurrentBookStore
 import voice.core.logging.api.Logger
@@ -79,11 +80,16 @@ class PlayerController(
   fun setPosition(
     time: Long,
     id: ChapterId,
+    tag: ListeningEventType? = null,
   ) = executeAfterPrepare { controller ->
     val bookId = currentBookStoreId.data.first() ?: return@executeAfterPrepare
     val book = bookRepository.get(bookId) ?: return@executeAfterPrepare
     val index = book.chapters.indexOfFirst { it.id == id }
     if (index != -1) {
+      if (tag != null) {
+        // Must precede the seek so the recorder labels the discontinuity (same binder FIFO).
+        controller.sendCustomCommand(CustomCommand.TagNextSeek(tag.id))
+      }
       controller.seekTo(index, time)
     }
   }

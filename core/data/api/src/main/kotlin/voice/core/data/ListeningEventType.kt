@@ -7,6 +7,11 @@ public enum class ListeningEventType(public val id: Int) {
   Previous(3),
   SetPosition(4),
   AutoAdvance(5),
+
+  // A deliberate jump to a chosen destination: the chapter list, a bookmark, or a listening-log
+  // entry. Distinct from SetPosition (scrubber drag / raw seek) so the log can say what the user
+  // actually did instead of a generic "position set".
+  GoToChapter(6),
   ;
 
   public companion object {

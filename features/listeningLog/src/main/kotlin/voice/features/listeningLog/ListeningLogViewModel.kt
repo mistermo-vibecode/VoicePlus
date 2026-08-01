@@ -35,6 +35,9 @@ import java.util.concurrent.TimeUnit
 
 private const val COALESCE_WINDOW_MS = 2_000L
 
+// A play within this window after a sleep-timer stop is flagged "resumed after sleep".
+private const val RESUMED_AFTER_SLEEP_WINDOW_MS = 60L * 60 * 1000
+
 @AssistedInject
 class ListeningLogViewModel(
   private val sessionRepo: ListeningSessionRepo,
@@ -75,12 +78,26 @@ class ListeningLogViewModel(
     offset: Int,
     overrideMap: Map<Pair<String, Long>, String>,
   ): List<ListeningLogGroup> {
+    // A session that starts shortly after a sleep-timer stop was probably started half-asleep.
+    // Marking it lets the morning reader tell the awake stopping point (the Sleep-badged pause)
+    // from listening that happened while dozing.
+    val resumedAfterSleepIds = buildSet {
+      val byStart = sessions.sortedBy { it.startedAt }
+      byStart.forEachIndexed { index, session ->
+        if (index == 0) return@forEachIndexed
+        val previous = byStart[index - 1]
+        val gapMs = session.startedAt.toEpochMilli() - previous.endedAt.toEpochMilli()
+        if (previous.endReason == ListeningSessionEndReason.Sleep.id && gapMs in 0..RESUMED_AFTER_SLEEP_WINDOW_MS) {
+          add(session.id)
+        }
+      }
+    }
     val timed = buildList {
       sessions.forEach { session ->
         add(
           TimedEntry(
             timestamp = session.startedAt,
-            entry = Raw.Play(session),
+            entry = Raw.Play(session, resumedAfterSleep = session.id in resumedAfterSleepIds),
           ),
         )
         add(
@@ -176,6 +193,7 @@ class ListeningLogViewModel(
           remainingLabel = remainingLabel(totalDuration, session.startPositionMs),
           chapterId = session.chapterId,
           positionMs = session.startPositionMs,
+          resumedAfterSleep = raw.resumedAfterSleep,
         )
       }
       is Raw.Pause -> {
@@ -239,7 +257,7 @@ class ListeningLogViewModel(
   }
 
   fun onEntryClick(entry: ListeningLogEntry) {
-    playerController.setPosition(entry.positionMs, entry.chapterId)
+    playerController.setPosition(entry.positionMs, entry.chapterId, tag = ListeningEventType.GoToChapter)
     navigator.goBack()
   }
 
@@ -266,7 +284,11 @@ private data class TimedEntry(
 )
 
 private sealed interface Raw {
-  data class Play(val session: ListeningSession) : Raw
+  data class Play(
+    val session: ListeningSession,
+    val resumedAfterSleep: Boolean = false,
+  ) : Raw
+
   data class Pause(val session: ListeningSession) : Raw
   data class Transport(val event: ListeningEvent) : Raw
 }
@@ -297,6 +319,7 @@ sealed interface ListeningLogEntry {
     override val remainingLabel: String,
     override val chapterId: ChapterId,
     override val positionMs: Long,
+    val resumedAfterSleep: Boolean = false,
   ) : ListeningLogEntry
 
   data class Pause(

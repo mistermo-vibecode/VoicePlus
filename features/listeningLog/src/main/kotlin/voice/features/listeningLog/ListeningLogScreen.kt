@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FastForward
@@ -229,6 +230,21 @@ private fun EventCard(
               style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.Bold,
             )
+            if (entry.resumedAfterSleep) {
+              AssistChip(
+                onClick = {},
+                enabled = false,
+                label = {
+                  Text(
+                    stringResource(StringsR.string.listening_log_resumed_after_sleep),
+                    style = MaterialTheme.typography.labelSmall,
+                  )
+                },
+                colors = AssistChipDefaults.assistChipColors(
+                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            }
           }
           is ListeningLogEntry.Pause -> {
             Icon(
@@ -328,6 +344,7 @@ private fun ListeningEventType.icon(): ImageVector = when (this) {
   ListeningEventType.Previous -> Icons.Default.SkipPrevious
   ListeningEventType.SetPosition -> Icons.Default.MyLocation
   ListeningEventType.AutoAdvance -> Icons.Default.AutoMode
+  ListeningEventType.GoToChapter -> Icons.AutoMirrored.Filled.MenuBook
 }
 
 private fun ListeningEventType.labelRes(): Int = when (this) {
@@ -337,4 +354,5 @@ private fun ListeningEventType.labelRes(): Int = when (this) {
   ListeningEventType.Previous -> StringsR.string.listening_log_event_previous
   ListeningEventType.SetPosition -> StringsR.string.listening_log_event_seek
   ListeningEventType.AutoAdvance -> StringsR.string.listening_log_event_auto_advance
+  ListeningEventType.GoToChapter -> StringsR.string.listening_log_event_go_to_chapter
 }
