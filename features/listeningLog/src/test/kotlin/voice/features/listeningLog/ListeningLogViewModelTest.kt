@@ -335,6 +335,34 @@ class ListeningLogViewModelTest {
   }
 
   @Test
+  fun `position labels are relative to the chapter mark, not the file`() = runTest {
+    // Single file with two marks: "Chapter 5" [0..60s), "Chapter 6" [60s..120s].
+    val chapter = Chapter(
+      id = chapterId,
+      name = "File",
+      duration = 120_000L,
+      fileLastModified = Instant.EPOCH,
+      markData = listOf(MarkData(startMs = 0L, name = "Chapter 5"), MarkData(startMs = 60_000L, name = "Chapter 6")),
+    )
+    val twoMarkBook = book(offset = 0).let {
+      it.copy(content = it.content, chapters = listOf(chapter))
+    }
+    val vm = viewModel(
+      twoMarkBook,
+      // Session ends 75s into the file = 15s into Chapter 6.
+      sessions = listOf(session(endPositionMs = 75_000L)),
+    )
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      val entries = awaitEntries { it.any { e -> e is ListeningLogEntry.Pause } }
+      val pause = entries.filterIsInstance<ListeningLogEntry.Pause>().single()
+      assertEquals("Chapter 6", pause.chapterName)
+      assertEquals("0:15", pause.positionLabel)
+      // The raw file position is preserved for tap-to-jump.
+      assertEquals(75_000L, pause.positionMs)
+    }
+  }
+
+  @Test
   fun `a go-to-chapter event renders as its own transport entry`() = runTest {
     val vm = viewModel(
       book(offset = 0),

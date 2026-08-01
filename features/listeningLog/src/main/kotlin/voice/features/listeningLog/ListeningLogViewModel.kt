@@ -19,6 +19,7 @@ import voice.core.data.ListeningEventType
 import voice.core.data.ListeningSession
 import voice.core.data.ListeningSessionEndReason
 import voice.core.data.byMarkKey
+import voice.core.data.durationMs
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.repo.ListeningEventRepo
@@ -185,11 +186,12 @@ class ListeningLogViewModel(
     return when (val raw = entry) {
       is Raw.Play -> {
         val session = raw.session
+        val location = book.resolveLocation(session.chapterId, session.startPositionMs, offset, overrideMap)
         ListeningLogEntry.Play(
           id = "s${session.id}-play",
           timeLabel = timestamp.atZone(ZoneId.systemDefault()).format(timeFormatter),
-          chapterName = book.chapterName(session.chapterId, session.startPositionMs, offset, overrideMap),
-          positionLabel = formatTime(session.startPositionMs),
+          chapterName = location.chapterName,
+          positionLabel = location.positionLabel,
           remainingLabel = remainingLabel(totalDuration, session.startPositionMs),
           chapterId = session.chapterId,
           positionMs = session.startPositionMs,
@@ -199,12 +201,13 @@ class ListeningLogViewModel(
       is Raw.Pause -> {
         val session = raw.session
         val endChapterId = session.endChapterId ?: session.chapterId
+        val location = book.resolveLocation(endChapterId, session.endPositionMs, offset, overrideMap)
         ListeningLogEntry.Pause(
           id = "s${session.id}-pause",
           timeLabel = timestamp.atZone(ZoneId.systemDefault()).format(timeFormatter),
           endReason = ListeningSessionEndReason.fromId(session.endReason),
-          chapterName = book.chapterName(endChapterId, session.endPositionMs, offset, overrideMap),
-          positionLabel = formatTime(session.endPositionMs),
+          chapterName = location.chapterName,
+          positionLabel = location.positionLabel,
           remainingLabel = remainingLabel(totalDuration, session.endPositionMs),
           chapterId = endChapterId,
           positionMs = session.endPositionMs,
@@ -212,12 +215,13 @@ class ListeningLogViewModel(
       }
       is Raw.Transport -> {
         val event = raw.event
+        val location = book.resolveLocation(event.chapterId, event.positionMs, offset, overrideMap)
         ListeningLogEntry.Transport(
           id = "e${event.id}",
           type = checkNotNull(ListeningEventType.fromId(event.type)),
           fromPositionMs = event.fromPositionMs,
-          chapterName = book.chapterName(event.chapterId, event.positionMs, offset, overrideMap),
-          positionLabel = formatTime(event.positionMs),
+          chapterName = location.chapterName,
+          positionLabel = location.positionLabel,
           remainingLabel = remainingLabel(totalDuration, event.positionMs),
           chapterId = event.chapterId,
           positionMs = event.positionMs,
@@ -226,24 +230,35 @@ class ListeningLogViewModel(
     }
   }
 
-  private fun Book?.chapterName(
+  private data class ResolvedLocation(
+    val chapterName: String,
+    val positionLabel: String,
+  )
+
+  private fun Book?.resolveLocation(
     id: ChapterId,
     positionMs: Long,
     offset: Int,
     overrideMap: Map<Pair<String, Long>, String>,
-  ): String {
-    if (this == null) return context.getString(R.string.unknown_chapter)
+  ): ResolvedLocation {
+    val unknown = context.getString(R.string.unknown_chapter)
+    if (this == null) return ResolvedLocation(unknown, formatTime(positionMs))
     val index = chapters.indexOfFirst { it.id == id }
-    if (index == -1) return context.getString(R.string.unknown_chapter)
+    if (index == -1) return ResolvedLocation(unknown, formatTime(positionMs))
     val chapter = chapters[index]
     val mark = chapter.chapterMarks.firstOrNull { positionMs in it.startMs..it.endMs }
       ?: chapter.chapterMarks.lastOrNull { positionMs >= it.startMs }
     val override = mark?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
     // Mirror the other surfaces' fallback: prefer the chapter's own name, then a localized
     // "Unknown chapter" — rather than a synthetic, mis-numbered "Chapter N".
-    return resolveChapterName(mark?.name ?: "", offset, override)
+    val name = resolveChapterName(mark?.name ?: "", offset, override)
       .ifBlank { chapter.name.orEmpty() }
-      .ifBlank { context.getString(R.string.unknown_chapter) }
+      .ifBlank { unknown }
+    // Position INTO the displayed chapter mark, matching the player screen — for single-file
+    // books the raw file position ("7:42:15") says nothing about where in the chapter you are.
+    val positionInChapter = mark?.let { (positionMs - it.startMs).coerceAtLeast(0L) } ?: positionMs
+    val chapterDuration = mark?.durationMs ?: chapter.duration
+    return ResolvedLocation(name, formatTime(positionInChapter, chapterDuration))
   }
 
   private fun remainingLabel(
