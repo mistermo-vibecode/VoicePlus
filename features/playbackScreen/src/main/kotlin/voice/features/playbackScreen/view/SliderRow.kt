@@ -1,5 +1,6 @@
 package voice.features.playbackScreen.view
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import voice.core.ui.formatTime
@@ -59,12 +61,24 @@ internal fun SliderRow(
       dragging -> localValue
       else -> heldAfterSeek ?: liveFraction
     }
-    Text(
-      text = formatTime(
-        timeMs = (duration * displayedFraction.toDouble()).inWholeMilliseconds,
-        durationMs = duration.inWholeMilliseconds,
-      ),
-    )
+    // The label lives in the same Row as the slider, so its width sets the track's width. Pin it
+    // to the widest string it can show (the full duration) via an invisible template — otherwise
+    // every digit change mid-drag resizes the track and the thumb hops under a steady finger.
+    Box(contentAlignment = Alignment.CenterEnd) {
+      Text(
+        text = formatTime(
+          timeMs = duration.inWholeMilliseconds,
+          durationMs = duration.inWholeMilliseconds,
+        ),
+        modifier = Modifier.alpha(0F),
+      )
+      Text(
+        text = formatTime(
+          timeMs = (duration * displayedFraction.toDouble()).inWholeMilliseconds,
+          durationMs = duration.inWholeMilliseconds,
+        ),
+      )
+    }
     Slider(
       modifier = Modifier
         .weight(1F)
