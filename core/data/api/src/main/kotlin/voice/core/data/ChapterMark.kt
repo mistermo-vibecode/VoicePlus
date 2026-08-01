@@ -35,5 +35,9 @@ public val ChapterMark.durationMs: Long get() = (endMs - startMs).coerceAtLeast(
 public fun Chapter.markForPosition(positionInChapterMs: Long): ChapterMark {
   return chapterMarks.find { positionInChapterMs in it.startMs..it.endMs }
     ?: chapterMarks.firstOrNull { positionInChapterMs == it.endMs }
+    // Past the last mark's end (e.g. a session that ran to the very end of the file): the last
+    // mark at-or-before the position, not the first — every surface (player, bookmarks, log)
+    // should attribute such a position to the chapter it is actually in.
+    ?: chapterMarks.lastOrNull { positionInChapterMs >= it.startMs }
     ?: chapterMarks.first()
 }

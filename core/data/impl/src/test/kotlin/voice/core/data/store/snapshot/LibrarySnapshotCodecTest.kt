@@ -61,7 +61,7 @@ class LibrarySnapshotCodecTest {
   }
 
   @Test
-  fun `v3 LibrarySnapshot round-trips endReason, events, hidden books, settings and folders`() {
+  fun `v3 LibrarySnapshot round-trips endReason, events, hidden books and settings`() {
     val snap = LibrarySnapshot(
       schemaVersion = LibrarySnapshot.SCHEMA_VERSION, sequence = 7, savedAtEpochMillis = 1,
       totalCount = 1, activeCount = 1,
@@ -82,7 +82,6 @@ class LibrarySnapshotCodecTest {
       ),
       hiddenBooks = setOf("b-hidden"),
       settings = mapOf("darkTheme" to "true"),
-      folders = listOf(FolderDto(uri = "content://tree/primary%3ABooks", type = "Root")),
     )
     val text = json.encodeToString(LibrarySnapshot.serializer(), snap)
     val decoded = json.decodeFromString(LibrarySnapshot.serializer(), text)

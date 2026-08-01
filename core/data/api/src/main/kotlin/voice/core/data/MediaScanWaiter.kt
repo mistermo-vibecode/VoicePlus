@@ -8,8 +8,6 @@ package voice.core.data
  */
 public interface MediaScanWaiter {
 
-  public suspend fun scanAndAwait(
-    restartIfScanning: Boolean = true,
-    forceReParse: Boolean = false,
-  )
+  /** Always scans with `restartIfScanning = true`: a restore's scan must never be collapsed into an in-flight scan. */
+  public suspend fun scanAndAwait()
 }

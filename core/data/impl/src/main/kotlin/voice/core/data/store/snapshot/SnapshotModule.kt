@@ -21,44 +21,26 @@ public interface SnapshotModule {
     encodeDefaults = true
   }
 
+  // The ring owns its slot count and filenames; consumers inject the ring, never a slot.
+  // Filenames must stay "librarySnapshot0/1/2" to preserve existing on-disk data.
   @Provides
   @SingleIn(AppScope::class)
-  @SnapshotSlot0Store
-  private fun snapshotSlot0(
+  private fun snapshotRing(
     @SnapshotJson json: Json,
     context: Application,
-  ): DataStore<LibrarySnapshot?> = VoiceDataStoreFactory(json, context).create(
-    serializer = LibrarySnapshot.serializer().nullable,
-    replaceCorruptedWithDefault = true,
-    defaultValue = null,
-    fileName = "librarySnapshot0",
-  )
-
-  @Provides
-  @SingleIn(AppScope::class)
-  @SnapshotSlot1Store
-  private fun snapshotSlot1(
-    @SnapshotJson json: Json,
-    context: Application,
-  ): DataStore<LibrarySnapshot?> = VoiceDataStoreFactory(json, context).create(
-    serializer = LibrarySnapshot.serializer().nullable,
-    replaceCorruptedWithDefault = true,
-    defaultValue = null,
-    fileName = "librarySnapshot1",
-  )
-
-  @Provides
-  @SingleIn(AppScope::class)
-  @SnapshotSlot2Store
-  private fun snapshotSlot2(
-    @SnapshotJson json: Json,
-    context: Application,
-  ): DataStore<LibrarySnapshot?> = VoiceDataStoreFactory(json, context).create(
-    serializer = LibrarySnapshot.serializer().nullable,
-    replaceCorruptedWithDefault = true,
-    defaultValue = null,
-    fileName = "librarySnapshot2",
-  )
+  ): SnapshotRing {
+    val factory = VoiceDataStoreFactory(json, context)
+    return SnapshotRing(
+      (0..2).map { slot ->
+        factory.create(
+          serializer = LibrarySnapshot.serializer().nullable,
+          replaceCorruptedWithDefault = true,
+          defaultValue = null,
+          fileName = "librarySnapshot$slot",
+        )
+      },
+    )
+  }
 
   @Provides
   @SingleIn(AppScope::class)

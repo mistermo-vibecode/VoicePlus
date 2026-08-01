@@ -44,10 +44,12 @@ internal fun SliderRow(
 
     val liveFraction = (playedTime / duration).toFloat().coerceIn(0F, 1F)
     heldAfterSeek?.let { held ->
-      // Release the hold as soon as the reported position lands near the chosen target.
+      // Release the hold as soon as the reported position lands near the chosen target. Done in an
+      // effect, not the composition body — writing state that this pass already read is the classic
+      // backwards write and forces a guaranteed extra recomposition frame.
       val caughtUp = abs(liveFraction - held) * duration.inWholeMilliseconds <= CATCH_UP_TOLERANCE_MS
-      if (caughtUp) {
-        heldAfterSeek = null
+      LaunchedEffect(caughtUp) {
+        if (caughtUp) heldAfterSeek = null
       }
       // Hard deadline keyed on the hold itself (not the ticking position), so a seek that never
       // reflects back — book switched mid-hold, seek rejected — can't freeze the thumb.

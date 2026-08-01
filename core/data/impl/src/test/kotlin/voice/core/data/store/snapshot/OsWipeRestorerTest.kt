@@ -45,10 +45,7 @@ class OsWipeRestorerTest {
   // Fake scan: invoking scanAndAwait runs [onScan], which inserts the freshly-scanned (new-URI) library.
   private var onScan: suspend () -> Unit = {}
   private val scanWaiter = object : MediaScanWaiter {
-    override suspend fun scanAndAwait(
-      restartIfScanning: Boolean,
-      forceReParse: Boolean,
-    ) = onScan()
+    override suspend fun scanAndAwait() = onScan()
   }
 
   @Before

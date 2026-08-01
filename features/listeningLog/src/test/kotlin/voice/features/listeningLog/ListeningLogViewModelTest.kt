@@ -145,7 +145,9 @@ class ListeningLogViewModelTest {
       chapterNameOverrideRepo = overrideRepo,
       playerController = mockk(relaxed = true),
       navigator = mockk(relaxed = true),
-      context = mockk(relaxed = true),
+      // A real (Robolectric) context: the VM now reads DateFormat.is24HourFormat and string
+      // resources at construction, which a relaxed mock cannot serve.
+      context = androidx.test.core.app.ApplicationProvider.getApplicationContext(),
       bookId = bookId,
     )
   }

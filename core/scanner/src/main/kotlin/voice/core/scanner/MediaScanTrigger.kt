@@ -104,14 +104,11 @@ internal constructor(
   /**
    * Starts a scan and suspends until it (and its active-book reconcile inside [MediaScanner.scan]) has
    * finished. Joins the EXACT job it started (not the shared [scanningJob] field, which a concurrent scan
-   * could overwrite) — and never observes the racy [scannerActive] flag. Defaults to `restartIfScanning =
-   * true` so a restore's scan is not collapsed into an in-flight App-start / overview scan by the
-   * re-entrancy guard.
+   * could overwrite) — and never observes the racy [scannerActive] flag. Always scans with
+   * `restartIfScanning = true` so a restore's scan is not collapsed into an in-flight App-start /
+   * overview scan by the re-entrancy guard — a guarantee of the interface, not a caller choice.
    */
-  override suspend fun scanAndAwait(
-    restartIfScanning: Boolean,
-    forceReParse: Boolean,
-  ) {
-    scanInternal(restartIfScanning = restartIfScanning, forceReParse = forceReParse).join()
+  override suspend fun scanAndAwait() {
+    scanInternal(restartIfScanning = true, forceReParse = false).join()
   }
 }

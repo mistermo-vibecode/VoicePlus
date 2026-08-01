@@ -26,7 +26,6 @@ import voice.core.data.store.ExcludedBooksStore
 import voice.core.data.store.snapshot.identity.DeviceRelativePath
 import voice.core.data.store.snapshot.identity.IdentityStampBuilder
 import voice.core.data.store.snapshot.rekey.BookIdentityStamp
-import voice.core.data.store.snapshot.rekey.ChildEntry
 import voice.core.data.store.snapshot.rekey.ReKeyResult
 import voice.core.data.store.snapshot.rekey.RestoreReKeyer
 import voice.core.data.store.snapshot.rekey.ScannedBook
@@ -79,7 +78,7 @@ internal class OsWipeRestorer(
   private suspend fun doRestore(snapshot: LibrarySnapshot): ReKeyResult = restoreGate.withRestoreActive {
     // 1. Make the freshly-scanned, new-URI books exist AND the scan's setAllInactiveExcept reconcile complete
     // before we read them. scanAndAwait joins the actual scan job (not the racy scannerActive flag).
-    scanWaiter.scanAndAwait(restartIfScanning = true)
+    scanWaiter.scanAndAwait()
 
     // 2. Scanned side: build a stamp + chapter anchors for each freshly-scanned active book.
     val liveBooks = bookContentDao.all()
@@ -210,11 +209,11 @@ internal class OsWipeRestorer(
     bookRelPath: String,
   ): BookIdentityStamp {
     val children = chapters
-      .map { ChildEntry(relName = DeviceRelativePath.relName(it.id.toUri(), bookRelPath), size = 0L) }
-      .sortedBy { it.relName }
+      .map { DeviceRelativePath.relName(it.id.toUri(), bookRelPath) }
+      .sorted()
     return BookIdentityStamp(
       authority = DeviceRelativePath.authority(dto.id.toUri()),
-      isSingleFile = children.size == 1 && children.single().relName.isEmpty(),
+      isSingleFile = children.size == 1 && children.single().isEmpty(),
       relPath = bookRelPath,
       folderName = bookRelPath.substringAfterLast('/'),
       children = children,

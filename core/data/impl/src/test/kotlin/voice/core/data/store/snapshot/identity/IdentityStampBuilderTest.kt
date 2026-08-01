@@ -51,8 +51,7 @@ class IdentityStampBuilderTest {
     stamp.isSingleFile shouldBe false
     stamp.relPath shouldBe "primary:Books/Dune"
     stamp.folderName shouldBe "Dune"
-    stamp.children.map { it.relName } shouldBe listOf("01.mp3", "Disc2/02.mp3")
-    stamp.children.map { it.size } shouldBe listOf(0L, 0L)
+    stamp.children shouldBe listOf("01.mp3", "Disc2/02.mp3")
   }
 
   @Test
@@ -63,6 +62,6 @@ class IdentityStampBuilderTest {
     )
     stamp.isSingleFile shouldBe true
     stamp.relPath shouldBe "primary:Books/book.m4b"
-    stamp.children.single().relName shouldBe ""
+    stamp.children.single() shouldBe ""
   }
 }

@@ -25,8 +25,6 @@ import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -177,7 +175,7 @@ internal fun ListeningLogScreen(
     AlertDialog(
       onDismissRequest = { showClearDialog = false },
       title = { Text(stringResource(StringsR.string.listening_log_clear_history)) },
-      text = { Text(stringResource(StringsR.string.dialog_confirm)) },
+      text = { Text(stringResource(StringsR.string.listening_log_clear_confirm_message)) },
       confirmButton = {
         TextButton(onClick = {
           showClearDialog = false
@@ -231,19 +229,7 @@ private fun EventCard(
               fontWeight = FontWeight.Bold,
             )
             if (entry.resumedAfterSleep) {
-              AssistChip(
-                onClick = {},
-                enabled = false,
-                label = {
-                  Text(
-                    stringResource(StringsR.string.listening_log_resumed_after_sleep),
-                    style = MaterialTheme.typography.labelSmall,
-                  )
-                },
-                colors = AssistChipDefaults.assistChipColors(
-                  disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-              )
+              LogBadge(stringResource(StringsR.string.listening_log_resumed_after_sleep))
             }
           }
           is ListeningLogEntry.Pause -> {
@@ -327,14 +313,25 @@ private fun EndReasonBadge(endReason: ListeningSessionEndReason?) {
     // Paused and BookSwitch intentionally show no badge.
     else -> return
   }
-  AssistChip(
-    onClick = {},
-    enabled = false,
-    label = { Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall) },
-    colors = AssistChipDefaults.assistChipColors(
-      disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    ),
-  )
+  LogBadge(stringResource(labelRes))
+}
+
+// A plain non-interactive status badge. NOT a disabled AssistChip: chips keep their button
+// semantics when disabled (TalkBack announces a disabled control) and render at disabled alpha —
+// the wrong tool for pure status text.
+@Composable
+private fun LogBadge(text: String) {
+  Surface(
+    shape = MaterialTheme.shapes.small,
+    color = MaterialTheme.colorScheme.surfaceVariant,
+  ) {
+    Text(
+      text = text,
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+    )
+  }
 }
 
 private fun ListeningEventType.icon(): ImageVector = when (this) {

@@ -37,9 +37,6 @@ internal data class LibrarySnapshot(
   val hiddenBooks: Set<String> = emptySet(),
   // App settings worth carrying across a wipe, each JSON-encoded by SettingsSnapshotter.
   val settings: Map<String, String> = emptyMap(),
-  // The configured audiobook folders. Display-only on restore: SAF grants cannot be re-created
-  // programmatically, but the names tell the user which folders to re-grant.
-  val folders: List<FolderDto> = emptyList(),
 ) {
   fun activeIds(): Set<String> = books.filter { it.isActive }.map { it.id }.toSet()
 
@@ -48,7 +45,7 @@ internal data class LibrarySnapshot(
     // schemaVersion is <= this (older bundles decode via default-valued fields); a bundle from a NEWER
     // schema is refused rather than silently truncated. v2 added: listening sessions, chapters2 rows,
     // chapter relNames, character notes on the OS-wipe path. v3 added: session endReason, listening
-    // events, hidden books, settings, folder names — and dropped the stored per-book identity stamp
+    // events, hidden books, settings — and dropped the stored per-book identity stamp
     // (it is derived from the URIs already in the bundle; old bundles' `identity` keys are ignored).
     const val SCHEMA_VERSION = 3
   }
@@ -129,12 +126,6 @@ internal data class ListeningEventDto(
   val positionMs: Long,
   val fromPositionMs: Long? = null,
   val atEpochMillis: Long,
-)
-
-@Serializable
-internal data class FolderDto(
-  val uri: String,
-  val type: String,
 )
 
 @Serializable

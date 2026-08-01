@@ -49,12 +49,9 @@ class SnapshotWriterTest {
     chapterNameOverrideDao = db.chapterNameOverrideDao(),
     listeningSessionDao = db.listeningSessionDao(),
     listeningEventDao = db.listeningEventDao(),
-    slot0 = slot0,
-    slot1 = slot1,
-    slot2 = slot2,
+    ring = ring,
     excludedBooksStore = excluded,
     settingsSnapshotter = testSettingsSnapshotter(),
-    audiobookFolders = EmptyAudiobookFolders,
     backupRepository = backup,
     restoreGate = RestoreGate(),
   )
@@ -157,7 +154,7 @@ private val noopBackupStub = object : BackupRepository {
   override suspend fun deleteBackup(entry: BackupEntry) = false
   override suspend fun exportNow() = BackupExportResult.SkippedNoFolder
   override suspend fun exportAfterSnapshot() = BackupExportResult.SkippedNoFolder
-  override suspend fun importAndRestore(entry: BackupEntry?) = false
+  override suspend fun importAndRestore(entry: BackupEntry?) = Unit
 }
 
 private class RecordingBackup(lastBackup: Instant?) : BackupRepository by noopBackupStub {

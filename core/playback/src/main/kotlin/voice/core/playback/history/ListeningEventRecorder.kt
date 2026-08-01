@@ -193,13 +193,15 @@ class ListeningEventRecorder(
   private fun close(defaultReason: ListeningSessionEndReason) {
     stopCheckpointing()
     val session = buildClosedSession(defaultReason)
-    // ONE coroutine, session first: the checkpoint is this session's crash insurance, so it must
-    // not be cleared until the insert has committed — a kill between "clear" and "insert" would
-    // lose both. No-session closes still clear any stale checkpoint.
-    scope.launch {
-      if (session != null) sessionRepo.addSession(session)
-      checkpointStore.updateData { null }
-    }
+    scope.launch { persistAndClear(session) }
+  }
+
+  // The recorder's data-loss guard, stated once: the checkpoint is the session's crash insurance,
+  // so it must not be cleared until the insert has committed — a kill between "clear" and
+  // "insert" would lose both. No-session closes still clear any stale checkpoint.
+  private suspend fun persistAndClear(session: ListeningSession?) {
+    if (session != null) sessionRepo.addSession(session)
+    checkpointStore.updateData { null }
   }
 
   /**
@@ -208,12 +210,8 @@ class ListeningEventRecorder(
    * takes precedence if the sleep-timer flag is set. Idempotent after the first call.
    */
   suspend fun flushOpenSessionNow() {
-    checkpointJob?.cancel()
-    checkpointJob = null
-    val session = buildClosedSession(ListeningSessionEndReason.Paused)
-    // Session before checkpoint-clear, same reason as close(): the clear must not outrun the write.
-    if (session != null) sessionRepo.addSession(session)
-    checkpointStore.updateData { null }
+    stopCheckpointing()
+    persistAndClear(buildClosedSession(ListeningSessionEndReason.Paused))
   }
 
   private fun clearPauseFlags() {

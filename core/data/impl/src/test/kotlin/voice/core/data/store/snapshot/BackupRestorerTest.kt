@@ -31,6 +31,7 @@ class BackupRestorerTest {
   private val slot1 = MemoryDataStore<LibrarySnapshot?>(null)
   private val slot2 = MemoryDataStore<LibrarySnapshot?>(null)
   private val excluded = MemoryDataStore<Set<String>>(emptySet())
+  private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
 
   @Before
   fun setup() {
@@ -43,9 +44,7 @@ class BackupRestorerTest {
   fun teardown() = db.close()
 
   private fun restorer() = BackupRestorer(
-    slot0 = slot0,
-    slot1 = slot1,
-    slot2 = slot2,
+    ring = ring,
     bookContentDao = db.bookContentDao(),
     bookmarkDao = db.bookmarkDao(),
     bookCharacterDao = db.bookCharacterDao(),

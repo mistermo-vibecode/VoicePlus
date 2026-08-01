@@ -23,9 +23,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @SingleIn(AppScope::class)
 @Inject
 internal class BackupRestorer(
-  @SnapshotSlot0Store slot0: DataStore<LibrarySnapshot?>,
-  @SnapshotSlot1Store slot1: DataStore<LibrarySnapshot?>,
-  @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
+  private val ring: SnapshotRing,
   private val bookContentDao: BookContentDao,
   private val bookmarkDao: BookmarkDao,
   private val bookCharacterDao: BookCharacterDao,
@@ -39,8 +37,6 @@ internal class BackupRestorer(
   private val settingsSnapshotter: SettingsSnapshotter,
   private val restoreGate: RestoreGate,
 ) {
-
-  private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
 
   suspend fun restoreIfNeeded() {
     try {
@@ -67,19 +63,24 @@ internal class BackupRestorer(
 
   /**
    * Same-device restore of an external bundle whose book ids are all still present live — no scan,
-   * no re-key. Additive and idempotent; returns the number of restored books. Used by the explicit
-   * Restore action's fast path; [OsWipeRestorer] remains the door for dead-URI bundles.
+   * no re-key. Additive and idempotent; returns the number of restored books. Owns the whole
+   * commit: rows first, then the hidden set and settings — the same succeed-then-write ordering
+   * as [restoreIfNeeded], stated once so the two paths cannot drift. [OsWipeRestorer] remains the
+   * door for dead-URI bundles.
    */
-  suspend fun applyDirect(
-    snapshot: LibrarySnapshot,
-    extraExcluded: Set<String> = emptySet(),
-  ): Int = restoreGate.withRestoreActive {
-    val excludedIds = excludedBooksStore.data.first() + extraExcluded
-    val restored = apply(snapshot, excludedIds, bookContentDao.all())
-    contentRepo.invalidateCache()
-    Logger.i("Directly restored $restored books from an external bundle (same-device ids)")
-    restored
-  }.also { restoreGate.requestFlush() }
+  suspend fun applyDirect(snapshot: LibrarySnapshot): Int {
+    val restored = restoreGate.withRestoreActive {
+      val excludedIds = excludedBooksStore.data.first() + snapshot.hiddenBooks
+      val written = apply(snapshot, excludedIds, bookContentDao.all())
+      excludedBooksStore.updateData { it + snapshot.hiddenBooks }
+      settingsSnapshotter.apply(snapshot.settings)
+      contentRepo.invalidateCache()
+      Logger.i("Directly restored $written books from an external bundle (same-device ids)")
+      written
+    }
+    restoreGate.requestFlush()
+    return restored
+  }
 
   /** True when every active book in [snapshot] already exists in the live database (same-URI restore). */
   suspend fun canApplyDirect(snapshot: LibrarySnapshot): Boolean {

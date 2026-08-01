@@ -20,7 +20,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import voice.core.data.BookContent
-import voice.core.data.folders.AudiobookFolders
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.dao.BookCharacterDao
@@ -49,17 +48,13 @@ internal class SnapshotWriter(
   private val chapterNameOverrideDao: ChapterNameOverrideDao,
   private val listeningSessionDao: ListeningSessionDao,
   private val listeningEventDao: ListeningEventDao,
-  @SnapshotSlot0Store slot0: DataStore<LibrarySnapshot?>,
-  @SnapshotSlot1Store slot1: DataStore<LibrarySnapshot?>,
-  @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
+  private val ring: SnapshotRing,
   @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
   private val settingsSnapshotter: SettingsSnapshotter,
-  private val audiobookFolders: AudiobookFolders,
   private val backupRepository: BackupRepository,
   private val restoreGate: RestoreGate,
 ) {
 
-  private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
   private val dirty = AtomicBoolean(false)
   private val flushMutex = Mutex()
 
@@ -164,9 +159,6 @@ internal class SnapshotWriter(
           events = events.map { it.toDto() },
           hiddenBooks = excludedIds,
           settings = settingsSnapshotter.capture(),
-          folders = audiobookFolders.all().first().flatMap { (type, folders) ->
-            folders.map { FolderDto(uri = it.uri.toString(), type = type.name) }
-          },
         )
         if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
           Logger.w(

@@ -32,13 +32,9 @@ internal data class BookIdentityStamp(
   val isSingleFile: Boolean,
   val relPath: String,
   val folderName: String,
-  val children: List<ChildEntry>,
-)
-
-/** One audio file inside a book folder. [relName] is the folder-relative document-id tail (with extension). */
-internal data class ChildEntry(
-  val relName: String,
-  val size: Long,
+  // Folder-relative document-id tails (with extension), sorted. The relName multiset IS the
+  // structural identity; file sizes were dropped as a signal that could never fire (always 0).
+  val children: List<String>,
 )
 
 /** A snapshot chapter with the stable [relName] anchor and its snapshot-time duration. */

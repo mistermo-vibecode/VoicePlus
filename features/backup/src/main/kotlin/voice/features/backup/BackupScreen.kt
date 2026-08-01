@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +22,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -165,7 +165,12 @@ internal fun BackupScreen(
             )
           },
           supportingContent = {
-            viewState.folder?.let { Text(it.toString()) }
+            viewState.folder?.let { folder ->
+              // "Backups", not "content://…/tree/primary%3ABackups": decode the tree's last
+              // segment the way the folder picker does; raw URI fallback for exotic providers.
+              val display = folder.lastPathSegment?.substringAfterLast(':')?.takeIf { it.isNotBlank() }
+              Text(display ?: folder.toString())
+            }
           },
         )
       }
@@ -273,11 +278,18 @@ private fun SaveRow(
     supportingContent = { Text(save.displayName, style = MaterialTheme.typography.bodySmall) },
     leadingContent = if (save.manual) {
       {
-        AssistChip(
-          onClick = {},
-          enabled = false,
-          label = { Text(stringResource(StringsR.string.backup_save_manual)) },
-        )
+        // Plain badge, not a disabled chip: chips keep button semantics and disabled alpha.
+        Surface(
+          shape = MaterialTheme.shapes.small,
+          color = MaterialTheme.colorScheme.surfaceVariant,
+        ) {
+          Text(
+            text = stringResource(StringsR.string.backup_save_manual),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+          )
+        }
       }
     } else {
       null

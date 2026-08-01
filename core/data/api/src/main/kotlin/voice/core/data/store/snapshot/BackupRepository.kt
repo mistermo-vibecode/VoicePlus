@@ -51,11 +51,10 @@ public interface BackupRepository {
   public suspend fun exportAfterSnapshot(): BackupExportResult
 
   /**
-   * Restore from [entry], or from the newest readable save when null. Returns true when any
-   * matched/unmatched backup data was found.
+   * Restore from [entry], or from the newest readable save when null. Outcomes are reported
+   * through [status] and [lastRestore].
    */
-  @IgnorableReturnValue
-  public suspend fun importAndRestore(entry: BackupEntry? = null): Boolean
+  public suspend fun importAndRestore(entry: BackupEntry? = null)
 }
 
 /** One save file in the backup folder. [savedAt] is parsed from the file name; null for legacy fixed-name bundles. */

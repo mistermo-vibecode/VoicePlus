@@ -1,6 +1,7 @@
 package voice.features.listeningLog
 
 import android.content.Context
+import android.text.format.DateFormat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,6 +21,7 @@ import voice.core.data.ListeningSession
 import voice.core.data.ListeningSessionEndReason
 import voice.core.data.byMarkKey
 import voice.core.data.durationMs
+import voice.core.data.markForPosition
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.repo.ListeningEventRepo
@@ -31,6 +33,7 @@ import voice.navigation.Navigator
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -52,8 +55,14 @@ class ListeningLogViewModel(
 ) {
 
   private val scope = MainScope()
-  private val timeFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.getDefault())
-  private val dateFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
+
+  // Respect the device's 12/24-hour setting and locale date order (mirrors the sleep timer's
+  // localTimeFormatter, which is internal to features:settings).
+  private val timeFormatter = DateTimeFormatter.ofPattern(
+    if (DateFormat.is24HourFormat(context)) "HH:mm" else "hh:mm a",
+    Locale.getDefault(),
+  )
+  private val dateFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
 
   @Composable
   fun viewState(): ListeningLogViewState {
@@ -246,19 +255,19 @@ class ListeningLogViewModel(
     val index = chapters.indexOfFirst { it.id == id }
     if (index == -1) return ResolvedLocation(unknown, formatTime(positionMs))
     val chapter = chapters[index]
-    val mark = chapter.chapterMarks.firstOrNull { positionMs in it.startMs..it.endMs }
-      ?: chapter.chapterMarks.lastOrNull { positionMs >= it.startMs }
-    val override = mark?.let { overrideMap[Pair(chapter.id.value, it.startMs)] }
+    // The one shared definition of "which mark contains this position" (used by the player screen
+    // and bookmarks too), so all surfaces name the same position the same way.
+    val mark = chapter.markForPosition(positionMs)
+    val override = overrideMap[Pair(chapter.id.value, mark.startMs)]
     // Mirror the other surfaces' fallback: prefer the chapter's own name, then a localized
     // "Unknown chapter" — rather than a synthetic, mis-numbered "Chapter N".
-    val name = resolveChapterName(mark?.name ?: "", offset, override)
+    val name = resolveChapterName(mark.name ?: "", offset, override)
       .ifBlank { chapter.name.orEmpty() }
       .ifBlank { unknown }
     // Position INTO the displayed chapter mark, matching the player screen — for single-file
     // books the raw file position ("7:42:15") says nothing about where in the chapter you are.
-    val positionInChapter = mark?.let { (positionMs - it.startMs).coerceAtLeast(0L) } ?: positionMs
-    val chapterDuration = mark?.durationMs ?: chapter.duration
-    return ResolvedLocation(name, formatTime(positionInChapter, chapterDuration))
+    val positionInChapter = (positionMs - mark.startMs).coerceAtLeast(0L)
+    return ResolvedLocation(name, formatTime(positionInChapter, mark.durationMs))
   }
 
   private fun remainingLabel(
@@ -268,7 +277,7 @@ class ListeningLogViewModel(
     val remainingMs = (totalDurationMs - positionMs).coerceAtLeast(0L)
     val hours = TimeUnit.MILLISECONDS.toHours(remainingMs)
     val minutes = TimeUnit.MILLISECONDS.toMinutes(remainingMs) % 60
-    return "${hours}h ${minutes}m left"
+    return context.getString(R.string.listening_log_remaining, hours, minutes)
   }
 
   fun onEntryClick(entry: ListeningLogEntry) {

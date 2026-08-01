@@ -32,7 +32,7 @@ class RestoreReKeyerTest {
   private fun stamp(
     relPath: String,
     folder: String,
-    children: List<Pair<String, Long>>,
+    children: List<String>,
     authority: String = EXTERNAL_STORAGE_AUTHORITY,
     singleFile: Boolean = false,
   ) = BookIdentityStamp(
@@ -40,14 +40,13 @@ class RestoreReKeyerTest {
     isSingleFile = singleFile,
     relPath = relPath,
     folderName = folder,
-    children = children.map { ChildEntry(it.first, it.second) },
+    children = children,
   )
 
   private fun snapBook(
     relPath: String,
     chapterRelNames: List<String>,
     folder: String = "Folder",
-    childSizes: List<Long> = chapterRelNames.map { 100L },
     currentRel: String = chapterRelNames.first(),
     position: Long = 0,
     lastPlayed: Long = 0,
@@ -60,7 +59,7 @@ class RestoreReKeyerTest {
     singleFile: Boolean = false,
     bookId: String = "old://$relPath",
   ): SnapshotBook = SnapshotBook(
-    stamp = stamp(relPath, folder, chapterRelNames.zip(childSizes), authority, singleFile),
+    stamp = stamp(relPath, folder, chapterRelNames, authority, singleFile),
     content = BookContentDto(
       id = bookId, playbackSpeed = 1.5f, skipSilence = true, isActive = true,
       lastPlayedAtEpochMillis = lastPlayed, author = "Author", name = "Book", addedAtEpochMillis = 10,
@@ -79,12 +78,11 @@ class RestoreReKeyerTest {
     relPath: String,
     chapterRelNames: List<String>,
     folder: String = "Folder",
-    childSizes: List<Long> = chapterRelNames.map { 100L },
     durations: List<Long> = chapterRelNames.map { 1_000L },
     newBookId: String = "new://$relPath",
   ): ScannedBook = ScannedBook(
     newBookId = BookId(newBookId),
-    stamp = stamp(relPath, folder, chapterRelNames.zip(childSizes)),
+    stamp = stamp(relPath, folder, chapterRelNames),
     chapters = chapterRelNames.mapIndexed { i, rel -> ScannedChapter(ChapterId(newCid(relPath, rel)), rel, durations[i]) },
   )
 
@@ -142,16 +140,6 @@ class RestoreReKeyerTest {
     val r = RestoreReKeyer.reKey(
       snapshot = listOf(snapBook("primary:Books/Dune", listOf("01.mp3", "02.mp3"))),
       scanned = listOf(scanBook("primary:Books/Dune", listOf("01.mp3", "99-different.mp3"))),
-    )
-    r.matched.shouldBe(emptyList())
-    r.unmatched.single().reason shouldBe UnmatchedReason.CONTENT_CHANGED
-  }
-
-  @Test
-  fun `same names but contradicting known sizes refuses match`() {
-    val r = RestoreReKeyer.reKey(
-      snapshot = listOf(snapBook("primary:Books/Dune", listOf("01.mp3", "02.mp3"), childSizes = listOf(100, 200))),
-      scanned = listOf(scanBook("primary:Books/Dune", listOf("01.mp3", "02.mp3"), childSizes = listOf(100, 999))),
     )
     r.matched.shouldBe(emptyList())
     r.unmatched.single().reason shouldBe UnmatchedReason.CONTENT_CHANGED
@@ -308,17 +296,6 @@ class RestoreReKeyerTest {
     )
     r.unmatched.shouldBe(emptyList())
     r.matched.single().content.id shouldBe BookId("new://primary:Books/book.m4b")
-  }
-
-  @Test
-  fun `unknown (zero) sizes do not block a legitimate match`() {
-    val relPath = "primary:Books/Dune"
-    val r = RestoreReKeyer.reKey(
-      snapshot = listOf(snapBook(relPath, listOf("01.mp3", "02.mp3"), childSizes = listOf(0, 0))),
-      scanned = listOf(scanBook(relPath, listOf("01.mp3", "02.mp3"), childSizes = listOf(500, 600))),
-    )
-    r.unmatched.shouldBe(emptyList())
-    r.matched.single().content.id shouldBe BookId("new://$relPath")
   }
 
   @Test

@@ -79,16 +79,11 @@ internal object RestoreReKeyer {
     UnmatchedBook(relPath = stamp.relPath, folderName = stamp.folderName, reason = reason)
 
   /**
-   * The never-cross-attach gate. HARD: identical child count + identical relName multiset. Then two
-   * contradiction-fatal soft signals, each skipped when either side is unknown (0):
-   *  - file size — currently ALWAYS 0/unknown in production (the identity stamp is derived from URIs, not a
-   *    DocumentFile walk), so this particular gate is inert today; kept for forward compatibility if sizes
-   *    are ever captured.
-   *  - chapter duration — snapshot vs freshly-scanned duration per relName. Durations ARE captured
-   *    end-to-end, so this is the live guard against an in-place re-rip / edition swap that kept the same
-   *    filenames. Minor re-encode jitter is tolerated; a material change fails the match.
-   * Any same-named pair whose two known values disagree fails — we refuse to graft a stale position onto
-   * different audio.
+   * The never-cross-attach gate. HARD: identical child count + identical relName multiset. Then one
+   * contradiction-fatal soft signal: chapter duration — snapshot vs freshly-scanned duration per relName.
+   * This is the live guard against an in-place re-rip / edition swap that kept the same filenames. Minor
+   * re-encode jitter is tolerated; a material change fails the match — we refuse to graft a stale position
+   * onto different audio.
    */
   private fun confirm(
     snap: SnapshotBook,
@@ -97,12 +92,7 @@ internal object RestoreReKeyer {
     val snapChildren = snap.stamp.children
     val candChildren = cand.stamp.children
     if (snapChildren.size != candChildren.size) return false
-    if (snapChildren.map { it.relName }.sorted() != candChildren.map { it.relName }.sorted()) return false
-    val candSizeByRelName = candChildren.associate { it.relName to it.size }
-    for (child in snapChildren) {
-      val candSize = candSizeByRelName[child.relName] ?: return false
-      if (child.size > 0 && candSize > 0 && child.size != candSize) return false
-    }
+    if (snapChildren.sorted() != candChildren.sorted()) return false
     val candDurationByRelName = cand.chapters.associate { it.relName to it.duration }
     for (chapter in snap.chapters) {
       val candDuration = candDurationByRelName[chapter.relName] ?: continue

@@ -21,7 +21,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import voice.core.data.folders.PersistedUriPermissions
 import voice.core.data.repo.internals.AppDb
-import voice.core.data.store.ExcludedBooksStore
 import voice.core.data.store.snapshot.rekey.ReKeyResult
 import voice.core.logging.api.Logger
 import java.time.Instant
@@ -50,17 +49,12 @@ public class BackupRepositoryImpl internal constructor(
   private val context: Application,
   @SnapshotBackupStateStore private val stateStore: DataStore<BackupState>,
   @SnapshotJson private val json: Json,
-  @SnapshotSlot0Store slot0: DataStore<LibrarySnapshot?>,
-  @SnapshotSlot1Store slot1: DataStore<LibrarySnapshot?>,
-  @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
-  @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
+  private val ring: SnapshotRing,
   private val persistedUriPermissions: PersistedUriPermissions,
   private val osWipeRestorer: OsWipeRestorer,
   private val backupRestorer: BackupRestorer,
   private val settingsSnapshotter: SettingsSnapshotter,
 ) : BackupRepository {
-
-  private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
 
   // Serialize import/export so a restore cannot interleave with a backup write.
   private val mutex = Mutex()
@@ -225,23 +219,11 @@ public class BackupRepositoryImpl internal constructor(
     }
   }
 
-  override suspend fun importAndRestore(entry: BackupEntry?): Boolean {
-    val outcome = import(entry)
-    return outcome is ImportOutcome.Imported && outcome.changed
-  }
-
-  private sealed interface ImportOutcome {
-    data object NothingToImport : ImportOutcome
-    data object Corrupt : ImportOutcome
-    data object RefusedNewer : ImportOutcome
-    data class Imported(val changed: Boolean) : ImportOutcome
-  }
-
-  private suspend fun import(entry: BackupEntry?): ImportOutcome {
-    return mutex.withLock {
+  override suspend fun importAndRestore(entry: BackupEntry?) {
+    mutex.withLock {
       busyState.value = true
       try {
-        val folder = activeFolder() ?: return@withLock ImportOutcome.NothingToImport
+        val folder = activeFolder() ?: return@withLock
         val read = withContext(Dispatchers.IO) {
           if (entry != null) readEntry(entry.uri) else probe(listEntries(folder))
         }
@@ -249,32 +231,26 @@ public class BackupRepositoryImpl internal constructor(
           is ExternalReadResult.Valid -> read.snapshot
           ExternalReadResult.Corrupt -> {
             statusState.value = BackupStatus(BackupStatusKind.BackupUnreadable)
-            return@withLock ImportOutcome.Corrupt
+            return@withLock
           }
           ExternalReadResult.Missing -> {
             statusState.value = BackupStatus(BackupStatusKind.NoBackupFound)
-            return@withLock ImportOutcome.NothingToImport
+            return@withLock
           }
           ExternalReadResult.RefusedNewer -> {
             lastRestoreState.value = RestoreSummary(restoredCount = 0, unmatched = emptyList(), refusedNewerBackup = true)
             statusState.value = BackupStatus(BackupStatusKind.RefusedNewerBackup)
-            return@withLock ImportOutcome.RefusedNewer
+            return@withLock
           }
         }
 
         if (backupRestorer.canApplyDirect(snapshot)) {
-          // Same device, ids alive: apply additively without the scan + re-key machinery. The
-          // snapshot's hidden set participates as an exclusion filter, but nothing is written to
-          // the stores until the restore has actually succeeded.
-          val extraHidden = snapshot.hiddenBooks
-          val restored = backupRestorer.applyDirect(snapshot, extraExcluded = extraHidden)
-          excludedBooksStore.updateData { it + extraHidden }
-          settingsSnapshotter.apply(snapshot.settings)
+          // Same device, ids alive: apply additively without the scan + re-key machinery.
+          // applyDirect owns the whole commit (rows, then hidden set + settings on success).
+          val restored = backupRestorer.applyDirect(snapshot)
           stateStore.updateData { it.copy(restorePending = false) }
-          val summary = RestoreSummary(restoredCount = restored, unmatched = emptyList())
-          lastRestoreState.value = summary
+          lastRestoreState.value = RestoreSummary(restoredCount = restored, unmatched = emptyList())
           statusState.value = BackupStatus(BackupStatusKind.RestoreComplete, restoredCount = restored)
-          ImportOutcome.Imported(restored > 0)
         } else {
           // The re-key scan derives names, so the one scan-affecting setting must precede it;
           // everything else is applied only after the restore succeeds.
@@ -286,14 +262,12 @@ public class BackupRepositoryImpl internal constructor(
           stateStore.updateData { it.copy(restorePending = result.unmatched.isNotEmpty()) }
           lastRestoreState.value = result.toSummary()
           statusState.value = result.toStatus()
-          ImportOutcome.Imported(result.matched.isNotEmpty() || result.unmatched.isNotEmpty())
         }
       } catch (e: CancellationException) {
         throw e
       } catch (t: Throwable) {
         Logger.w(t, "External backup import failed; library is unaffected")
         statusState.value = BackupStatus(BackupStatusKind.BackupUnreadable)
-        ImportOutcome.Corrupt
       } finally {
         busyState.value = false
       }

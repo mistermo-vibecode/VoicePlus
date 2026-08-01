@@ -255,6 +255,7 @@
     <string name="listening_log_end_sleep">Sleep timer</string>
     <string name="listening_log_end_finished">Finished</string>
     <string name="listening_log_end_interrupted">Interrupted</string>
+    <string name="listening_log_clear_confirm_message">This deletes the listening history for this book and can\'t be undone.</string>
     <string name="listening_log_remaining">%1$dh %2$dm left</string>
     <string name="listening_log_clear_all">Clear all</string>
     <string name="pref_media_button_double_click">Media Button: Double Click</string>
