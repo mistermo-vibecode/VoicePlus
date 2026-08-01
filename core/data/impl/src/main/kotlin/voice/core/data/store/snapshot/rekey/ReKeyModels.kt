@@ -94,6 +94,9 @@ internal data class UnmatchedBook(
  * freshness-arbitrates [content] against any live row using [sourceLastPlayedAt] before persisting.
  */
 internal data class MatchedBook(
+  // The snapshot-side (pre-wipe) book id, so callers can translate id-keyed state — e.g. the
+  // hidden-books set — onto the new id.
+  val sourceId: String,
   val content: BookContent,
   val bookmarks: List<Bookmark>,
   val overrides: List<ChapterNameOverride>,

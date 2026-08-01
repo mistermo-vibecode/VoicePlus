@@ -8,6 +8,7 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -144,10 +145,12 @@ class OsWipeRestorerTest {
     bookmarks: List<BookmarkDto> = emptyList(),
     sessions: List<ListeningSessionDto> = emptyList(),
     characters: List<BookCharacterDto> = emptyList(),
+    hiddenBooks: Set<String> = emptySet(),
   ) = LibrarySnapshot(
     schemaVersion = LibrarySnapshot.SCHEMA_VERSION, dbVersion = AppDb.VERSION, sequence = 1, savedAtEpochMillis = 0,
     totalCount = books.size, activeCount = books.size, books = books, bookmarks = bookmarks,
     characters = characters, chapterNameOverrides = emptyList(), sessions = sessions, chapters = chapters,
+    hiddenBooks = hiddenBooks,
   )
 
   @Test
@@ -283,5 +286,45 @@ class OsWipeRestorerTest {
 
     val bookRepo = BookRepositoryImpl(ChapterRepoImpl(db.chapterDao()), contentRepo)
     bookRepo.get(BookId(newUri("primary:Books/Dune"))).shouldBeNull()
+  }
+
+  @Test
+  fun `hidden books are re-keyed with their data and stay hidden under their new ids`() = runTest {
+    val (dune, duneChapters) = snapshotBookOf("primary:Books/Dune", listOf("01.mp3"), "01.mp3", position = 400, lastPlayed = 5_000)
+    val hiddenOldId = oldUri("primary:Books/Dune")
+    // Same-URI exclusion also present (the repo pre-unions on some paths) — must not block participation.
+    excluded.updateData { setOf(hiddenOldId) }
+    onScan = { scanInBook("primary:Books/Dune", listOf("01.mp3")) }
+
+    val result = restorer().run(snapshotOf(listOf(dune), duneChapters, hiddenBooks = setOf(hiddenOldId)))
+
+    result.matched.map { it.sourceId } shouldContainExactlyInAnyOrder listOf(hiddenOldId)
+    val newId = newUri("primary:Books/Dune")
+    // The book's data was restored under the new id...
+    db.bookContentDao().all().single { it.id.value == newId }.positionInChapter shouldBe 400L
+    // ...and the hidden set now covers the NEW id, so it does not resurface visible.
+    excluded.data.first().contains(newId) shouldBe true
+  }
+
+  @Test
+  fun `end reasons survive the re-key`() = runTest {
+    val (dune, duneChapters) = snapshotBookOf("primary:Books/Dune", listOf("01.mp3"), "01.mp3", position = 400, lastPlayed = 5_000)
+    val session = ListeningSessionDto(
+      id = 3,
+      bookId = oldUri("primary:Books/Dune"),
+      chapterId = oldUri("primary:Books/Dune/01.mp3"),
+      startedAtEpochMillis = 100,
+      endedAtEpochMillis = 200,
+      durationMs = 100,
+      startPositionMs = 0,
+      endPositionMs = 100,
+      endChapterId = null,
+      endReason = 1,
+    )
+    onScan = { scanInBook("primary:Books/Dune", listOf("01.mp3")) }
+
+    restorer().run(snapshotOf(listOf(dune), duneChapters, sessions = listOf(session)))
+
+    db.listeningSessionDao().all().single().endReason shouldBe 1
   }
 }

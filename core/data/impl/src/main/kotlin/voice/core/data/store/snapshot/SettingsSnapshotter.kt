@@ -81,4 +81,15 @@ internal class SettingsSnapshotter(
       settings[entry.key]?.let { entry.apply(it) }
     }
   }
+
+  /**
+   * Apply ONLY the settings that change how a library scan derives names (ignoreFileTags).
+   * The OS-wipe restore needs these before its scan; everything else is applied after the
+   * restore succeeds, so a failed restore doesn't leave half-replaced settings behind.
+   */
+  suspend fun applyScanAffecting(settings: Map<String, String>) {
+    entries.filter { it.key == "ignoreFileTags" }.forEach { entry ->
+      settings[entry.key]?.let { entry.apply(it) }
+    }
+  }
 }

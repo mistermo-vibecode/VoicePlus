@@ -209,4 +209,13 @@ class BackupRestorerTest {
     excluded.data.first() shouldBe setOf("b")
     db.bookContentDao().all().map { it.id.value } shouldContainExactlyInAnyOrder listOf("a")
   }
+
+  @Test
+  fun `applyDirect reports only what it actually wrote`() = runTest {
+    // Live book is FRESHER than the snapshot: the freshness guard keeps it, so nothing is written.
+    contentRepo.put(book("a", active = true).copy(lastPlayedAt = Instant.ofEpochMilli(9_999)))
+    val snapshot = snapshotOf("a") // snapshot books carry lastPlayedAt = EPOCH
+
+    restorer().applyDirect(snapshot) shouldBe 0
+  }
 }

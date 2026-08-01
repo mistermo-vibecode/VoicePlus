@@ -20,4 +20,8 @@ public class LibrarySnapshotServiceImpl internal constructor(
   override suspend fun restoreIfNeeded() {
     restorer.restoreIfNeeded()
   }
+
+  override suspend fun flushNow() {
+    writer.flushNow()
+  }
 }

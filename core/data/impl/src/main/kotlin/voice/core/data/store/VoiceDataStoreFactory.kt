@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import dev.zacsweers.metro.Inject
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.serializer
@@ -21,9 +22,18 @@ internal class VoiceDataStoreFactory(
     defaultValue: T,
     fileName: String,
     migrations: List<DataMigration<T>> = emptyList(),
+    // Opt-in: a corrupted file is replaced with the default instead of poisoning every read AND
+    // write of the store forever. Use for stores whose loss is acceptable (snapshots, checkpoints);
+    // leave off where silent reset would itself be data loss.
+    replaceCorruptedWithDefault: Boolean = false,
   ): DataStore<T> {
     return DataStoreFactory.create(
       migrations = migrations,
+      corruptionHandler = if (replaceCorruptedWithDefault) {
+        ReplaceFileCorruptionHandler { defaultValue }
+      } else {
+        null
+      },
       serializer = KotlinxDataStoreSerializer(
         defaultValue = defaultValue,
         json = json,

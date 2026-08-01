@@ -151,7 +151,6 @@ class ListeningEventRecorder(
   private fun stopCheckpointing() {
     checkpointJob?.cancel()
     checkpointJob = null
-    scope.launch { checkpointStore.updateData { null } }
   }
 
   private fun buildClosedSession(defaultReason: ListeningSessionEndReason): ListeningSession? {
@@ -193,8 +192,14 @@ class ListeningEventRecorder(
 
   private fun close(defaultReason: ListeningSessionEndReason) {
     stopCheckpointing()
-    val session = buildClosedSession(defaultReason) ?: return
-    scope.launch { sessionRepo.addSession(session) }
+    val session = buildClosedSession(defaultReason)
+    // ONE coroutine, session first: the checkpoint is this session's crash insurance, so it must
+    // not be cleared until the insert has committed — a kill between "clear" and "insert" would
+    // lose both. No-session closes still clear any stale checkpoint.
+    scope.launch {
+      if (session != null) sessionRepo.addSession(session)
+      checkpointStore.updateData { null }
+    }
   }
 
   /**
@@ -206,9 +211,9 @@ class ListeningEventRecorder(
     checkpointJob?.cancel()
     checkpointJob = null
     val session = buildClosedSession(ListeningSessionEndReason.Paused)
-    // Teardown path: clear synchronously — the scope is about to be cancelled.
-    checkpointStore.updateData { null }
+    // Session before checkpoint-clear, same reason as close(): the clear must not outrun the write.
     if (session != null) sessionRepo.addSession(session)
+    checkpointStore.updateData { null }
   }
 
   private fun clearPauseFlags() {

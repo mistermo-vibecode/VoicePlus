@@ -60,7 +60,6 @@ class BookmarkViewModel(
   private val _viewEffects = MutableSharedFlow<BookmarkViewEffect>(extraBufferCapacity = 1)
   val viewEffects: Flow<BookmarkViewEffect> get() = _viewEffects
 
-  private var lastDeleted: Bookmark? = null
   private var bookmarks by mutableStateOf<List<Bookmark>>(emptyList())
   private var chapters by mutableStateOf<List<Chapter>>(emptyList())
 
@@ -145,15 +144,12 @@ class BookmarkViewModel(
       bookmarkRepo.deleteBookmark(id)
       bookmarks = bookmarks.filter { it.id != id }
       if (deleted != null) {
-        lastDeleted = deleted
-        _viewEffects.tryEmit(BookmarkViewEffect.BookmarkDeleted)
+        _viewEffects.tryEmit(BookmarkViewEffect.BookmarkDeleted(deleted))
       }
     }
   }
 
-  fun undoDelete() {
-    val deleted = lastDeleted ?: return
-    lastDeleted = null
+  fun undoDelete(deleted: Bookmark) {
     scope.launch {
       bookmarkRepo.addBookmark(deleted)
       bookmarks = (bookmarks + deleted)

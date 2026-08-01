@@ -225,6 +225,7 @@ public interface StoreModule {
       serializer = OpenSessionCheckpoint.serializer().nullable,
       defaultValue = null,
       fileName = "openListeningSession",
+      replaceCorruptedWithDefault = true,
     )
   }
 }

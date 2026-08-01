@@ -90,14 +90,14 @@ fun BookmarkScreen(bookId: BookId) {
   LaunchedEffect(viewModel) {
     viewModel.viewEffects.collect { effect ->
       when (effect) {
-        BookmarkViewEffect.BookmarkDeleted -> {
+        is BookmarkViewEffect.BookmarkDeleted -> {
           val result = snackbarHostState.showSnackbar(
             message = deletedMessage,
             actionLabel = undoLabel,
             duration = SnackbarDuration.Short,
           )
           if (result == SnackbarResult.ActionPerformed) {
-            viewModel.undoDelete()
+            viewModel.undoDelete(effect.bookmark)
           }
         }
         BookmarkViewEffect.BookmarkUnavailable -> {

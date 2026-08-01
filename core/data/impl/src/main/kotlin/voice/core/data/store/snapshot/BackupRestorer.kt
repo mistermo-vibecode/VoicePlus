@@ -50,11 +50,12 @@ internal class BackupRestorer(
       // resurrecting it would fight the removal. Explicit Restore covers recovery from a destructive bug.
       if (live.isNotEmpty()) return
       val candidate = RestoreSelector.select(live.size, ring.readAll()) ?: return
-      // A wiped device also lost its DataStore: bring the hidden set and settings back first so the
-      // restored books respect them.
+      // The snapshot's hidden set filters the restore; the stores are only written once the
+      // apply has succeeded, so a failed restore leaves settings and the hidden set untouched.
+      val excluded = excludedBooksStore.data.first() + candidate.hiddenBooks
+      val restored = apply(candidate, excluded, live)
       excludedBooksStore.updateData { it + candidate.hiddenBooks }
       settingsSnapshotter.apply(candidate.settings)
-      val restored = apply(candidate, excludedBooksStore.data.first(), live)
       contentRepo.invalidateCache()
       Logger.i("Restored $restored books from snapshot generation ${candidate.sequence}")
     } catch (e: CancellationException) {
@@ -69,8 +70,11 @@ internal class BackupRestorer(
    * no re-key. Additive and idempotent; returns the number of restored books. Used by the explicit
    * Restore action's fast path; [OsWipeRestorer] remains the door for dead-URI bundles.
    */
-  suspend fun applyDirect(snapshot: LibrarySnapshot): Int = restoreGate.withRestoreActive {
-    val excludedIds = excludedBooksStore.data.first()
+  suspend fun applyDirect(
+    snapshot: LibrarySnapshot,
+    extraExcluded: Set<String> = emptySet(),
+  ): Int = restoreGate.withRestoreActive {
+    val excludedIds = excludedBooksStore.data.first() + extraExcluded
     val restored = apply(snapshot, excludedIds, bookContentDao.all())
     contentRepo.invalidateCache()
     Logger.i("Directly restored $restored books from an external bundle (same-device ids)")
@@ -102,6 +106,7 @@ internal class BackupRestorer(
     // chapters2 carries no bookId, so restore them all (REPLACE). A chapter with no surviving content2 row is
     // simply invisible; re-inserting is what lets a restored book's BookRepository.book() resolve at all.
     val chapters = snapshot.chapters.map { it.toChapter() }
+    var written = 0
     appDb.transaction {
       // Natural-key dedup for the autoGenerate-PK tables, seeded INSIDE the transaction: snapshot row
       // ids belong to a different database generation, so inserting by id could collide with (or
@@ -114,9 +119,15 @@ internal class BackupRestorer(
         val liveRow = liveById[id]
         when {
           // Missing live row, or the snapshot is at least as fresh -> take the snapshot copy.
-          liveRow == null || snap.lastPlayedAt >= liveRow.lastPlayedAt -> bookContentDao.insert(snap)
+          liveRow == null || snap.lastPlayedAt >= liveRow.lastPlayedAt -> {
+            bookContentDao.insert(snap)
+            written++
+          }
           // The collapse was only an isActive flip; keep the fresher live progress, just re-activate.
-          !liveRow.isActive && snap.isActive -> bookContentDao.insert(liveRow.copy(isActive = true))
+          !liveRow.isActive && snap.isActive -> {
+            bookContentDao.insert(liveRow.copy(isActive = true))
+            written++
+          }
         }
       }
       bookmarks.forEach { bookmarkDao.addBookmark(it) }
@@ -131,6 +142,8 @@ internal class BackupRestorer(
         if (seenEventKeys.add(event.naturalKey())) listeningEventDao.insert(event.copy(id = 0))
       }
     }
-    return books.size
+    // Books whose live progress was NEWER than the snapshot are deliberately untouched; report
+    // only what was actually written so "Restored N books" is never a lie.
+    return written
   }
 }

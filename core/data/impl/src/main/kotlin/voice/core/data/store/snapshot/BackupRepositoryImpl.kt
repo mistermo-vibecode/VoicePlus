@@ -34,6 +34,11 @@ internal data class BackupState(
   // Fingerprint of the last successfully exported snapshot, so an unchanged library doesn't mint
   // a new file. Reset when the folder changes: a new folder deserves a first file regardless.
   val lastBackupFingerprint: Long? = null,
+  // A restore left unmatched books whose data exists ONLY in the backup files. While set,
+  // automatic exports are suppressed: a partial-library export would become the newest save,
+  // and after 7 autos the pre-wipe file holding the unmatched books' data would be pruned away.
+  // Cleared by a fully-matched restore, or overridden by an explicit "Back up now".
+  val restorePending: Boolean = false,
 )
 
 /** The automatic saves kept in the folder. Older autos are pruned; manual saves never are. */
@@ -139,6 +144,10 @@ public class BackupRepositoryImpl internal constructor(
     busyState.value = true
     try {
       val result = export(manual = true)
+      if (result == BackupExportResult.Written) {
+        // The user explicitly chose to save the current state; stop suppressing autos.
+        stateStore.updateData { it.copy(restorePending = false) }
+      }
       statusState.value = when (result) {
         BackupExportResult.Written -> BackupStatus(BackupStatusKind.BackupSaved)
         BackupExportResult.Failed -> BackupStatus(BackupStatusKind.BackupFailed)
@@ -155,7 +164,22 @@ public class BackupRepositoryImpl internal constructor(
   private suspend fun export(manual: Boolean): BackupExportResult {
     return mutex.withLock {
       try {
-        val folder = activeFolder() ?: return@withLock BackupExportResult.SkippedNoFolder
+        val state = stateStore.data.first()
+        if (!manual && state.restorePending) {
+          // A partial restore is awaiting a re-grant-and-retry; the backup files still hold the
+          // unmatched books' data. An automatic export now would shadow and eventually prune it.
+          Logger.w("Automatic backup suppressed: a partial restore is pending")
+          return@withLock BackupExportResult.SkippedNoSnapshot
+        }
+        val folder = activeFolder()
+        if (folder == null) {
+          if (state.folderUri != null) {
+            // A folder is configured but its grant is gone (SD ejected, folder deleted, grant
+            // revoked). Without a status the UI would keep claiming backups are on.
+            statusState.value = BackupStatus(BackupStatusKind.PermissionDenied)
+          }
+          return@withLock BackupExportResult.SkippedNoFolder
+        }
         val snapshot = ring.best() ?: return@withLock BackupExportResult.SkippedNoSnapshot
         withContext(Dispatchers.IO) {
           val fingerprint = ExternalBackupBundleCodec.meaningfulFingerprint(json, snapshot)
@@ -187,6 +211,7 @@ public class BackupRepositoryImpl internal constructor(
         throw e
       } catch (t: Throwable) {
         Logger.w(t, "External backup export failed; library is unaffected")
+        statusState.value = BackupStatus(BackupStatusKind.BackupFailed)
         BackupExportResult.Failed
       }
     }
@@ -237,20 +262,28 @@ public class BackupRepositoryImpl internal constructor(
           }
         }
 
-        // Settings and the hidden set come back BEFORE any restore work: ignoreFileTags changes how
-        // the re-key scan derives names, and the hidden set keeps hidden books from resurfacing.
-        excludedBooksStore.updateData { it + snapshot.hiddenBooks }
-        settingsSnapshotter.apply(snapshot.settings)
-
         if (backupRestorer.canApplyDirect(snapshot)) {
-          // Same device, ids alive: apply additively without the scan + re-key machinery.
-          val restored = backupRestorer.applyDirect(snapshot)
+          // Same device, ids alive: apply additively without the scan + re-key machinery. The
+          // snapshot's hidden set participates as an exclusion filter, but nothing is written to
+          // the stores until the restore has actually succeeded.
+          val extraHidden = snapshot.hiddenBooks
+          val restored = backupRestorer.applyDirect(snapshot, extraExcluded = extraHidden)
+          excludedBooksStore.updateData { it + extraHidden }
+          settingsSnapshotter.apply(snapshot.settings)
+          stateStore.updateData { it.copy(restorePending = false) }
           val summary = RestoreSummary(restoredCount = restored, unmatched = emptyList())
           lastRestoreState.value = summary
           statusState.value = BackupStatus(BackupStatusKind.RestoreComplete, restoredCount = restored)
           ImportOutcome.Imported(restored > 0)
         } else {
+          // The re-key scan derives names, so the one scan-affecting setting must precede it;
+          // everything else is applied only after the restore succeeds.
+          settingsSnapshotter.applyScanAffecting(snapshot.settings)
           val result = osWipeRestorer.run(snapshot)
+          settingsSnapshotter.apply(snapshot.settings)
+          // While books remain unmatched, their data lives ONLY in the backup files: suppress
+          // automatic exports so a partial-library save can't shadow (and eventually prune) them.
+          stateStore.updateData { it.copy(restorePending = result.unmatched.isNotEmpty()) }
           lastRestoreState.value = result.toSummary()
           statusState.value = result.toStatus()
           ImportOutcome.Imported(result.matched.isNotEmpty() || result.unmatched.isNotEmpty())
@@ -299,6 +332,7 @@ public class BackupRepositoryImpl internal constructor(
     val text = runCatching { readDocumentText(uri) }.getOrNull() ?: return ExternalReadResult.Missing
     return when (val decoded = ExternalBackupBundleCodec.decode(json, text)) {
       ExternalBackupBundleDecodeResult.Corrupt -> ExternalReadResult.Corrupt
+      ExternalBackupBundleDecodeResult.NewerFormat -> ExternalReadResult.RefusedNewer
       is ExternalBackupBundleDecodeResult.Valid -> decoded.snapshot.compatibility()
     }
   }

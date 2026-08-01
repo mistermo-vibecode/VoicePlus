@@ -19,6 +19,10 @@ private data class ExternalBackupBundle(
 internal sealed interface ExternalBackupBundleDecodeResult {
   data class Valid(val snapshot: LibrarySnapshot) : ExternalBackupBundleDecodeResult
   data object Corrupt : ExternalBackupBundleDecodeResult
+
+  // Parseable envelope from a NEWER app version. Distinct from Corrupt: restore must STOP and
+  // tell the user to update, not silently skip past it to older data.
+  data object NewerFormat : ExternalBackupBundleDecodeResult
 }
 
 internal object ExternalBackupBundleCodec {
@@ -42,6 +46,7 @@ internal object ExternalBackupBundleCodec {
     runCatching { json.decodeFromString<ExternalBackupBundle>(text) }
       .getOrNull()
       ?.let { bundle ->
+        if (bundle.formatVersion > FORMAT_VERSION) return ExternalBackupBundleDecodeResult.NewerFormat
         if (bundle.formatVersion != FORMAT_VERSION) return ExternalBackupBundleDecodeResult.Corrupt
         return if (bundle.payload.crc32(json) == bundle.payloadCrc32) {
           ExternalBackupBundleDecodeResult.Valid(bundle.payload)

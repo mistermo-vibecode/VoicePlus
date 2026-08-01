@@ -105,6 +105,11 @@ internal class SnapshotWriter(
     }
   }
 
+  /** Flush pending changes to the ring immediately (no-op when nothing changed). */
+  suspend fun flushNow() {
+    flushIfDirty()
+  }
+
   private suspend fun flushIfDirty(forceExternalBackup: Boolean = false) {
     if (!dirty.getAndSet(false)) return
     flushMutex.withLock {

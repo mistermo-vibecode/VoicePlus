@@ -90,4 +90,11 @@ class ExternalBackupBundleCodecTest {
     ExternalBackupBundleCodec.meaningfulFingerprint(json, snapshot(name = "Book")) shouldNotBe
       ExternalBackupBundleCodec.meaningfulFingerprint(json, snapshot(name = "Other"))
   }
+
+  @Test
+  fun `an envelope from a newer format version is refused, not treated as corrupt`() {
+    val text = ExternalBackupBundleCodec.encode(json, snapshot())
+      .replace("\"formatVersion\":1", "\"formatVersion\":2")
+    ExternalBackupBundleCodec.decode(json, text) shouldBe ExternalBackupBundleDecodeResult.NewerFormat
+  }
 }

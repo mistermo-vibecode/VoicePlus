@@ -8,11 +8,12 @@ class RotationGuardTest {
   private fun snap(
     active: List<String>,
     inactive: List<String> = emptyList(),
+    savedAt: Long = 0,
   ): LibrarySnapshot {
     val books = (active.map { it to true } + inactive.map { it to false })
       .map { (id, isActive) -> dto(id, isActive) }
     return LibrarySnapshot(
-      schemaVersion = 1, sequence = 1, savedAtEpochMillis = 0,
+      schemaVersion = 1, sequence = 1, savedAtEpochMillis = savedAt,
       totalCount = books.size, activeCount = active.size,
       books = books, bookmarks = emptyList(), characters = emptyList(), chapterNameOverrides = emptyList(),
     )
@@ -66,5 +67,27 @@ class RotationGuardTest {
     val best = snap(active = (1..10).map { "b$it" })
     val afterOneGone = snap(active = (1..9).map { "b$it" }, inactive = listOf("b10"))
     RotationGuard.isSuspiciousShrink(best, afterOneGone, excludedIds = emptySet()) shouldBe false
+  }
+
+  @Test
+  fun `a persistent shrink outlives the veto - deliberate library changes eventually back up`() {
+    val best = snap(active = listOf("a", "b", "c", "d"), savedAt = 0)
+    val shrunk = snap(
+      active = emptyList(),
+      inactive = listOf("a", "b", "c", "d"),
+      savedAt = RotationGuard.VETO_EXPIRY_MS,
+    )
+    RotationGuard.isSuspiciousShrink(best, shrunk, excludedIds = emptySet()) shouldBe false
+  }
+
+  @Test
+  fun `a fresh shrink within the expiry window is still vetoed`() {
+    val best = snap(active = listOf("a", "b", "c", "d"), savedAt = 0)
+    val shrunk = snap(
+      active = emptyList(),
+      inactive = listOf("a", "b", "c", "d"),
+      savedAt = RotationGuard.VETO_EXPIRY_MS - 1,
+    )
+    RotationGuard.isSuspiciousShrink(best, shrunk, excludedIds = emptySet()) shouldBe true
   }
 }

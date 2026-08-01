@@ -29,6 +29,7 @@ public interface SnapshotModule {
     context: Application,
   ): DataStore<LibrarySnapshot?> = VoiceDataStoreFactory(json, context).create(
     serializer = LibrarySnapshot.serializer().nullable,
+    replaceCorruptedWithDefault = true,
     defaultValue = null,
     fileName = "librarySnapshot0",
   )
@@ -41,6 +42,7 @@ public interface SnapshotModule {
     context: Application,
   ): DataStore<LibrarySnapshot?> = VoiceDataStoreFactory(json, context).create(
     serializer = LibrarySnapshot.serializer().nullable,
+    replaceCorruptedWithDefault = true,
     defaultValue = null,
     fileName = "librarySnapshot1",
   )
@@ -53,6 +55,7 @@ public interface SnapshotModule {
     context: Application,
   ): DataStore<LibrarySnapshot?> = VoiceDataStoreFactory(json, context).create(
     serializer = LibrarySnapshot.serializer().nullable,
+    replaceCorruptedWithDefault = true,
     defaultValue = null,
     fileName = "librarySnapshot2",
   )
@@ -67,5 +70,6 @@ public interface SnapshotModule {
     serializer = BackupState.serializer(),
     defaultValue = BackupState(),
     fileName = "snapshotBackupState",
+    replaceCorruptedWithDefault = true,
   )
 }

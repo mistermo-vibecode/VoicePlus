@@ -217,6 +217,7 @@ internal object RestoreReKeyer {
         startPositionMs = clamp(dto.startPositionMs, start.second),
         endPositionMs = clamp(dto.endPositionMs, endClampDuration),
         endChapterId = end?.first,
+        endReason = dto.endReason,
       )
     }
 
@@ -234,6 +235,7 @@ internal object RestoreReKeyer {
     }
 
     return MatchedBook(
+      sourceId = snap.content.id,
       content = content,
       bookmarks = bookmarks,
       overrides = overrides,

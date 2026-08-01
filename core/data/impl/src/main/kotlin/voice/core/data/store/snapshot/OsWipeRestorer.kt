@@ -96,7 +96,10 @@ internal class OsWipeRestorer(
     val sessionsByBook = snapshot.sessions.groupBy { it.bookId }
     val charactersByBook = snapshot.characters.groupBy { it.bookId }
     val snapshotBooks = snapshot.books
-      .filter { it.id !in excludedIds }
+      // Hidden books DO participate: the scan has already put their files back on disk under new
+      // ids, so skipping them would leave them visible and dataless. They are re-keyed with their
+      // data and their NEW ids are added to the hidden set below, so they stay hidden.
+      .filter { it.id !in excludedIds || it.id in snapshot.hiddenBooks }
       .map { dto ->
         toSnapshotBook(dto, snapChapterById, bookmarksByBook, overridesByBook, sessionsByBook, charactersByBook)
       }
@@ -138,6 +141,15 @@ internal class OsWipeRestorer(
         // carrying them across dead-URI chapter ids isn't worth the mapping surface. The same-device
         // direct restore path (BackupRestorer.applyDirect) does restore them.
       }
+    }
+
+    // Translate the hidden set onto the new ids: the snapshot's hidden ids died with the wipe, and
+    // without this the freshly-scanned copies of hidden books would resurface visible.
+    val hiddenNewIds = result.matched
+      .filter { it.sourceId in snapshot.hiddenBooks }
+      .map { it.content.id.value }
+    if (hiddenNewIds.isNotEmpty()) {
+      excludedBooksStore.updateData { it + hiddenNewIds }
     }
 
     // 6. Refresh the fill-once content cache so the restored books render this session, not after a restart.

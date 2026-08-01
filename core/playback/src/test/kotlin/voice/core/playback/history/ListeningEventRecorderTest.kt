@@ -405,6 +405,32 @@ class ListeningEventRecorderTest {
   }
 
   @Test
+  fun `session insert commits before the checkpoint is cleared`() = runTest {
+    val order = mutableListOf<String>()
+    coEvery { sessionRepo.addSession(any()) } answers {
+      saved += firstArg<ListeningSession>()
+      order += "insert"
+    }
+    checkpointStore.onWrite = { if (it == null) order += "clear" }
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    recorder.attachTo(player)
+
+    val start = Instant.ofEpochMilli(1_000_000)
+    recorder.clock = { start }
+    recorder.onIsPlayingChanged(true)
+    recorder.clock = { start.plusMillis(60_000) }
+    position = 60_000L
+    recorder.onIsPlayingChanged(false)
+    testScheduler.advanceUntilIdle()
+
+    // The checkpoint is the session's crash insurance: clearing it before the insert commits
+    // would make a kill in that window lose both.
+    order shouldBe listOf("insert", "clear")
+  }
+
+  @Test
   fun `flushOpenSessionNow clears the checkpoint synchronously`() = runTest {
     val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
     var position = 0L
@@ -433,9 +459,12 @@ private class FakeCheckpointStore : androidx.datastore.core.DataStore<OpenSessio
   override val data: kotlinx.coroutines.flow.Flow<OpenSessionCheckpoint?> = state
   val value: OpenSessionCheckpoint? get() = state.value
 
+  var onWrite: (OpenSessionCheckpoint?) -> Unit = {}
+
   override suspend fun updateData(transform: suspend (t: OpenSessionCheckpoint?) -> OpenSessionCheckpoint?): OpenSessionCheckpoint? {
     val next = transform(state.value)
     state.value = next
+    onWrite(next)
     return next
   }
 }

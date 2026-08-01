@@ -210,7 +210,7 @@ class BookmarkViewModelTest {
       vm.deleteBookmark(mark.id)
       while (state.bookmarks.isNotEmpty()) state = awaitItem()
 
-      vm.undoDelete()
+      vm.undoDelete(mark)
       while (state.bookmarks.none { it.title == "Keep me" }) state = awaitItem()
       assertEquals(1, state.bookmarks.size)
     }
