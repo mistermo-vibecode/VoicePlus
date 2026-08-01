@@ -71,14 +71,6 @@ class PlaybackService : MediaLibraryService() {
     release()
   }
 
-  override fun onTaskRemoved(rootIntent: Intent?) {
-    Logger.d("onTaskRemoved: persisting in-flight position and session")
-    runBlocking {
-      positionUpdater.flushPositionNow()
-    }
-    super.onTaskRemoved(rootIntent)
-  }
-
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
     return session.takeUnless { session ->
       session.invokeIsReleased
