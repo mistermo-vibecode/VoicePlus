@@ -118,6 +118,7 @@ class VoicePlayerTest {
     volumeGain = mockk(relaxed = true),
     sleepTimer = mockk(relaxed = true),
     intentHolder = PlaybackIntentHolder(),
+    listeningEventRecorder = mockk(relaxed = true),
   )
 
   @Test

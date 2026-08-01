@@ -274,4 +274,90 @@ class ListeningEventRecorderTest {
     events shouldHaveSize 1
     events.single().type shouldBe ListeningEventType.Forward.id
   }
+
+  @Test
+  fun `a rebuffer mid-listen does not fragment the session`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    every { player.playbackState } returns Player.STATE_BUFFERING
+    every { player.playWhenReady } returns true
+    recorder.attachTo(player)
+
+    val start = Instant.ofEpochMilli(1_000_000)
+    recorder.clock = { start }
+    recorder.onIsPlayingChanged(true)
+
+    // Stream stalls twice mid-listen: isPlaying flips false while BUFFERING with playWhenReady.
+    recorder.clock = { start.plusMillis(1_000) }
+    recorder.onIsPlayingChanged(false)
+    recorder.onIsPlayingChanged(true)
+    recorder.clock = { start.plusMillis(2_000) }
+    recorder.onIsPlayingChanged(false)
+    recorder.onIsPlayingChanged(true)
+
+    // A real pause: player is READY, playWhenReady false.
+    every { player.playbackState } returns Player.STATE_READY
+    every { player.playWhenReady } returns false
+    recorder.clock = { start.plusMillis(60_000) }
+    position = 60_000L
+    recorder.onIsPlayingChanged(false)
+
+    saved shouldHaveSize 1
+    saved.single().durationMs shouldBe 60_000L
+  }
+
+  @Test
+  fun `a pause with no open session clears stale sleep flags`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    recorder.attachTo(player)
+
+    // Sleep timer fires while already paused: flags are set, but no session is open.
+    holder.stoppedBySleepTimer = true
+    holder.pendingPauseEndPositionMs = 123_456L
+    recorder.onIsPlayingChanged(false)
+
+    holder.stoppedBySleepTimer shouldBe false
+    holder.pendingPauseEndPositionMs shouldBe null
+
+    // The NEXT real session must not inherit a Sleep badge or a stale end position.
+    val start = Instant.ofEpochMilli(2_000_000)
+    recorder.clock = { start }
+    recorder.onIsPlayingChanged(true)
+    recorder.clock = { start.plusMillis(30_000) }
+    position = 30_000L
+    recorder.onIsPlayingChanged(false)
+
+    saved shouldHaveSize 1
+    saved.single().endReason shouldBe ListeningSessionEndReason.Paused.id
+    saved.single().endPositionMs shouldBe 30_000L
+  }
+
+  @Test
+  fun `switching books closes the open session with BookSwitch billed to the old book`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    recorder.attachTo(player)
+
+    val start = Instant.ofEpochMilli(1_000_000)
+    recorder.clock = { start }
+    recorder.onIsPlayingChanged(true)
+
+    recorder.clock = { start.plusMillis(45_000) }
+    position = 45_000L
+    // Same book: no-op.
+    recorder.onBookSwitch(bookId)
+    saved shouldHaveSize 0
+
+    recorder.onBookSwitch(BookId("content://books/2"))
+
+    saved shouldHaveSize 1
+    val session = saved.single()
+    session.bookId shouldBe bookId
+    session.endReason shouldBe ListeningSessionEndReason.BookSwitch.id
+    session.durationMs shouldBe 45_000L
+  }
 }

@@ -42,8 +42,25 @@ class ListeningEventRecorder(
     if (isPlaying) {
       open()
     } else {
+      val player = player
+      if (player != null && player.playbackState == Player.STATE_BUFFERING && player.playWhenReady) {
+        // A rebuffer mid-listen, not a pause. Keep the session open — otherwise a stuttering
+        // stream fragments one listen into sub-3s pieces the duration gate then discards.
+        return
+      }
       close(ListeningSessionEndReason.Paused)
     }
+  }
+
+  /**
+   * Called by VoicePlayer.setBook BEFORE the timeline swap: close an open session that belongs to
+   * a different book, so its time is billed to the book that was actually playing. The new book's
+   * session opens on the next isPlaying edge.
+   */
+  fun onBookSwitch(newBookId: BookId) {
+    val open = openSession ?: return
+    if (open.bookId == newBookId) return
+    close(ListeningSessionEndReason.BookSwitch)
   }
 
   override fun onPlaybackStateChanged(playbackState: Int) {
@@ -98,7 +115,14 @@ class ListeningEventRecorder(
   }
 
   private fun buildClosedSession(defaultReason: ListeningSessionEndReason): ListeningSession? {
-    val open = openSession ?: return null
+    val open = openSession ?: run {
+      // No session to close, but a pause that never opened one (sleep timer firing while already
+      // paused, redundant pause during buffering) must not leave its flags behind — a stale
+      // stoppedBySleepTimer/pendingPauseEndPositionMs would poison the NEXT real session with a
+      // bogus Sleep badge and an end position from hours earlier.
+      clearPauseFlags()
+      return null
+    }
     openSession = null
 
     val endedAt = clock()
