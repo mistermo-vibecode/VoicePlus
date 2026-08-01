@@ -6,20 +6,29 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.retain.retain
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -29,6 +38,7 @@ import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
+import voice.core.data.store.snapshot.BackupEntry
 import voice.core.data.store.snapshot.BackupStatus
 import voice.core.data.store.snapshot.BackupStatusKind
 import voice.core.logging.api.Logger
@@ -60,13 +70,16 @@ interface BackupProvider {
 @Composable
 fun BackupScreen() {
   val viewModel = retain { rootGraphAs<BackupGraph>().backupViewModel }
+  LaunchedEffect(viewModel) { viewModel.refreshSaves() }
   val viewState = viewModel.viewState()
   BackupScreen(
     viewState = viewState,
     onClose = viewModel::onClose,
     onChooseFolder = viewModel::onFolderChosen,
+    onClearFolder = viewModel::clearFolder,
     onBackupNow = viewModel::backupNow,
-    onRestoreNow = viewModel::restoreNow,
+    onRestore = viewModel::restore,
+    onDeleteSave = viewModel::deleteSave,
   )
 }
 
@@ -75,12 +88,21 @@ internal fun BackupScreen(
   viewState: BackupViewState,
   onClose: () -> Unit,
   onChooseFolder: (Uri) -> Unit,
+  onClearFolder: () -> Unit,
   onBackupNow: () -> Unit,
-  onRestoreNow: () -> Unit,
+  onRestore: (BackupEntry) -> Unit,
+  onDeleteSave: (BackupEntry) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
     if (uri != null) onChooseFolder(uri)
+  }
+  val launchPicker = {
+    try {
+      pickFolder.launch(null)
+    } catch (e: ActivityNotFoundException) {
+      Logger.w(e, "No SAF folder picker available")
+    }
   }
   Scaffold(
     modifier = modifier,
@@ -95,79 +117,156 @@ internal fun BackupScreen(
       )
     },
   ) { paddingValues ->
-    Column(
+    LazyColumn(
       modifier = Modifier
         .padding(paddingValues)
-        .padding(16.dp)
+        .padding(horizontal = 16.dp)
         .fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      ListItem(
-        headlineContent = {
-          Text(
-            if (viewState.folder == null) {
-              stringResource(StringsR.string.backup_folder_none)
-            } else {
-              stringResource(StringsR.string.backup_enabled)
-            },
-          )
-        },
-        supportingContent = {
-          viewState.folder?.let { Text(it.toString()) }
-        },
-      )
-      ListItem(
-        headlineContent = { Text(stringResource(StringsR.string.backup_last)) },
-        supportingContent = {
-          Text(viewState.lastBackup?.formatBackupTime() ?: stringResource(StringsR.string.backup_last_never))
-        },
-      )
+      item {
+        ListItem(
+          headlineContent = {
+            Text(
+              if (viewState.folder == null) {
+                stringResource(StringsR.string.backup_folder_none)
+              } else {
+                stringResource(StringsR.string.backup_enabled)
+              },
+            )
+          },
+          supportingContent = {
+            viewState.folder?.let { Text(it.toString()) }
+          },
+        )
+      }
+      item {
+        ListItem(
+          headlineContent = { Text(stringResource(StringsR.string.backup_last)) },
+          supportingContent = {
+            Text(viewState.lastBackup?.formatBackupTime() ?: stringResource(StringsR.string.backup_last_never))
+          },
+        )
+      }
       viewState.status?.let { status ->
-        Text(status.message())
+        item { Text(status.message()) }
       }
       if (viewState.busy) {
-        Text(stringResource(StringsR.string.backup_busy))
+        item { Text(stringResource(StringsR.string.backup_busy)) }
       }
-      OutlinedButton(
-        modifier = Modifier.fillMaxWidth(),
-        enabled = !viewState.busy,
-        onClick = {
-          try {
-            pickFolder.launch(null)
-          } catch (e: ActivityNotFoundException) {
-            Logger.w(e, "No SAF folder picker available")
+      if (viewState.folder == null) {
+        item {
+          Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewState.busy,
+            onClick = { launchPicker() },
+          ) {
+            Text(stringResource(StringsR.string.backup_choose_folder))
           }
-        },
-      ) {
-        Text(stringResource(StringsR.string.backup_choose_folder))
-      }
-      Button(
-        modifier = Modifier.fillMaxWidth(),
-        enabled = viewState.folder != null && !viewState.busy,
-        onClick = onBackupNow,
-      ) {
-        Text(stringResource(StringsR.string.backup_now))
-      }
-      Button(
-        modifier = Modifier.fillMaxWidth(),
-        enabled = viewState.folder != null && !viewState.busy,
-        onClick = onRestoreNow,
-      ) {
-        Text(stringResource(StringsR.string.backup_restore_now))
+        }
+      } else {
+        item {
+          Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewState.busy,
+            onClick = onBackupNow,
+          ) {
+            Text(stringResource(StringsR.string.backup_now))
+          }
+        }
+        item {
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+              modifier = Modifier.weight(1f),
+              enabled = !viewState.busy,
+              onClick = { launchPicker() },
+            ) {
+              Text(stringResource(StringsR.string.backup_change_folder))
+            }
+            OutlinedButton(
+              modifier = Modifier.weight(1f),
+              enabled = !viewState.busy,
+              onClick = onClearFolder,
+            ) {
+              Text(stringResource(StringsR.string.backup_clear_folder))
+            }
+          }
+        }
+        item {
+          Text(
+            text = stringResource(StringsR.string.backup_saves),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 8.dp),
+          )
+        }
+        if (viewState.saves.isEmpty()) {
+          item { Text(stringResource(StringsR.string.backup_saves_empty)) }
+        }
+        items(viewState.saves, key = { it.displayName }) { save ->
+          SaveRow(
+            save = save,
+            busy = viewState.busy,
+            onRestore = { onRestore(save) },
+            onDelete = { onDeleteSave(save) },
+          )
+        }
       }
       viewState.lastRestore?.let { restore ->
-        if (restore.refusedNewerBackup) {
-          Text(stringResource(StringsR.string.backup_restore_refused_newer))
-        } else if (restore.unmatched.isNotEmpty()) {
-          Text(stringResource(StringsR.string.backup_restore_unmatched_title, restore.unmatched.size))
-          Text(stringResource(StringsR.string.backup_restore_unmatched_hint))
-          restore.unmatched.take(5).forEach { info ->
-            Text("- ${info.folderName}: ${info.reason.restoreReasonLabel()}")
+        item {
+          Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (restore.refusedNewerBackup) {
+              Text(stringResource(StringsR.string.backup_restore_refused_newer))
+            } else if (restore.unmatched.isNotEmpty()) {
+              Text(stringResource(StringsR.string.backup_restore_unmatched_title, restore.unmatched.size))
+              Text(stringResource(StringsR.string.backup_restore_unmatched_hint))
+              restore.unmatched.take(5).forEach { info ->
+                Text("- ${info.folderName}: ${info.reason.restoreReasonLabel()}")
+              }
+            }
           }
         }
       }
     }
   }
+}
+
+@Composable
+private fun SaveRow(
+  save: BackupEntry,
+  busy: Boolean,
+  onRestore: () -> Unit,
+  onDelete: () -> Unit,
+) {
+  ListItem(
+    headlineContent = {
+      Text(save.savedAt?.formatBackupTime() ?: stringResource(StringsR.string.backup_save_legacy))
+    },
+    supportingContent = { Text(save.displayName, style = MaterialTheme.typography.bodySmall) },
+    leadingContent = if (save.manual) {
+      {
+        AssistChip(
+          onClick = {},
+          enabled = false,
+          label = { Text(stringResource(StringsR.string.backup_save_manual)) },
+        )
+      }
+    } else {
+      null
+    },
+    trailingContent = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        TextButton(enabled = !busy, onClick = onRestore) {
+          Text(stringResource(StringsR.string.backup_restore_action))
+        }
+        IconButton(enabled = !busy, onClick = onDelete) {
+          Icon(
+            Icons.Outlined.Delete,
+            contentDescription = stringResource(StringsR.string.backup_delete_save),
+          )
+        }
+      }
+    },
+  )
 }
 
 @Composable

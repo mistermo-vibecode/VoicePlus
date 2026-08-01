@@ -43,6 +43,7 @@ public interface BackupRepository {
   public suspend fun deleteBackup(entry: BackupEntry): Boolean
 
   /** Write a manual save point now. Always writes a new file, even if nothing changed. */
+  @IgnorableReturnValue
   public suspend fun exportNow(): BackupExportResult
 
   /** Write an automatic save after a local snapshot. Skips when nothing meaningful changed. */

@@ -7,7 +7,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import voice.core.data.store.snapshot.BackupEntry
 import voice.core.data.store.snapshot.BackupRepository
 import voice.core.data.store.snapshot.BackupStatus
 import voice.core.data.store.snapshot.RestoreSummary
@@ -21,6 +23,7 @@ class BackupViewModel(
 ) {
 
   private val scope = MainScope()
+  private val saves = MutableStateFlow<List<BackupEntry>>(emptyList())
 
   @Composable
   fun viewState(): BackupViewState {
@@ -29,26 +32,54 @@ class BackupViewModel(
     val lastRestore by remember { backupRepository.lastRestore }.collectAsState(initial = null)
     val status by remember { backupRepository.status }.collectAsState(initial = null)
     val busy by remember { backupRepository.busy }.collectAsState(initial = false)
+    val savesList by saves.collectAsState()
     return BackupViewState(
       folder = folder,
       lastBackup = lastBackup,
       lastRestore = lastRestore,
       status = status,
       busy = busy,
+      saves = savesList,
     )
   }
 
-  fun onFolderChosen(uri: Uri) {
-    scope.launch { backupRepository.setBackupFolder(uri) }
+  fun refreshSaves() {
+    scope.launch { reloadSaves() }
   }
 
-  fun restoreNow() {
-    scope.launch { backupRepository.importAndRestore() }
+  private suspend fun reloadSaves() {
+    saves.value = backupRepository.listBackups()
+  }
+
+  fun onFolderChosen(uri: Uri) {
+    scope.launch {
+      backupRepository.setBackupFolder(uri)
+      reloadSaves()
+    }
+  }
+
+  fun clearFolder() {
+    scope.launch {
+      backupRepository.clearBackupFolder()
+      saves.value = emptyList()
+    }
   }
 
   fun backupNow() {
     scope.launch {
-      backupRepository.exportNow().let { }
+      backupRepository.exportNow()
+      reloadSaves()
+    }
+  }
+
+  fun restore(entry: BackupEntry) {
+    scope.launch { backupRepository.importAndRestore(entry) }
+  }
+
+  fun deleteSave(entry: BackupEntry) {
+    scope.launch {
+      backupRepository.deleteBackup(entry)
+      reloadSaves()
     }
   }
 
@@ -63,4 +94,5 @@ data class BackupViewState(
   val lastRestore: RestoreSummary?,
   val status: BackupStatus?,
   val busy: Boolean,
+  val saves: List<BackupEntry>,
 )
