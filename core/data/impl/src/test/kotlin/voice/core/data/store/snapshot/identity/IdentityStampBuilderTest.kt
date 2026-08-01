@@ -21,8 +21,11 @@ class IdentityStampBuilderTest {
   }
 
   private fun chapter(documentId: String) = Chapter(
-    id = ChapterId(docUri(documentId)), name = null, duration = 1_000,
-    fileLastModified = Instant.EPOCH, markData = emptyList(),
+    id = ChapterId(docUri(documentId)),
+    name = null,
+    duration = 1_000,
+    fileLastModified = Instant.EPOCH,
+    markData = emptyList(),
   )
 
   private fun book(

@@ -51,8 +51,11 @@ class LibrarySnapshotCodecTest {
   @Test
   fun `Chapter round-trips through dto (relName is restore-only metadata)`() {
     val original = Chapter(
-      id = ChapterId("ch-1"), name = "One", duration = 1_000,
-      fileLastModified = Instant.ofEpochMilli(42), markData = listOf(MarkData(0, "intro"), MarkData(500, "two")),
+      id = ChapterId("ch-1"),
+      name = "One",
+      duration = 1_000,
+      fileLastModified = Instant.ofEpochMilli(42),
+      markData = listOf(MarkData(0, "intro"), MarkData(500, "two")),
     )
     original.toDto(relName = "01.mp3").toChapter() shouldBe original
   }
@@ -65,8 +68,10 @@ class LibrarySnapshotCodecTest {
       books = listOf(
         book("b1", true).toDto().copy(
           identity = BookIdentityStampDto(
-            authority = "com.android.externalstorage.documents", isSingleFile = false,
-            relPath = "primary:Books/B1", folderName = "B1",
+            authority = "com.android.externalstorage.documents",
+            isSingleFile = false,
+            relPath = "primary:Books/B1",
+            folderName = "B1",
             children = listOf(ChildEntryDto("ch-b1.mp3", 1234)),
           ),
         ),

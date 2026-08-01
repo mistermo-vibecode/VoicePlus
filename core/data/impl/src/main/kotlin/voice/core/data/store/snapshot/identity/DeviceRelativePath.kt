@@ -24,6 +24,8 @@ internal object DeviceRelativePath {
    * named "01.mp3" in different sub-folders never collide. A single-file book (the child's documentId equals
    * the book's documentId) yields "".
    */
-  fun relName(childUri: Uri, bookRelPath: String): String =
-    documentId(childUri).removePrefix(bookRelPath).trimStart('/')
+  fun relName(
+    childUri: Uri,
+    bookRelPath: String,
+  ): String = documentId(childUri).removePrefix(bookRelPath).trimStart('/')
 }

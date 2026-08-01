@@ -45,7 +45,10 @@ class OsWipeRestorerTest {
   // Fake scan: invoking scanAndAwait runs [onScan], which inserts the freshly-scanned (new-URI) library.
   private var onScan: suspend () -> Unit = {}
   private val scanWaiter = object : MediaScanWaiter {
-    override suspend fun scanAndAwait(restartIfScanning: Boolean, forceReParse: Boolean) = onScan()
+    override suspend fun scanAndAwait(
+      restartIfScanning: Boolean,
+      forceReParse: Boolean,
+    ) = onScan()
   }
 
   @Before
@@ -74,7 +77,10 @@ class OsWipeRestorerTest {
 
   // --- URI schemes: same documentId tail under different tree-grant prefixes (= the OS-wipe re-grant) ---
 
-  private fun docUri(tree: String, documentId: String): String {
+  private fun docUri(
+    tree: String,
+    documentId: String,
+  ): String {
     val enc = java.net.URLEncoder.encode(documentId, "UTF-8").replace("+", "%20")
     return "content://$auth/tree/$tree/document/$enc"
   }
@@ -146,11 +152,21 @@ class OsWipeRestorerTest {
 
   @Test
   fun `re-keys a wiped book onto its new URIs, restoring position and bookmark, and never cross-attaches`() = runTest {
-    val (dune, duneChapters) = snapshotBookOf("primary:Books/Dune", listOf("01.mp3", "02.mp3"), "01.mp3", position = 400, lastPlayed = 5_000)
+    val (dune, duneChapters) = snapshotBookOf(
+      "primary:Books/Dune",
+      listOf("01.mp3", "02.mp3"),
+      "01.mp3",
+      position = 400,
+      lastPlayed = 5_000,
+    )
     val (ghost, ghostChapters) = snapshotBookOf("primary:Books/Ghost", listOf("a.mp3"), "a.mp3", position = 10, lastPlayed = 5_000)
     val bookmark = BookmarkDto(
-      bookId = oldUri("primary:Books/Dune"), chapterId = oldUri("primary:Books/Dune/02.mp3"),
-      title = "bm", time = 50, addedAtEpochMillis = 1, setBySleepTimer = false,
+      bookId = oldUri("primary:Books/Dune"),
+      chapterId = oldUri("primary:Books/Dune/02.mp3"),
+      title = "bm",
+      time = 50,
+      addedAtEpochMillis = 1,
+      setBySleepTimer = false,
       id = "00000000-0000-0000-0000-000000000009",
     )
     val snapshot = snapshotOf(listOf(dune, ghost), duneChapters + ghostChapters, bookmarks = listOf(bookmark))
@@ -193,8 +209,13 @@ class OsWipeRestorerTest {
   fun `restores character notes onto the re-keyed book`() = runTest {
     val (dune, duneChapters) = snapshotBookOf("primary:Books/Dune", listOf("01.mp3"), "01.mp3", position = 400, lastPlayed = 5_000)
     val character = BookCharacterDto(
-      id = 9, bookId = oldUri("primary:Books/Dune"), name = "Paul", description = "the heir",
-      sortOrder = 0, createdAtEpochMillis = 11, updatedAtEpochMillis = 22,
+      id = 9,
+      bookId = oldUri("primary:Books/Dune"),
+      name = "Paul",
+      description = "the heir",
+      sortOrder = 0,
+      createdAtEpochMillis = 11,
+      updatedAtEpochMillis = 22,
     )
     onScan = { scanInBook("primary:Books/Dune", listOf("01.mp3")) }
 
