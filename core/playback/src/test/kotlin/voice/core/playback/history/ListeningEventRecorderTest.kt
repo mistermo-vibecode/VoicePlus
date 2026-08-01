@@ -5,6 +5,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -19,6 +20,7 @@ import voice.core.data.ListeningEvent
 import voice.core.data.ListeningEventType
 import voice.core.data.ListeningSession
 import voice.core.data.ListeningSessionEndReason
+import voice.core.data.OpenSessionCheckpoint
 import voice.core.data.repo.ListeningEventRepo
 import voice.core.data.repo.ListeningSessionRepo
 import voice.core.playback.session.MediaId
@@ -47,7 +49,10 @@ class ListeningEventRecorderTest {
     every { currentPosition } answers { position() }
   }
 
-  private fun recorder(scope: CoroutineScope): ListeningEventRecorder = ListeningEventRecorder(sessionRepo, eventRepo, holder, scope)
+  private val checkpointStore = FakeCheckpointStore()
+
+  private fun recorder(scope: CoroutineScope): ListeningEventRecorder =
+    ListeningEventRecorder(sessionRepo, eventRepo, holder, scope, checkpointStore)
 
   @Test
   fun `play then pause writes one session with paused reason`() = runTest {
@@ -359,5 +364,78 @@ class ListeningEventRecorderTest {
     session.bookId shouldBe bookId
     session.endReason shouldBe ListeningSessionEndReason.BookSwitch.id
     session.durationMs shouldBe 45_000L
+  }
+
+  @Test
+  fun `open session is checkpointed periodically and cleared on close`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    recorder.attachTo(player)
+
+    val start = Instant.ofEpochMilli(1_000_000)
+    recorder.clock = { start }
+    recorder.onIsPlayingChanged(true)
+    checkpointStore.value shouldBe null
+
+    // First checkpoint lands after the 30s tick.
+    recorder.clock = { start.plusMillis(30_000) }
+    position = 30_000L
+    testScheduler.advanceTimeBy(31_000)
+
+    val checkpoint = checkpointStore.value
+    checkpoint shouldBe OpenSessionCheckpoint(
+      startedAtEpochMillis = 1_000_000,
+      bookId = bookId.value,
+      chapterId = chapterId.value,
+      startPositionMs = 0,
+      lastSeenAtEpochMillis = 1_030_000,
+      lastSeenPositionMs = 30_000,
+      lastSeenChapterId = chapterId.value,
+    )
+
+    // A normal close clears it — nothing for the finalizer to resurrect.
+    recorder.clock = { start.plusMillis(60_000) }
+    position = 60_000L
+    recorder.onIsPlayingChanged(false)
+    testScheduler.advanceUntilIdle()
+
+    checkpointStore.value shouldBe null
+    saved shouldHaveSize 1
+  }
+
+  @Test
+  fun `flushOpenSessionNow clears the checkpoint synchronously`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    recorder.attachTo(player)
+
+    val start = Instant.ofEpochMilli(1_000_000)
+    recorder.clock = { start }
+    recorder.onIsPlayingChanged(true)
+    recorder.clock = { start.plusMillis(30_000) }
+    testScheduler.advanceTimeBy(31_000)
+    checkpointStore.value shouldNotBe null
+
+    recorder.clock = { start.plusMillis(45_000) }
+    position = 45_000L
+    recorder.flushOpenSessionNow()
+
+    checkpointStore.value shouldBe null
+    saved shouldHaveSize 1
+  }
+}
+
+/** Minimal in-memory DataStore for the checkpoint (core/data's MemoryDataStore lives in another module). */
+private class FakeCheckpointStore : androidx.datastore.core.DataStore<OpenSessionCheckpoint?> {
+  private val state = kotlinx.coroutines.flow.MutableStateFlow<OpenSessionCheckpoint?>(null)
+  override val data: kotlinx.coroutines.flow.Flow<OpenSessionCheckpoint?> = state
+  val value: OpenSessionCheckpoint? get() = state.value
+
+  override suspend fun updateData(transform: suspend (t: OpenSessionCheckpoint?) -> OpenSessionCheckpoint?): OpenSessionCheckpoint? {
+    val next = transform(state.value)
+    state.value = next
+    return next
   }
 }

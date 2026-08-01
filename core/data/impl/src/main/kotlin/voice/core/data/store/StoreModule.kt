@@ -14,6 +14,7 @@ import kotlinx.serialization.builtins.serializer
 import voice.core.data.BookId
 import voice.core.data.GridMode
 import voice.core.data.MediaButtonClickAction
+import voice.core.data.OpenSessionCheckpoint
 import voice.core.data.sleeptimer.SleepTimerPreference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -214,5 +215,16 @@ public interface StoreModule {
   @IgnoreFileTagsStore
   private fun ignoreFileTagsStore(factory: VoiceDataStoreFactory): DataStore<Boolean> {
     return factory.boolean("ignoreFileTags", defaultValue = false)
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @OpenListeningSessionStore
+  private fun openListeningSessionStore(factory: VoiceDataStoreFactory): DataStore<OpenSessionCheckpoint?> {
+    return factory.create(
+      serializer = OpenSessionCheckpoint.serializer().nullable,
+      defaultValue = null,
+      fileName = "openListeningSession",
+    )
   }
 }

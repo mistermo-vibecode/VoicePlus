@@ -7,6 +7,7 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import voice.core.data.BookId
 import voice.core.data.ListeningSession
+import java.time.Instant
 
 @Dao
 public interface ListeningSessionDao {
@@ -33,4 +34,11 @@ public interface ListeningSessionDao {
 
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   public suspend fun upsert(session: ListeningSession)
+
+  // Dedup probe for the interrupted-session finalizer: was this session already recorded normally?
+  @Query("SELECT COUNT(*) FROM listening_session WHERE bookId = :bookId AND startedAt = :startedAt")
+  public suspend fun countAt(
+    bookId: BookId,
+    startedAt: Instant,
+  ): Int
 }

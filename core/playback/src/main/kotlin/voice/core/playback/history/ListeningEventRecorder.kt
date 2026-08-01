@@ -1,9 +1,13 @@
 package voice.core.playback.history
 
+import androidx.datastore.core.DataStore
 import androidx.media3.common.Player
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import voice.core.data.BookId
 import voice.core.data.ChapterId
@@ -11,8 +15,10 @@ import voice.core.data.ListeningEvent
 import voice.core.data.ListeningEventType
 import voice.core.data.ListeningSession
 import voice.core.data.ListeningSessionEndReason
+import voice.core.data.OpenSessionCheckpoint
 import voice.core.data.repo.ListeningEventRepo
 import voice.core.data.repo.ListeningSessionRepo
+import voice.core.data.store.OpenListeningSessionStore
 import voice.core.playback.di.PlaybackScope
 import voice.core.playback.session.MediaId
 import voice.core.playback.session.toMediaIdOrNull
@@ -25,12 +31,14 @@ class ListeningEventRecorder(
   private val eventRepo: ListeningEventRepo,
   private val holder: PlaybackIntentHolder,
   private val scope: CoroutineScope,
+  @OpenListeningSessionStore private val checkpointStore: DataStore<OpenSessionCheckpoint?>,
 ) : Player.Listener {
 
   internal var clock: () -> Instant = { Instant.now() }
 
   private var player: Player? = null
   private var openSession: OpenSession? = null
+  private var checkpointJob: Job? = null
 
   fun attachTo(player: Player) {
     this.player?.removeListener(this)
@@ -112,6 +120,38 @@ class ListeningEventRecorder(
       chapterId = location.chapterId,
       startPositionMs = location.positionMs,
     )
+    startCheckpointing()
+  }
+
+  // Persist the open session every ~30s so a process death (crash, force-stop, reboot) loses at
+  // most that much: the orphaned checkpoint is finalized as an Interrupted session at next app
+  // start. This is the recorder's equivalent of PositionUpdater's 1s position checkpoint.
+  private fun startCheckpointing() {
+    checkpointJob?.cancel()
+    checkpointJob = scope.launch {
+      while (isActive) {
+        delay(CHECKPOINT_INTERVAL_MS)
+        val open = openSession ?: return@launch
+        val location = currentLocation()
+        checkpointStore.updateData {
+          OpenSessionCheckpoint(
+            startedAtEpochMillis = open.startedAt.toEpochMilli(),
+            bookId = open.bookId.value,
+            chapterId = open.chapterId.value,
+            startPositionMs = open.startPositionMs,
+            lastSeenAtEpochMillis = clock().toEpochMilli(),
+            lastSeenPositionMs = location?.positionMs ?: open.startPositionMs,
+            lastSeenChapterId = (location?.chapterId ?: open.chapterId).value,
+          )
+        }
+      }
+    }
+  }
+
+  private fun stopCheckpointing() {
+    checkpointJob?.cancel()
+    checkpointJob = null
+    scope.launch { checkpointStore.updateData { null } }
   }
 
   private fun buildClosedSession(defaultReason: ListeningSessionEndReason): ListeningSession? {
@@ -152,6 +192,7 @@ class ListeningEventRecorder(
   }
 
   private fun close(defaultReason: ListeningSessionEndReason) {
+    stopCheckpointing()
     val session = buildClosedSession(defaultReason) ?: return
     scope.launch { sessionRepo.addSession(session) }
   }
@@ -162,8 +203,12 @@ class ListeningEventRecorder(
    * takes precedence if the sleep-timer flag is set. Idempotent after the first call.
    */
   suspend fun flushOpenSessionNow() {
-    val session = buildClosedSession(ListeningSessionEndReason.Paused) ?: return
-    sessionRepo.addSession(session)
+    checkpointJob?.cancel()
+    checkpointJob = null
+    val session = buildClosedSession(ListeningSessionEndReason.Paused)
+    // Teardown path: clear synchronously — the scope is about to be cancelled.
+    checkpointStore.updateData { null }
+    if (session != null) sessionRepo.addSession(session)
   }
 
   private fun clearPauseFlags() {
@@ -199,3 +244,4 @@ class ListeningEventRecorder(
 }
 
 private const val MIN_SESSION_MS = 3_000L
+private const val CHECKPOINT_INTERVAL_MS = 30_000L

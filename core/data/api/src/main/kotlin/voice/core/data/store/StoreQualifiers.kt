@@ -52,3 +52,6 @@ public annotation class ExperimentalPlaybackPersistenceStore
 
 @Qualifier
 public annotation class IgnoreFileTagsStore
+
+@Qualifier
+public annotation class OpenListeningSessionStore

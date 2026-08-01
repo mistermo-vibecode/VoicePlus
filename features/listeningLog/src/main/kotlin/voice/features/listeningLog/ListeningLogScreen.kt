@@ -307,6 +307,7 @@ private fun EndReasonBadge(endReason: ListeningSessionEndReason?) {
   val labelRes = when (endReason) {
     ListeningSessionEndReason.Sleep -> StringsR.string.listening_log_end_sleep
     ListeningSessionEndReason.EndOfBook -> StringsR.string.listening_log_end_finished
+    ListeningSessionEndReason.Interrupted -> StringsR.string.listening_log_end_interrupted
     // Paused and BookSwitch intentionally show no badge.
     else -> return
   }
