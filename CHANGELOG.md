@@ -1,5 +1,30 @@
 # VoicePlus Changelog
 
+## v1.23 — Backup & Restore, Reliable Listening Log
+
+### Backup & Restore
+- **Back up to a folder you choose:** Pick any folder (SD card, cloud-synced, USB drive) and VoicePlus keeps timestamped backup files there — positions, bookmarks, listening history and stats, character lists, chapter-name fixes, hidden books, and your settings. Choosing a folder is all it takes: the first backup is written immediately.
+- **Automatic and manual saves:** An automatic save is written about once a day (the newest 7 are kept); "Back up now" creates a manual save point that is never cleaned up.
+- **Restore from a list:** Every save in the folder is listed with its date — restore the one you want, or delete saves you no longer need. Backups are never overwritten, so a failed write can't damage an existing good save.
+- **Survives reinstall:** After an uninstall or a new phone, re-grant your audiobook folders and restore — books are matched back to their files, with anything unmatchable clearly listed instead of guessed.
+- **Safety rails:** Every backup is verified after writing; unreadable files are skipped at restore time; backups from a newer app version are refused rather than half-read.
+
+### Listening Log Reliability
+- **Sessions survive being killed:** The in-flight session is checkpointed every 30 seconds, so a crash, force-stop, or reboot mid-listen now records the session (with an "Interrupted" badge) instead of losing it entirely.
+- **Fixed listening not being recorded after swiping the app away** — the playback service could end up in a state where nothing was logged until the next reboot.
+- **Fixed stuttering playback fragmenting sessions** into pieces small enough to be discarded.
+- **Fixed sleep-timer stops rewinding twice** and leaving a stray "position set" entry in the log; a sleep stop that never played also no longer mislabels the next session.
+- **Switching books mid-play** now ends the previous book's session correctly instead of billing the time to the new book.
+- Listening history, stats, and end-reason badges are now included in backups and survive restore without duplicating.
+
+### Bookmarks
+- Fixed a crash when a bookmark pointed at a chapter that no longer exists; selecting such a bookmark now reports it as unavailable instead of seeking into nothing.
+- Deleting a bookmark now offers Undo.
+- Named bookmarks show their chapter and position underneath, so they stay locatable.
+- Blank bookmark names are rejected, and the media-button quick bookmark confirms with a toast.
+
+---
+
 ## v1.22 — Chapter Name Editor
 
 ### Chapter Name Editor
