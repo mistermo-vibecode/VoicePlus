@@ -1,3 +1,11 @@
+# Line endings — this repo is worked on from both macOS and Windows. Without
+# this, the Windows side writes CRLF and every file shows up as modified.
+# Git stores LF regardless of the checkout platform.
+* text=auto eol=lf
+
+# gradlew.bat must be CRLF in the working tree for cmd.exe (still stored as LF).
+*.bat text eol=crlf
+
 # VoicePlus identity-divergence rules
 #
 # Files listed here are intentionally different from upstream Voice and should
