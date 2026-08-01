@@ -17,6 +17,7 @@
 - **Switching books mid-play** now ends the previous book's session correctly instead of billing the time to the new book.
 - **Chapter and bookmark jumps are labeled:** picking a chapter or opening a bookmark now shows as "Went to chapter" with the chapter name, instead of an anonymous "Jumped" entry — so the log no longer shows seeks you don't remember making.
 - **"Resumed after sleep" marker:** a session started within an hour of a sleep-timer stop is chipped in the log, so in the morning you can tell where the timer stopped you (the Sleep entry) from listening that happened while dozing — and tap either to jump back.
+- **Positions shown as time into the chapter** ("Chapter 6 · 0:15") instead of the raw file position, matching the player screen.
 - Listening history, stats, and end-reason badges are now included in backups and survive restore without duplicating.
 
 ### Playback
