@@ -51,3 +51,6 @@ signing/
 # Local AI assistant context — not for public release
 CLAUDE.md
 .claude/
+
+# Local device data pulls — never commit
+device-backup*/
