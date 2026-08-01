@@ -19,6 +19,9 @@
 - **"Resumed after sleep" marker:** a session started within an hour of a sleep-timer stop is chipped in the log, so in the morning you can tell where the timer stopped you (the Sleep entry) from listening that happened while dozing — and tap either to jump back.
 - Listening history, stats, and end-reason badges are now included in backups and survive restore without duplicating.
 
+### Playback
+- **Smoother scrubbing:** fixed the seek slider jittering under your finger — the time label was resizing the track as its digits changed mid-drag — and the thumb no longer snaps back briefly after you release it.
+
 ### Bookmarks
 - Fixed a crash when a bookmark pointed at a chapter that no longer exists; selecting such a bookmark now reports it as unavailable instead of seeking into nothing.
 - Deleting a bookmark now offers Undo.
