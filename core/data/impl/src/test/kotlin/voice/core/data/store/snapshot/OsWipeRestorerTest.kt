@@ -26,7 +26,6 @@ import voice.core.data.repo.ChapterRepoImpl
 import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.MemoryDataStore
 import voice.core.data.store.snapshot.identity.DeviceRelativePath
-import voice.core.data.store.snapshot.identity.IdentityStampBuilder
 import java.time.Instant
 
 /**
@@ -106,7 +105,7 @@ class OsWipeRestorerTest {
     positionInChapter = position, cover = null, gain = 2f, genre = null, narrator = null, series = null, part = null,
   )
 
-  /** Build a single-book snapshot fragment (book dto + identity + chapter dtos) keyed to OLD URIs. */
+  /** Build a single-book snapshot fragment (book dto + chapter dtos) keyed to OLD URIs. */
   private fun snapshotBookOf(
     relPath: String,
     chapterRelNames: List<String>,
@@ -118,7 +117,8 @@ class OsWipeRestorerTest {
     val book = bookRow(oldUri(relPath), chapterUris, position, lastPlayed)
       .copy(currentChapter = ChapterId(oldUri("$relPath/$currentRel")))
     val chapters = chapterUris.map { chapterRow(it) }
-    val dto = book.toDto().copy(identity = IdentityStampBuilder.build(book, chapters))
+    // v3 stores no identity stamp; the restorer derives it from these URIs.
+    val dto = book.toDto()
     val chapterDtos = chapters.map { ch ->
       ch.toDto(relName = DeviceRelativePath.relName(ch.id.value.toUri(), relPath))
     }

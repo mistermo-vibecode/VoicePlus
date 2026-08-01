@@ -48,10 +48,13 @@ class SnapshotWriterTest {
     chapterDao = db.chapterDao(),
     chapterNameOverrideDao = db.chapterNameOverrideDao(),
     listeningSessionDao = db.listeningSessionDao(),
+    listeningEventDao = db.listeningEventDao(),
     slot0 = slot0,
     slot1 = slot1,
     slot2 = slot2,
     excludedBooksStore = excluded,
+    settingsSnapshotter = testSettingsSnapshotter(),
+    audiobookFolders = EmptyAudiobookFolders,
     backupRepository = backup,
     restoreGate = RestoreGate(),
   )
@@ -77,7 +80,7 @@ class SnapshotWriterTest {
   }
 
   @Test
-  fun `stamps each book with its re-grant-invariant identity and chapter relNames`() = runTest {
+  fun `stamps each chapter with its re-keying relName anchor`() = runTest {
     val auth = "com.android.externalstorage.documents"
     fun docUri(documentId: String): String {
       val enc = java.net.URLEncoder.encode(documentId, "UTF-8").replace("+", "%20")
@@ -98,11 +101,8 @@ class SnapshotWriterTest {
 
     writer().writeSnapshot(contentRepo.all())
 
+    // No identity stamp is stored (v3 derives it on restore); the chapter relNames are the anchors.
     val written = ring.best().shouldNotBeNull()
-    val identity = written.books.single().identity.shouldNotBeNull()
-    identity.relPath shouldBe "primary:Books/Dune"
-    identity.authority shouldBe auth
-    identity.children.map { it.relName } shouldBe listOf("01.mp3", "Disc2/02.mp3")
     written.chapters.map { it.relName }.toSet() shouldBe setOf("01.mp3", "Disc2/02.mp3")
   }
 

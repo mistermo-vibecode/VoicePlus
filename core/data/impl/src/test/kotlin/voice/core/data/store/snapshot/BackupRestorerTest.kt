@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -51,9 +52,12 @@ class BackupRestorerTest {
     chapterDao = db.chapterDao(),
     chapterNameOverrideDao = db.chapterNameOverrideDao(),
     listeningSessionDao = db.listeningSessionDao(),
+    listeningEventDao = db.listeningEventDao(),
     excludedBooksStore = excluded,
     appDb = db,
     contentRepo = contentRepo,
+    settingsSnapshotter = testSettingsSnapshotter(),
+    restoreGate = RestoreGate(),
   )
 
   private fun book(
@@ -148,6 +152,61 @@ class BackupRestorerTest {
       )
     }
     restorer().restoreIfNeeded()
-    db.listeningSessionDao().all().map { it.id } shouldContainExactlyInAnyOrder listOf(7L)
+    // Restored with a FRESH id — snapshot ids belong to a different database generation.
+    val restored = db.listeningSessionDao().all().single()
+    restored.startedAt shouldBe Instant.ofEpochMilli(100)
+    restored.bookId.value shouldBe "a"
+  }
+
+  @Test
+  fun `applyDirect twice never duplicates sessions, characters or events`() = runTest {
+    contentRepo.put(book("a", active = true))
+    val snapshot = snapshotOf("a").copy(
+      sessions = listOf(
+        ListeningSession(
+          id = 7, bookId = BookId("a"), chapterId = ChapterId("ca"),
+          startedAt = Instant.ofEpochMilli(100), endedAt = Instant.ofEpochMilli(200),
+          durationMs = 100, startPositionMs = 0, endPositionMs = 100, endReason = 1,
+        ).toDto(),
+      ),
+      characters = listOf(
+        BookCharacterDto(
+          id = 3,
+          bookId = "a",
+          name = "Paul",
+          description = "Atreides",
+          createdAtEpochMillis = 5,
+          updatedAtEpochMillis = 5,
+        ),
+      ),
+      events = listOf(
+        ListeningEventDto(bookId = "a", type = 0, chapterId = "ca", positionMs = 50, atEpochMillis = 150),
+      ),
+    )
+
+    val r = restorer()
+    r.applyDirect(snapshot) shouldBe 1
+    r.applyDirect(snapshot) shouldBe 1
+
+    db.listeningSessionDao().all().size shouldBe 1
+    db.listeningSessionDao().all().single().endReason shouldBe 1
+    db.bookCharacterDao().all().size shouldBe 1
+    db.listeningEventDao().all().size shouldBe 1
+  }
+
+  @Test
+  fun `canApplyDirect is true only when every active snapshot book exists live`() = runTest {
+    contentRepo.put(book("a", active = true))
+    restorer().canApplyDirect(snapshotOf("a")) shouldBe true
+    restorer().canApplyDirect(snapshotOf("a", "b")) shouldBe false
+    restorer().canApplyDirect(snapshotOf()) shouldBe false
+  }
+
+  @Test
+  fun `auto-restore brings back the hidden set and keeps hidden books out`() = runTest {
+    slot0.updateData { snapshotOf("a", "b").copy(hiddenBooks = setOf("b")) }
+    restorer().restoreIfNeeded()
+    excluded.data.first() shouldBe setOf("b")
+    db.bookContentDao().all().map { it.id.value } shouldContainExactlyInAnyOrder listOf("a")
   }
 }

@@ -20,16 +20,17 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import voice.core.data.BookContent
+import voice.core.data.folders.AudiobookFolders
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.dao.BookCharacterDao
 import voice.core.data.repo.internals.dao.BookmarkDao
 import voice.core.data.repo.internals.dao.ChapterDao
 import voice.core.data.repo.internals.dao.ChapterNameOverrideDao
+import voice.core.data.repo.internals.dao.ListeningEventDao
 import voice.core.data.repo.internals.dao.ListeningSessionDao
 import voice.core.data.store.ExcludedBooksStore
 import voice.core.data.store.snapshot.identity.DeviceRelativePath
-import voice.core.data.store.snapshot.identity.IdentityStampBuilder
 import voice.core.logging.api.Logger
 import java.time.Instant
 import java.time.ZoneOffset
@@ -47,10 +48,13 @@ internal class SnapshotWriter(
   private val chapterDao: ChapterDao,
   private val chapterNameOverrideDao: ChapterNameOverrideDao,
   private val listeningSessionDao: ListeningSessionDao,
+  private val listeningEventDao: ListeningEventDao,
   @SnapshotSlot0Store slot0: DataStore<LibrarySnapshot?>,
   @SnapshotSlot1Store slot1: DataStore<LibrarySnapshot?>,
   @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
   @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
+  private val settingsSnapshotter: SettingsSnapshotter,
+  private val audiobookFolders: AudiobookFolders,
   private val backupRepository: BackupRepository,
   private val restoreGate: RestoreGate,
 ) {
@@ -119,13 +123,9 @@ internal class SnapshotWriter(
         if (restoreGate.active.value) return@withContext
         val excludedIds = excludedBooksStore.data.first()
         val allChapters = chapterDao.all()
-        val chapterById = allChapters.associateBy { it.id.value }
-        // Each book's re-grant-invariant identity stamp, and the volume-relative documentId of the book each
-        // chapter belongs to, are derived purely from the stored URIs (see IdentityStampBuilder).
-        val bookDtos = books.map { book ->
-          val bookChapters = book.chapters.mapNotNull { chapterById[it.value] }
-          book.toDto().copy(identity = IdentityStampBuilder.build(book, bookChapters))
-        }
+        // Identity stamps for re-keying are DERIVED from the stored URIs on restore
+        // (OsWipeRestorer.reconstructStamp), so the bundle doesn't carry them.
+        val bookDtos = books.map { it.toDto() }
         val bookRelPathByChapterId: Map<String, String> = buildMap {
           books.forEach { book ->
             val relPath = DeviceRelativePath.documentId(book.id.value.toUri())
@@ -138,6 +138,11 @@ internal class SnapshotWriter(
             .orEmpty()
           chapter.toDto(relName = relName)
         }
+        // Newest events per book, mirroring the UI's own 500-row read cap so bundle size stays bounded.
+        val events = listeningEventDao.all()
+          .groupBy { it.bookId }
+          .values
+          .flatMap { it.take(EVENTS_PER_BOOK) }
         val snapshot = LibrarySnapshot(
           schemaVersion = LibrarySnapshot.SCHEMA_VERSION,
           dbVersion = AppDb.VERSION,
@@ -151,6 +156,12 @@ internal class SnapshotWriter(
           chapterNameOverrides = chapterNameOverrideDao.all().map { it.toDto() },
           sessions = listeningSessionDao.all().map { it.toDto() },
           chapters = chapterDtos,
+          events = events.map { it.toDto() },
+          hiddenBooks = excludedIds,
+          settings = settingsSnapshotter.capture(),
+          folders = audiobookFolders.all().first().flatMap { (type, folders) ->
+            folders.map { FolderDto(uri = it.uri.toString(), type = type.name) }
+          },
         )
         if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
           Logger.w(
@@ -188,5 +199,6 @@ internal class SnapshotWriter(
   companion object {
     private val DEBOUNCE = 3.seconds
     private val PERIODIC_FLUSH = 5.minutes
+    private const val EVENTS_PER_BOOK = 500
   }
 }

@@ -1,0 +1,84 @@
+package voice.core.data.store.snapshot
+
+import androidx.datastore.core.DataStore
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.flow.first
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
+import voice.core.data.GridMode
+import voice.core.data.MediaButtonClickAction
+import voice.core.data.sleeptimer.SleepTimerPreference
+import voice.core.data.store.AutoRewindAmountStore
+import voice.core.data.store.DarkThemeStore
+import voice.core.data.store.ExperimentalPlaybackPersistenceStore
+import voice.core.data.store.FadeOutStore
+import voice.core.data.store.GridModeStore
+import voice.core.data.store.IgnoreFileTagsStore
+import voice.core.data.store.MediaButtonDoubleClickHandlerStore
+import voice.core.data.store.MediaButtonTripleClickHandlerStore
+import voice.core.data.store.SeekTimeStore
+import voice.core.data.store.SleepTimerPreferenceStore
+import kotlin.time.Duration
+
+/**
+ * Captures the settings worth carrying across a wipe into the snapshot's `settings` map, and
+ * applies them back on restore. Each value is JSON-encoded with its own serializer, keyed by a
+ * stable name — unknown keys in an old bundle are simply skipped, missing keys keep defaults.
+ *
+ * A whole-DB or whole-snapshot restore that skips DataStore is how backups silently lose the
+ * "everything around the library" state (learned the hard way in crawlfit); this is the small
+ * companion that closes that gap.
+ */
+@SingleIn(AppScope::class)
+@Inject
+internal class SettingsSnapshotter(
+  @DarkThemeStore darkTheme: DataStore<Boolean>,
+  @AutoRewindAmountStore autoRewind: DataStore<Int>,
+  @SeekTimeStore seekTime: DataStore<Int>,
+  @FadeOutStore fadeOut: DataStore<Duration>,
+  @SleepTimerPreferenceStore sleepTimer: DataStore<SleepTimerPreference>,
+  @GridModeStore gridMode: DataStore<GridMode>,
+  @MediaButtonDoubleClickHandlerStore mediaDoubleClick: DataStore<MediaButtonClickAction>,
+  @MediaButtonTripleClickHandlerStore mediaTripleClick: DataStore<MediaButtonClickAction>,
+  @ExperimentalPlaybackPersistenceStore experimentalPersistence: DataStore<Boolean>,
+  @IgnoreFileTagsStore ignoreFileTags: DataStore<Boolean>,
+  @SnapshotJson private val json: Json,
+) {
+
+  private inner class Entry<T>(
+    val key: String,
+    val store: DataStore<T>,
+    val serializer: KSerializer<T>,
+  ) {
+    suspend fun capture(): Pair<String, String> = key to json.encodeToString(serializer, store.data.first())
+
+    suspend fun apply(encoded: String) {
+      val value = runCatching { json.decodeFromString(serializer, encoded) }.getOrNull() ?: return
+      store.updateData { value }
+    }
+  }
+
+  private val entries: List<Entry<*>> = listOf(
+    Entry("darkTheme", darkTheme, Boolean.serializer()),
+    Entry("autoRewind", autoRewind, Int.serializer()),
+    Entry("seekTime", seekTime, Int.serializer()),
+    Entry("fadeOut", fadeOut, Duration.serializer()),
+    Entry("sleepTimerPreference", sleepTimer, SleepTimerPreference.serializer()),
+    Entry("gridMode", gridMode, GridMode.serializer()),
+    Entry("mediaButtonDoubleClick", mediaDoubleClick, MediaButtonClickAction.serializer()),
+    Entry("mediaButtonTripleClick", mediaTripleClick, MediaButtonClickAction.serializer()),
+    Entry("experimentalPlaybackPersistence", experimentalPersistence, Boolean.serializer()),
+    Entry("ignoreFileTags", ignoreFileTags, Boolean.serializer()),
+  )
+
+  suspend fun capture(): Map<String, String> = entries.associate { it.capture() }
+
+  suspend fun apply(settings: Map<String, String>) {
+    entries.forEach { entry ->
+      settings[entry.key]?.let { entry.apply(it) }
+    }
+  }
+}

@@ -11,6 +11,7 @@ import voice.core.data.BookCharacter
 import voice.core.data.BookContent
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
+import voice.core.data.ListeningEvent
 import voice.core.data.ListeningSession
 import voice.core.data.MediaScanWaiter
 import voice.core.data.repo.BookContentRepo
@@ -32,7 +33,6 @@ import voice.core.data.store.snapshot.rekey.ScannedBook
 import voice.core.data.store.snapshot.rekey.ScannedChapter
 import voice.core.data.store.snapshot.rekey.SnapChapter
 import voice.core.data.store.snapshot.rekey.SnapshotBook
-import voice.core.data.store.snapshot.rekey.toStamp
 import voice.core.logging.api.Logger
 
 /**
@@ -126,13 +126,17 @@ internal class OsWipeRestorer(
         matched.bookmarks.forEach { bookmarkDao.addBookmark(it) }
         matched.overrides.forEach { chapterNameOverrideDao.insert(it) }
         matched.sessions.forEach { session ->
-          // ListeningSession has an autoGenerate PK; dedup on a natural key so a re-run can't double-count.
-          if (seenSessionKeys.add(session.naturalKey())) listeningSessionDao.insert(session)
+          // ListeningSession has an autoGenerate PK; dedup on a natural key so a re-run can't double-count,
+          // and insert with a fresh id so a snapshot-generation id can't collide with a live row.
+          if (seenSessionKeys.add(session.naturalKey())) listeningSessionDao.insert(session.copy(id = 0))
         }
         matched.characters.forEach { character ->
-          // BookCharacter also has an autoGenerate PK; same natural-key dedup.
-          if (seenCharacterKeys.add(character.naturalKey())) bookCharacterDao.insert(character)
+          // BookCharacter also has an autoGenerate PK; same natural-key dedup + fresh id.
+          if (seenCharacterKeys.add(character.naturalKey())) bookCharacterDao.insert(character.copy(id = 0))
         }
+        // Listening EVENTS are deliberately not re-keyed: they are seek/skip decorations on the log, and
+        // carrying them across dead-URI chapter ids isn't worth the mapping surface. The same-device
+        // direct restore path (BackupRestorer.applyDirect) does restore them.
       }
     }
 
@@ -149,7 +153,7 @@ internal class OsWipeRestorer(
     val relPath = DeviceRelativePath.documentId(book.id.value.toUri())
     return ScannedBook(
       newBookId = book.id,
-      stamp = IdentityStampBuilder.build(book, chapters).toStamp(),
+      stamp = IdentityStampBuilder.build(book, chapters),
       chapters = chapters.map {
         ScannedChapter(
           newId = it.id,
@@ -170,7 +174,7 @@ internal class OsWipeRestorer(
   ): SnapshotBook {
     val bookRelPath = DeviceRelativePath.documentId(dto.id.toUri())
     val bookChapters = dto.chapters.mapNotNull { snapChapterById[it] }
-    val stamp = dto.identity?.toStamp() ?: reconstructStamp(dto, bookChapters, bookRelPath)
+    val stamp = reconstructStamp(dto, bookChapters, bookRelPath)
     val snapChapters = bookChapters.map { chapter ->
       // Prefer the stored relName; fall back to deriving it (legacy bundles written before relNames existed).
       val relName = chapter.relName.ifEmpty { DeviceRelativePath.relName(chapter.id.toUri(), bookRelPath) }
@@ -187,7 +191,7 @@ internal class OsWipeRestorer(
     )
   }
 
-  /** Rebuild a stamp from the snapshot's stored URIs when no stamp was persisted (legacy bundle). */
+  /** Build the snapshot side's stamp from its stored URIs — the URIs in the bundle ARE the identity. */
   private fun reconstructStamp(
     dto: BookContentDto,
     chapters: List<ChapterDto>,
@@ -206,6 +210,11 @@ internal class OsWipeRestorer(
   }
 }
 
-private fun ListeningSession.naturalKey(): String = "${bookId.value}|${startedAt.toEpochMilli()}|$startPositionMs"
+// Natural keys for the autoGenerate-PK tables, shared by both restore paths (this one and
+// BackupRestorer). Snapshot row ids belong to a different database generation, so restores insert
+// with a fresh id and dedup on these keys instead.
+internal fun ListeningSession.naturalKey(): String = "${bookId.value}|${startedAt.toEpochMilli()}|$startPositionMs"
 
-private fun BookCharacter.naturalKey(): String = "${bookId.value}|$name|${createdAt.toEpochMilli()}"
+internal fun BookCharacter.naturalKey(): String = "${bookId.value}|$name|${createdAt.toEpochMilli()}"
+
+internal fun ListeningEvent.naturalKey(): String = "${bookId.value}|${at.toEpochMilli()}|$type|$positionMs"

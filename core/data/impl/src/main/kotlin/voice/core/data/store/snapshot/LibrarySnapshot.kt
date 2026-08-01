@@ -8,6 +8,7 @@ import voice.core.data.Bookmark
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.ChapterNameOverride
+import voice.core.data.ListeningEvent
 import voice.core.data.ListeningSession
 import voice.core.data.MarkData
 import java.io.File
@@ -30,6 +31,15 @@ internal data class LibrarySnapshot(
   // chapters2 rows for every book. Required for the OS-wipe restore: without re-inserted Chapter rows
   // BookRepository.book() returns null and the restored book is invisible. Default-empty so legacy bundles decode.
   val chapters: List<ChapterDto> = emptyList(),
+  // Listening-log transport events, capped to the newest per book (matching the UI's own read cap).
+  val events: List<ListeningEventDto> = emptyList(),
+  // Book ids the user hid from the library. Restored books stay hidden instead of resurfacing.
+  val hiddenBooks: Set<String> = emptySet(),
+  // App settings worth carrying across a wipe, each JSON-encoded by SettingsSnapshotter.
+  val settings: Map<String, String> = emptyMap(),
+  // The configured audiobook folders. Display-only on restore: SAF grants cannot be re-created
+  // programmatically, but the names tell the user which folders to re-grant.
+  val folders: List<FolderDto> = emptyList(),
 ) {
   fun activeIds(): Set<String> = books.filter { it.isActive }.map { it.id }.toSet()
 
@@ -37,8 +47,10 @@ internal data class LibrarySnapshot(
     // Bump whenever a restore-affecting field is added/changed. Import/restore accepts any bundle whose
     // schemaVersion is <= this (older bundles decode via default-valued fields); a bundle from a NEWER
     // schema is refused rather than silently truncated. v2 added: listening sessions, chapters2 rows,
-    // per-book identity stamp + chapter relNames, character notes on the OS-wipe path.
-    const val SCHEMA_VERSION = 2
+    // chapter relNames, character notes on the OS-wipe path. v3 added: session endReason, listening
+    // events, hidden books, settings, folder names — and dropped the stored per-book identity stamp
+    // (it is derived from the URIs already in the bundle; old bundles' `identity` keys are ignored).
+    const val SCHEMA_VERSION = 3
   }
 }
 
@@ -62,10 +74,6 @@ internal data class BookContentDto(
   val series: String?,
   val part: String?,
   val chapterNameOffset: Int = 0,
-  // Re-grant-invariant folder fingerprint for the OS-wipe re-key. Null => this book is never auto-re-keyed
-  // (surfaced as unmatched). Populated by the writer from the scanner's identity store. Default-null so
-  // legacy bundles decode and the on-device (same-URI) restore path simply ignores it.
-  val identity: BookIdentityStampDto? = null,
 )
 
 @Serializable
@@ -109,6 +117,24 @@ internal data class ListeningSessionDto(
   val startPositionMs: Long,
   val endPositionMs: Long,
   val endChapterId: String?,
+  // v3: why the session ended (stable ListeningSessionEndReason id). Null on pre-v3 bundles.
+  val endReason: Int? = null,
+)
+
+@Serializable
+internal data class ListeningEventDto(
+  val bookId: String,
+  val type: Int,
+  val chapterId: String,
+  val positionMs: Long,
+  val fromPositionMs: Long? = null,
+  val atEpochMillis: Long,
+)
+
+@Serializable
+internal data class FolderDto(
+  val uri: String,
+  val type: String,
 )
 
 @Serializable
@@ -121,21 +147,6 @@ internal data class ChapterDto(
   // Folder-relative document-id tail (with extension), e.g. "Disc1/01 - Intro.mp3". The stable per-chapter
   // anchor for re-keying bookmarks/overrides/positions after an OS-wipe. Empty until the identity store fills it.
   val relName: String = "",
-)
-
-@Serializable
-internal data class BookIdentityStampDto(
-  val authority: String,
-  val isSingleFile: Boolean,
-  val relPath: String,
-  val folderName: String,
-  val children: List<ChildEntryDto>,
-)
-
-@Serializable
-internal data class ChildEntryDto(
-  val relName: String,
-  val size: Long,
 )
 
 internal fun BookContent.toDto() = BookContentDto(
@@ -237,6 +248,7 @@ internal fun ListeningSession.toDto() = ListeningSessionDto(
   startPositionMs = startPositionMs,
   endPositionMs = endPositionMs,
   endChapterId = endChapterId?.value,
+  endReason = endReason,
 )
 
 internal fun ListeningSessionDto.toListeningSession() = ListeningSession(
@@ -249,6 +261,25 @@ internal fun ListeningSessionDto.toListeningSession() = ListeningSession(
   startPositionMs = startPositionMs,
   endPositionMs = endPositionMs,
   endChapterId = endChapterId?.let { ChapterId(it) },
+  endReason = endReason,
+)
+
+internal fun ListeningEvent.toDto() = ListeningEventDto(
+  bookId = bookId.value,
+  type = type,
+  chapterId = chapterId.value,
+  positionMs = positionMs,
+  fromPositionMs = fromPositionMs,
+  atEpochMillis = at.toEpochMilli(),
+)
+
+internal fun ListeningEventDto.toListeningEvent() = ListeningEvent(
+  bookId = BookId(bookId),
+  type = type,
+  chapterId = ChapterId(chapterId),
+  positionMs = positionMs,
+  fromPositionMs = fromPositionMs,
+  at = Instant.ofEpochMilli(atEpochMillis),
 )
 
 internal fun Chapter.toDto(relName: String = "") = ChapterDto(

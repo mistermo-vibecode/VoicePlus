@@ -61,29 +61,51 @@ class LibrarySnapshotCodecTest {
   }
 
   @Test
-  fun `LibrarySnapshot with chapters and identity stamp round-trips through json`() {
+  fun `v3 LibrarySnapshot round-trips endReason, events, hidden books, settings and folders`() {
     val snap = LibrarySnapshot(
       schemaVersion = LibrarySnapshot.SCHEMA_VERSION, sequence = 7, savedAtEpochMillis = 1,
       totalCount = 1, activeCount = 1,
-      books = listOf(
-        book("b1", true).toDto().copy(
-          identity = BookIdentityStampDto(
-            authority = "com.android.externalstorage.documents",
-            isSingleFile = false,
-            relPath = "primary:Books/B1",
-            folderName = "B1",
-            children = listOf(ChildEntryDto("ch-b1.mp3", 1234)),
-          ),
+      books = listOf(book("b1", true).toDto()),
+      bookmarks = emptyList(), characters = emptyList(), chapterNameOverrides = emptyList(),
+      sessions = listOf(
+        ListeningSessionDto(
+          id = 3, bookId = "b1", chapterId = "ch-b1", startedAtEpochMillis = 10, endedAtEpochMillis = 20,
+          durationMs = 10, startPositionMs = 0, endPositionMs = 10, endChapterId = null, endReason = 1,
         ),
       ),
-      bookmarks = emptyList(), characters = emptyList(), chapterNameOverrides = emptyList(),
       chapters = listOf(
         Chapter(ChapterId("ch-b1"), "C", 1_000, Instant.ofEpochMilli(0), listOf(MarkData(0, "m")))
           .toDto(relName = "ch-b1.mp3"),
       ),
+      events = listOf(
+        ListeningEventDto(bookId = "b1", type = 0, chapterId = "ch-b1", positionMs = 5, atEpochMillis = 15),
+      ),
+      hiddenBooks = setOf("b-hidden"),
+      settings = mapOf("darkTheme" to "true"),
+      folders = listOf(FolderDto(uri = "content://tree/primary%3ABooks", type = "Root")),
     )
     val text = json.encodeToString(LibrarySnapshot.serializer(), snap)
-    json.decodeFromString(LibrarySnapshot.serializer(), text) shouldBe snap
+    val decoded = json.decodeFromString(LibrarySnapshot.serializer(), text)
+    decoded shouldBe snap
+    decoded.sessions.single().endReason shouldBe 1
+  }
+
+  @Test
+  fun `a v2 bundle with a stored identity stamp still decodes (unknown keys ignored)`() {
+    // Written by the v2 schema: per-book identity stamps were stored; v3 derives them instead.
+    val v2 = """{"schemaVersion":2,"dbVersion":65,"sequence":4,"savedAtEpochMillis":9,"totalCount":1,
+      "activeCount":1,"books":[{"id":"b1","playbackSpeed":1.0,"skipSilence":false,"isActive":true,
+      "lastPlayedAtEpochMillis":0,"author":null,"name":"b1","addedAtEpochMillis":0,"chapters":["ch-b1"],
+      "currentChapter":"ch-b1","positionInChapter":0,"coverPath":null,"genre":null,"narrator":null,
+      "series":null,"part":null,
+      "identity":{"authority":"a","isSingleFile":false,"relPath":"p","folderName":"f",
+      "children":[{"relName":"c.mp3","size":0}]}}],
+      "bookmarks":[],"characters":[],"chapterNameOverrides":[]}"""
+    val decoded = json.decodeFromString(LibrarySnapshot.serializer(), v2)
+    decoded.books.single().id shouldBe "b1"
+    decoded.sessions shouldBe emptyList()
+    decoded.hiddenBooks shouldBe emptySet()
+    decoded.settings shouldBe emptyMap()
   }
 
   @Test

@@ -16,6 +16,10 @@ public interface ListeningEventDao {
   @Query("SELECT * FROM listening_event WHERE bookId = :bookId ORDER BY at DESC LIMIT 500")
   public fun eventsForBook(bookId: BookId): Flow<List<ListeningEvent>>
 
+  // Snapshot capture; the caller caps per book in memory to mirror the UI read cap.
+  @Query("SELECT * FROM listening_event ORDER BY at DESC")
+  public suspend fun all(): List<ListeningEvent>
+
   @Query("DELETE FROM listening_event WHERE bookId = :bookId")
   public suspend fun deleteAllForBook(bookId: BookId)
 }

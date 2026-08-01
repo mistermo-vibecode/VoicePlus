@@ -21,6 +21,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import voice.core.data.folders.PersistedUriPermissions
 import voice.core.data.repo.internals.AppDb
+import voice.core.data.store.ExcludedBooksStore
 import voice.core.data.store.snapshot.rekey.ReKeyResult
 import voice.core.logging.api.Logger
 import java.time.Instant
@@ -47,8 +48,11 @@ public class BackupRepositoryImpl internal constructor(
   @SnapshotSlot0Store slot0: DataStore<LibrarySnapshot?>,
   @SnapshotSlot1Store slot1: DataStore<LibrarySnapshot?>,
   @SnapshotSlot2Store slot2: DataStore<LibrarySnapshot?>,
+  @ExcludedBooksStore private val excludedBooksStore: DataStore<Set<String>>,
   private val persistedUriPermissions: PersistedUriPermissions,
   private val osWipeRestorer: OsWipeRestorer,
+  private val backupRestorer: BackupRestorer,
+  private val settingsSnapshotter: SettingsSnapshotter,
 ) : BackupRepository {
 
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
@@ -233,10 +237,24 @@ public class BackupRepositoryImpl internal constructor(
           }
         }
 
-        val result = osWipeRestorer.run(snapshot)
-        lastRestoreState.value = result.toSummary()
-        statusState.value = result.toStatus()
-        ImportOutcome.Imported(result.matched.isNotEmpty() || result.unmatched.isNotEmpty())
+        // Settings and the hidden set come back BEFORE any restore work: ignoreFileTags changes how
+        // the re-key scan derives names, and the hidden set keeps hidden books from resurfacing.
+        excludedBooksStore.updateData { it + snapshot.hiddenBooks }
+        settingsSnapshotter.apply(snapshot.settings)
+
+        if (backupRestorer.canApplyDirect(snapshot)) {
+          // Same device, ids alive: apply additively without the scan + re-key machinery.
+          val restored = backupRestorer.applyDirect(snapshot)
+          val summary = RestoreSummary(restoredCount = restored, unmatched = emptyList())
+          lastRestoreState.value = summary
+          statusState.value = BackupStatus(BackupStatusKind.RestoreComplete, restoredCount = restored)
+          ImportOutcome.Imported(restored > 0)
+        } else {
+          val result = osWipeRestorer.run(snapshot)
+          lastRestoreState.value = result.toSummary()
+          statusState.value = result.toStatus()
+          ImportOutcome.Imported(result.matched.isNotEmpty() || result.unmatched.isNotEmpty())
+        }
       } catch (e: CancellationException) {
         throw e
       } catch (t: Throwable) {
