@@ -46,6 +46,7 @@ import voice.features.bookOverview.di.BookOverviewScope
 import voice.features.bookOverview.search.BookSearchViewState
 import voice.navigation.Destination
 import voice.navigation.Navigator
+import kotlin.time.Duration.Companion.minutes
 
 @SingleIn(BookOverviewScope::class)
 @Inject
@@ -79,7 +80,9 @@ class BookOverviewViewModel(
   private var query by mutableStateOf("")
 
   fun attach() {
-    mediaScanner.scan()
+    // Every navigation back to the library re-enters composition and lands here. Skip the full
+    // SAF re-walk when a scan completed recently; folder changes and restores scan explicitly.
+    mediaScanner.scan(skipIfCompletedWithin = ENTRY_SCAN_COOLDOWN)
   }
 
   @Composable
@@ -291,3 +294,6 @@ private fun Book.itemViewState(
     }
   }
 }
+
+// How stale the library may get before re-entering the overview triggers another automatic scan.
+private val ENTRY_SCAN_COOLDOWN = 5.minutes

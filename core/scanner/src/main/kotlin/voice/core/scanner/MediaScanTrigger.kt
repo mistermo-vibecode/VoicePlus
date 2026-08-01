@@ -21,6 +21,8 @@ import voice.core.data.repo.BookRepository
 import voice.core.documentfile.CachedDocumentFile
 import voice.core.documentfile.CachedDocumentFileFactory
 import voice.core.logging.api.Logger
+import java.time.Instant
+import kotlin.time.Duration
 import kotlin.time.measureTime
 
 @SingleIn(AppScope::class)
@@ -53,10 +55,27 @@ internal constructor(
   private val scanLock = Any()
   private var scanningJob: Job? = null
 
+  @Volatile
+  private var lastScanCompletedAt: Instant? = null
+
+  // Test seam, mirroring ListeningEventRecorder.clock.
+  internal var clock: () -> Instant = { Instant.now() }
+
   public fun scan(
     restartIfScanning: Boolean = false,
     forceReParse: Boolean = false,
+    // The book overview triggers a scan on every entry into composition — i.e. every navigation
+    // back to the library. Without a freshness window that is a full SAF re-walk (seconds of
+    // progress bar) per navigation. Explicit scans (folder changes, delete-rescan, restore) pass
+    // null or restart/force and are never skipped; only a scan that COMPLETED counts as fresh.
+    skipIfCompletedWithin: Duration? = null,
   ) {
+    if (skipIfCompletedWithin != null && !restartIfScanning && !forceReParse &&
+      isFresh(lastScanCompletedAt, clock(), skipIfCompletedWithin)
+    ) {
+      Logger.v("Skipping scan; last one completed within $skipIfCompletedWithin")
+      return
+    }
     scanInternal(restartIfScanning = restartIfScanning, forceReParse = forceReParse)
   }
 
@@ -89,6 +108,9 @@ internal constructor(
         }.also {
           Logger.i("scan took $it")
         }
+        // Only a run that got this far refreshes the window; a cancelled or thrown scan must not
+        // suppress the retry.
+        lastScanCompletedAt = clock()
       } finally {
         // Always clear the flag, even if the scan throws, so the progress indicator can't hang.
         _scannerActive.value = false
@@ -111,4 +133,14 @@ internal constructor(
   override suspend fun scanAndAwait() {
     scanInternal(restartIfScanning = true, forceReParse = false).join()
   }
+}
+
+// Pure so the cooldown window is testable without the scan rig.
+internal fun isFresh(
+  lastCompletedAt: Instant?,
+  now: Instant,
+  window: Duration,
+): Boolean {
+  if (lastCompletedAt == null) return false
+  return java.time.Duration.between(lastCompletedAt, now).toMillis() < window.inWholeMilliseconds
 }

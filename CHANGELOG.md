@@ -20,6 +20,9 @@
 - **Positions shown as time into the chapter** ("Chapter 6 · 0:15") instead of the raw file position, matching the player screen.
 - Listening history, stats, and end-reason badges are now included in backups and survive restore without duplicating.
 
+### Library
+- **No more rescan on every visit:** returning to the library from a book or settings no longer re-scans your folders (and no longer flashes the progress bar) — the automatic scan now runs at most every 5 minutes. Adding or removing a folder, deleting a book, and restoring a backup still scan immediately.
+
 ### Playback
 - **Smoother scrubbing:** fixed the seek slider jittering under your finger — the time label was resizing the track as its digits changed mid-drag — and the thumb no longer snaps back briefly after you release it.
 
