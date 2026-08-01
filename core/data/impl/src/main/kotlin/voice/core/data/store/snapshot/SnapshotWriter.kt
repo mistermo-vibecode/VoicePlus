@@ -7,12 +7,17 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import voice.core.data.BookContent
 import voice.core.data.repo.BookContentRepo
@@ -26,6 +31,9 @@ import voice.core.data.store.ExcludedBooksStore
 import voice.core.data.store.snapshot.identity.DeviceRelativePath
 import voice.core.data.store.snapshot.identity.IdentityStampBuilder
 import voice.core.logging.api.Logger
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @SingleIn(AppScope::class)
@@ -46,6 +54,9 @@ internal class SnapshotWriter(
 ) {
 
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
+  private val dirty = AtomicBoolean(false)
+  private val flushMutex = Mutex()
+  private val externalBackupCadence = SnapshotExternalBackupCadence()
 
   fun start(scope: CoroutineScope) {
     // Re-snapshot on any change to books OR user-authored data (bookmarks, character notes, chapter-name
@@ -57,16 +68,48 @@ internal class SnapshotWriter(
       bookmarkDao.count().map { },
       bookCharacterDao.count().map { },
       chapterNameOverrideDao.count().map { },
-      listeningSessionDao.allSessions().map { },
+      listeningSessionDao.count().map { },
     )
+      .onEach { dirty.set(true) }
       .debounce(DEBOUNCE)
-      .onEach { writeSnapshot(contentRepo.all()) }
+      .onEach { flushIfDirty() }
+      .launchIn(scope)
+
+    scope.launchPeriodicFlush()
+
+    // A fully-successful restore asks for an immediate flush (bypassing the debounce) so the re-keyed state
+    // reaches the ring + external bundle deterministically, even under steady playback or an early process kill.
+    restoreGate.flushRequests
+      .onEach {
+        dirty.set(true)
+        flushIfDirty(forceExternalBackup = true)
+      }
       .launchIn(scope)
   }
 
-  internal suspend fun writeSnapshot(books: List<BookContent>) {
+  private fun CoroutineScope.launchPeriodicFlush() {
+    launch {
+      while (isActive) {
+        delay(PERIODIC_FLUSH)
+        flushIfDirty()
+        exportPendingExternalBackup()
+      }
+    }
+  }
+
+  private suspend fun flushIfDirty(forceExternalBackup: Boolean = false) {
+    if (!dirty.getAndSet(false)) return
+    flushMutex.withLock {
+      writeSnapshot(contentRepo.all(), forceExternalBackup = forceExternalBackup)
+    }
+  }
+
+  internal suspend fun writeSnapshot(
+    books: List<BookContent>,
+    forceExternalBackup: Boolean = false,
+  ) {
     withContext(Dispatchers.IO) {
-      runCatching {
+      try {
         // An OS-wipe restore is mid-flight: the live library is the freshly-scanned, not-yet-re-keyed set
         // (active books, no user data). Writing it now would clobber the ring/bundle we are restoring from.
         if (restoreGate.active.value) return@withContext
@@ -105,7 +148,7 @@ internal class SnapshotWriter(
           sessions = listeningSessionDao.all().map { it.toDto() },
           chapters = chapterDtos,
         )
-        if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
+        if (RotationGuard.isSuspiciousShrink(ring.readAll(), snapshot, excludedIds)) {
           Logger.w(
             "Snapshot rotation declined: suspicious active shrink " +
               "(incoming=${snapshot.activeCount}, totalKnown=${snapshot.totalCount})",
@@ -113,12 +156,29 @@ internal class SnapshotWriter(
           return@withContext
         }
         ring.writeNext(snapshot)
-        backupRepository.exportNow()
-      }.onFailure { Logger.w(it, "Snapshot write failed; library is unaffected") }
+        exportExternalBackup(force = forceExternalBackup)
+      } catch (e: CancellationException) {
+        throw e
+      } catch (t: Throwable) {
+        Logger.w(t, "Snapshot write failed; library is unaffected")
+      }
     }
+  }
+
+  private suspend fun exportExternalBackup(force: Boolean) {
+    if (!externalBackupCadence.shouldExportAfterSnapshot(force)) return
+    val result = backupRepository.exportAfterSnapshot()
+    externalBackupCadence.record(result)
+  }
+
+  private suspend fun exportPendingExternalBackup() {
+    if (!externalBackupCadence.shouldExportPending()) return
+    val result = backupRepository.exportAfterSnapshot()
+    externalBackupCadence.record(result)
   }
 
   companion object {
     private val DEBOUNCE = 3.seconds
+    private val PERIODIC_FLUSH = 5.minutes
   }
 }

@@ -5,29 +5,25 @@ import voice.core.data.repo.internals.AppDb
 internal object RestoreSelector {
 
   /**
-   * Decides whether to restore and from which generation. Pure.
+   * Decides whether to auto-restore on launch and from which generation. Pure.
    *
    * Restores the newest candidate that is non-empty AND not from a newer schema, IFF the live DB is
-   * catastrophically empty OR its active set collapsed to nothing in a way NOT explained by the user's
-   * own deletes (excludedIds). Returns null otherwise — including a legitimately empty library.
+   * genuinely empty ([liveTotal] == 0) — a real clear-data / reinstall. A library that merely has all its
+   * books INACTIVE (e.g. the user removed their folders) is deliberately NOT auto-restored: resurrecting it
+   * would fight an intentional removal. Recovery from a destructive bug that leaves inactive rows behind is
+   * the user's explicit Restore action, not a silent heuristic. Returns null when nothing should restore.
    */
   fun select(
     liveTotal: Int,
-    liveActiveIds: Set<String>,
-    excludedIds: Set<String>,
     candidates: List<LibrarySnapshot>,
   ): LibrarySnapshot? {
-    val best = candidates
+    if (liveTotal > 0) return null
+    return candidates
       .filter {
         it.activeCount > 0 &&
           it.dbVersion <= AppDb.VERSION &&
           it.schemaVersion <= LibrarySnapshot.SCHEMA_VERSION
       }
       .maxByOrNull { it.sequence }
-      ?: return null
-
-    val catastrophicEmpty = liveTotal == 0
-    val unexplainedCollapse = liveActiveIds.isEmpty() && (best.activeIds() - excludedIds).isNotEmpty()
-    return if (catastrophicEmpty || unexplainedCollapse) best else null
   }
 }

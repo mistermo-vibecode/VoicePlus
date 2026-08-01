@@ -30,11 +30,11 @@ internal object RestoreReKeyer {
     val scannedByRelPath: Map<String, List<ScannedBook>> = scanned.groupBy { it.stamp.relPath }
 
     // STEP 0 — eligibility gate. Only location-stable ExternalStorageProvider folders can be auto-re-keyed.
+    // Single-file books are eligible here because this restore path uses the export bundle, not sidecars.
     val eligible = mutableListOf<SnapshotBook>()
     for (snap in snapshot) {
       val gate = when {
         snap.stamp.authority != EXTERNAL_STORAGE_AUTHORITY -> UnmatchedReason.OPAQUE_PROVIDER
-        snap.stamp.isSingleFile -> UnmatchedReason.SINGLE_FILE
         else -> null
       }
       if (gate != null) unmatched += snap.unmatched(gate) else eligible += snap
@@ -90,7 +90,10 @@ internal object RestoreReKeyer {
    * Any same-named pair whose two known values disagree fails — we refuse to graft a stale position onto
    * different audio.
    */
-  private fun confirm(snap: SnapshotBook, cand: ScannedBook): Boolean {
+  private fun confirm(
+    snap: SnapshotBook,
+    cand: ScannedBook,
+  ): Boolean {
     val snapChildren = snap.stamp.children
     val candChildren = cand.stamp.children
     if (snapChildren.size != candChildren.size) return false
@@ -109,7 +112,10 @@ internal object RestoreReKeyer {
   }
 
   /** Tolerate minor re-encode jitter (a few seconds), but reject an edition/content swap. */
-  private fun durationsAgree(snapMs: Long, scannedMs: Long): Boolean {
+  private fun durationsAgree(
+    snapMs: Long,
+    scannedMs: Long,
+  ): Boolean {
     val tolerance = maxOf(DURATION_TOLERANCE_MS, maxOf(snapMs, scannedMs) / 100) // 3s floor, else 1%
     return abs(snapMs - scannedMs) <= tolerance
   }
@@ -119,7 +125,10 @@ internal object RestoreReKeyer {
    * exact-order check). Chapter-scoped data re-points by relName (never index); the unplaceable is dropped,
    * never grafted onto a neighbour. Returns null (→ INVALID) on a structurally impossible candidate.
    */
-  private fun buildMatchedBook(snap: SnapshotBook, cand: ScannedBook): MatchedBook? {
+  private fun buildMatchedBook(
+    snap: SnapshotBook,
+    cand: ScannedBook,
+  ): MatchedBook? {
     if (cand.chapters.isEmpty()) return null // a "book" with no audio files cannot satisfy Book.init.
 
     val oldIdToRelName: Map<String, String> = snap.chapters.associate { it.oldId.value to it.relName }
@@ -239,8 +248,10 @@ internal object RestoreReKeyer {
    * it so a stale position can never point past a now-shorter re-ripped file; when it is unknown (0) we only
    * floor at 0 rather than zero out an otherwise-valid position.
    */
-  private fun clamp(positionMs: Long, freshDurationMs: Long): Long =
-    if (freshDurationMs > 0) positionMs.coerceIn(0L, freshDurationMs) else positionMs.coerceAtLeast(0L)
+  private fun clamp(
+    positionMs: Long,
+    freshDurationMs: Long,
+  ): Long = if (freshDurationMs > 0) positionMs.coerceIn(0L, freshDurationMs) else positionMs.coerceAtLeast(0L)
 
   private const val DURATION_TOLERANCE_MS = 3_000L
 }

@@ -16,17 +16,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import voice.core.data.store.snapshot.rekey.ReKeyResult
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromStream
-import kotlinx.serialization.json.encodeToStream
 import voice.core.data.folders.PersistedUriPermissions
 import voice.core.data.repo.internals.AppDb
+import voice.core.data.store.snapshot.rekey.ReKeyResult
 import voice.core.logging.api.Logger
 import java.time.Instant
+import kotlin.coroutines.cancellation.CancellationException
 
 @Serializable
 internal data class BackupState(
@@ -34,7 +32,6 @@ internal data class BackupState(
   val lastBackupMillis: Long? = null,
 )
 
-@OptIn(ExperimentalSerializationApi::class)
 @SingleIn(AppScope::class)
 @ContributesBinding(AppScope::class)
 public class BackupRepositoryImpl internal constructor(
@@ -50,8 +47,7 @@ public class BackupRepositoryImpl internal constructor(
 
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
 
-  // Serialize import vs export vs a second import so they never interleave (a torn-read of a half-written
-  // bundle, or two restores double-inserting autoGenerate-PK rows).
+  // Serialize import/export so a restore cannot interleave with a bundle rewrite.
   private val mutex = Mutex()
 
   override val backupFolder: Flow<Uri?> = stateStore.data.map { it.folderUri?.toUri() }
@@ -60,25 +56,35 @@ public class BackupRepositoryImpl internal constructor(
   }
   private val lastRestoreState = MutableStateFlow<RestoreSummary?>(null)
   override val lastRestore: Flow<RestoreSummary?> = lastRestoreState
+  private val statusState = MutableStateFlow<BackupStatus?>(null)
+  override val status: Flow<BackupStatus?> = statusState
+  private val busyState = MutableStateFlow(false)
+  override val busy: Flow<Boolean> = busyState
 
   override suspend fun setBackupFolder(uri: Uri) {
-    val granted = runCatching {
-      context.contentResolver.takePersistableUriPermission(
-        uri,
-        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-      )
-      uri in persistedUriPermissions.persistedUris()
-    }.getOrElse { false }
-    if (!granted) {
-      Logger.w("Backup folder permission was not granted; not saving the folder")
-      return
-    }
-    stateStore.updateData { it.copy(folderUri = uri.toString()) }
-    // If a bundle was found and re-keyed, the SnapshotWriter exports the final re-keyed state shortly after
-    // (once the restore gate clears); exporting now would clobber the bundle with the not-yet-re-keyed ring.
-    // Only export immediately when nothing was restored (fresh setup), so the first backup is written promptly.
-    if (!importAndRestore()) {
-      exportNow()
+    busyState.value = true
+    try {
+      val granted = runCatching {
+        context.contentResolver.takePersistableUriPermission(
+          uri,
+          Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+        )
+        uri in persistedUriPermissions.persistedUris()
+      }.getOrElse { false }
+      if (!granted) {
+        Logger.w("Backup folder permission was not granted; not saving the folder")
+        statusState.value = BackupStatus(BackupStatusKind.PermissionDenied)
+        return
+      }
+      stateStore.updateData { it.copy(folderUri = uri.toString()) }
+      statusState.value = when (readExternalSnapshot(uri)) {
+        is ExternalReadResult.Valid -> BackupStatus(BackupStatusKind.BackupFound)
+        ExternalReadResult.Corrupt -> BackupStatus(BackupStatusKind.BackupUnreadable)
+        ExternalReadResult.Missing -> BackupStatus(BackupStatusKind.NoBackupFound)
+        ExternalReadResult.RefusedNewer -> BackupStatus(BackupStatusKind.RefusedNewerBackup)
+      }
+    } finally {
+      busyState.value = false
     }
   }
 
@@ -92,53 +98,167 @@ public class BackupRepositoryImpl internal constructor(
       }.onFailure { Logger.w(it, "Could not release backup folder permission") }
     }
     stateStore.updateData { BackupState() }
+    statusState.value = null
   }
 
-  override suspend fun exportNow() {
-    mutex.withLock {
-      runCatching {
-        val folder = activeFolder() ?: return
-        val snapshot = ring.best() ?: return
-        withContext(Dispatchers.IO) {
-          val bundleUri = findOrCreateBundle(folder) ?: return@withContext
-          context.contentResolver.openOutputStream(bundleUri, "wt")?.use { out ->
-            json.encodeToStream(LibrarySnapshot.serializer(), snapshot, out)
-          }
+  override suspend fun exportNow(): BackupExportResult {
+    return export(
+      allowOverwriteCorrupt = true,
+      forceWrite = true,
+      publishBusy = true,
+      publishSuccessStatus = true,
+    )
+  }
+
+  override suspend fun exportAfterSnapshot(): BackupExportResult {
+    return export(
+      allowOverwriteCorrupt = false,
+      forceWrite = false,
+      publishBusy = false,
+      publishSuccessStatus = false,
+    )
+  }
+
+  private suspend fun export(
+    allowOverwriteCorrupt: Boolean,
+    forceWrite: Boolean,
+    publishBusy: Boolean,
+    publishSuccessStatus: Boolean,
+  ): BackupExportResult {
+    return mutex.withLock {
+      if (publishBusy) busyState.value = true
+      try {
+        val folder = activeFolder()
+        val snapshot = ring.best()
+        if (folder == null || snapshot == null) {
+          return@withLock ExternalBackupExportPlanner.plan(
+            hasFolder = folder != null,
+            hasSnapshot = snapshot != null,
+            forceWrite = forceWrite,
+            allowOverwriteCorrupt = allowOverwriteCorrupt,
+            existing = ExistingExternalBackup.Missing,
+            nextFingerprint = 0L,
+          ).toResult()
         }
-        stateStore.updateData { it.copy(lastBackupMillis = System.currentTimeMillis()) }
-      }.onFailure { Logger.w(it, "External backup export failed; library is unaffected") }
+        withContext(Dispatchers.IO) {
+          val documents = listBackupDocuments(folder)
+          val currentText = documents.primary?.let { readDocumentText(it) }
+          val currentDecode = currentText?.let { ExternalBackupBundleCodec.decode(json, it) }
+          val existing = when (currentDecode) {
+            null -> ExistingExternalBackup.Missing
+            ExternalBackupBundleDecodeResult.Corrupt -> ExistingExternalBackup.Corrupt
+            is ExternalBackupBundleDecodeResult.Valid -> ExistingExternalBackup.Valid(
+              meaningfulFingerprint = ExternalBackupBundleCodec.meaningfulFingerprint(json, currentDecode.snapshot),
+              isNewerThanThisApp = currentDecode.snapshot.isNewerThanThisApp(),
+            )
+          }
+          val decision = ExternalBackupExportPlanner.plan(
+            hasFolder = true,
+            hasSnapshot = true,
+            forceWrite = forceWrite,
+            allowOverwriteCorrupt = allowOverwriteCorrupt,
+            existing = existing,
+            nextFingerprint = ExternalBackupBundleCodec.meaningfulFingerprint(json, snapshot),
+          )
+          when (decision) {
+            ExternalBackupExportDecision.BlockedCorruptBackup -> {
+              statusState.value = BackupStatus(BackupStatusKind.BackupUnreadable)
+              return@withContext BackupExportResult.BlockedCorruptBackup
+            }
+            ExternalBackupExportDecision.BlockedNewerBackup -> {
+              statusState.value = BackupStatus(BackupStatusKind.RefusedNewerBackup)
+              return@withContext BackupExportResult.BlockedNewerBackup
+            }
+            ExternalBackupExportDecision.SkippedNoFolder,
+            ExternalBackupExportDecision.SkippedNoSnapshot,
+            ExternalBackupExportDecision.SkippedUnchanged,
+            -> return@withContext decision.toResult()
+            is ExternalBackupExportDecision.Write -> {
+              if (decision.rotatePrevious && currentText != null) {
+                val previousUri = documents.previous ?: createDocument(folder, PREVIOUS_BUNDLE_NAME)
+                if (previousUri != null && !writeDocumentText(previousUri, currentText)) {
+                  Logger.w("Could not rotate previous external backup; continuing with primary backup write")
+                }
+              }
+            }
+          }
+          val primaryUri = documents.primary ?: createDocument(folder, BUNDLE_NAME)
+          if (primaryUri == null) {
+            statusState.value = BackupStatus(BackupStatusKind.BackupFailed)
+            return@withContext BackupExportResult.Failed
+          }
+          if (!writeDocumentText(primaryUri, ExternalBackupBundleCodec.encode(json, snapshot))) {
+            statusState.value = BackupStatus(BackupStatusKind.BackupFailed)
+            return@withContext BackupExportResult.Failed
+          }
+          val verified = readDocumentText(primaryUri)
+            ?.let { ExternalBackupBundleCodec.decode(json, it) }
+          if (verified != ExternalBackupBundleDecodeResult.Valid(snapshot)) {
+            statusState.value = BackupStatus(BackupStatusKind.BackupFailed)
+            return@withContext BackupExportResult.Failed
+          }
+          stateStore.updateData { it.copy(lastBackupMillis = System.currentTimeMillis()) }
+          if (publishSuccessStatus) statusState.value = BackupStatus(BackupStatusKind.BackupSaved)
+          BackupExportResult.Written
+        }
+      } catch (e: CancellationException) {
+        throw e
+      } catch (t: Throwable) {
+        Logger.w(t, "External backup export failed; library is unaffected")
+        statusState.value = BackupStatus(BackupStatusKind.BackupFailed)
+        BackupExportResult.Failed
+      } finally {
+        if (publishBusy) busyState.value = false
+      }
     }
   }
 
   override suspend fun importAndRestore(): Boolean {
+    val outcome = import()
+    return outcome is ImportOutcome.Imported && outcome.changed
+  }
+
+  private sealed interface ImportOutcome {
+    data object NothingToImport : ImportOutcome
+    data object Corrupt : ImportOutcome
+    data object RefusedNewer : ImportOutcome
+    data class Imported(val changed: Boolean) : ImportOutcome
+  }
+
+  private suspend fun import(): ImportOutcome {
     return mutex.withLock {
-      runCatching {
-        val folder = activeFolder() ?: return false
-        val snapshot = withContext(Dispatchers.IO) {
-          val bundleUri = findBundle(folder) ?: return@withContext null
-          context.contentResolver.openInputStream(bundleUri)?.use { input ->
-            json.decodeFromStream(LibrarySnapshot.serializer(), input)
+      busyState.value = true
+      try {
+        val folder = activeFolder() ?: return@withLock ImportOutcome.NothingToImport
+        val snapshot = when (val read = readExternalSnapshot(folder)) {
+          is ExternalReadResult.Valid -> read.snapshot
+          ExternalReadResult.Corrupt -> {
+            statusState.value = BackupStatus(BackupStatusKind.BackupUnreadable)
+            return@withLock ImportOutcome.Corrupt
           }
-        } ?: return false
-        // Only ingest genuine, compatible VoicePlus bundles. Accept this schema or older (older bundles decode
-        // via default-valued fields); refuse a NEWER schema rather than silently truncating fields we can't read.
-        if (snapshot.schemaVersion > LibrarySnapshot.SCHEMA_VERSION) {
-          Logger.w("Ignoring external backup from a newer schemaVersion=${snapshot.schemaVersion}")
-          return false
+          ExternalReadResult.Missing -> {
+            statusState.value = BackupStatus(BackupStatusKind.NoBackupFound)
+            return@withLock ImportOutcome.NothingToImport
+          }
+          ExternalReadResult.RefusedNewer -> {
+            lastRestoreState.value = RestoreSummary(restoredCount = 0, unmatched = emptyList(), refusedNewerBackup = true)
+            statusState.value = BackupStatus(BackupStatusKind.RefusedNewerBackup)
+            return@withLock ImportOutcome.RefusedNewer
+          }
         }
-        if (snapshot.dbVersion > AppDb.VERSION) {
-          Logger.w("Ignoring external backup from a newer dbVersion=${snapshot.dbVersion}")
-          return false
-        }
-        // OS-wipe path: scan for the re-granted books under their NEW URIs, then re-key the bundle onto them.
-        // We deliberately do NOT write this (dead-URI) bundle to the on-device ring; the SnapshotWriter
-        // captures the freshly re-keyed (new-URI) state into the ring right after.
+
         val result = osWipeRestorer.run(snapshot)
         lastRestoreState.value = result.toSummary()
-        result.matched.isNotEmpty() || result.unmatched.isNotEmpty()
-      }.getOrElse {
-        Logger.w(it, "External backup import failed; library is unaffected")
-        false
+        statusState.value = result.toStatus()
+        ImportOutcome.Imported(result.matched.isNotEmpty() || result.unmatched.isNotEmpty())
+      } catch (e: CancellationException) {
+        throw e
+      } catch (t: Throwable) {
+        Logger.w(t, "External backup import failed; library is unaffected")
+        statusState.value = BackupStatus(BackupStatusKind.BackupUnreadable)
+        ImportOutcome.Corrupt
+      } finally {
+        busyState.value = false
       }
     }
   }
@@ -148,9 +268,68 @@ public class BackupRepositoryImpl internal constructor(
     return uri.takeIf { it in persistedUriPermissions.persistedUris() }
   }
 
-  private fun findBundle(treeUri: Uri): Uri? {
+  private sealed interface ExternalReadResult {
+    data class Valid(val snapshot: LibrarySnapshot) : ExternalReadResult
+    data object Missing : ExternalReadResult
+    data object Corrupt : ExternalReadResult
+    data object RefusedNewer : ExternalReadResult
+  }
+
+  private suspend fun readExternalSnapshot(folder: Uri): ExternalReadResult = withContext(Dispatchers.IO) {
+    val documents = listBackupDocuments(folder)
+    val primary = documents.primary?.let { readDocumentText(it) }
+    if (primary != null) {
+      when (val decoded = ExternalBackupBundleCodec.decode(json, primary)) {
+        ExternalBackupBundleDecodeResult.Corrupt -> {
+          documents.previous?.let { readDocumentText(it) }?.let { previous ->
+            when (val previousDecoded = ExternalBackupBundleCodec.decode(json, previous)) {
+              ExternalBackupBundleDecodeResult.Corrupt -> return@withContext ExternalReadResult.Corrupt
+              is ExternalBackupBundleDecodeResult.Valid -> return@withContext previousDecoded.snapshot.compatibility()
+            }
+          }
+          return@withContext ExternalReadResult.Corrupt
+        }
+        is ExternalBackupBundleDecodeResult.Valid -> return@withContext decoded.snapshot.compatibility()
+      }
+    }
+    val previous = documents.previous?.let { readDocumentText(it) } ?: return@withContext ExternalReadResult.Missing
+    when (val decoded = ExternalBackupBundleCodec.decode(json, previous)) {
+      ExternalBackupBundleDecodeResult.Corrupt -> ExternalReadResult.Corrupt
+      is ExternalBackupBundleDecodeResult.Valid -> decoded.snapshot.compatibility()
+    }
+  }
+
+  private fun LibrarySnapshot.compatibility(): ExternalReadResult {
+    return if (isNewerThanThisApp()) {
+      Logger.w("Refusing external backup from a newer version (schema=$schemaVersion, db=$dbVersion)")
+      ExternalReadResult.RefusedNewer
+    } else {
+      ExternalReadResult.Valid(this)
+    }
+  }
+
+  private fun LibrarySnapshot.isNewerThanThisApp(): Boolean {
+    return schemaVersion > LibrarySnapshot.SCHEMA_VERSION || dbVersion > AppDb.VERSION
+  }
+
+  private fun readDocumentText(uri: Uri): String? {
+    return context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+  }
+
+  private fun writeDocumentText(
+    uri: Uri,
+    text: String,
+  ): Boolean {
+    val stream = context.contentResolver.openOutputStream(uri, "wt") ?: return false
+    stream.bufferedWriter().use { it.write(text) }
+    return true
+  }
+
+  private fun listBackupDocuments(treeUri: Uri): BackupDocuments {
     val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
     val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
+    var primary: Uri? = null
+    var previous: Uri? = null
     context.contentResolver.query(
       childrenUri,
       arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME),
@@ -158,23 +337,36 @@ public class BackupRepositoryImpl internal constructor(
       null,
       null,
     )?.use { cursor ->
+      val documentIdColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+      val displayNameColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
       while (cursor.moveToNext()) {
-        if (cursor.getString(1) == BUNDLE_NAME) {
-          return DocumentsContract.buildDocumentUriUsingTree(treeUri, cursor.getString(0))
+        val displayName = cursor.getString(displayNameColumn)
+        val documentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, cursor.getString(documentIdColumn))
+        when (displayName) {
+          BUNDLE_NAME -> primary = documentUri
+          PREVIOUS_BUNDLE_NAME -> previous = documentUri
         }
       }
     }
-    return null
+    return BackupDocuments(primary = primary, previous = previous)
   }
 
-  private fun findOrCreateBundle(treeUri: Uri): Uri? {
-    findBundle(treeUri)?.let { return it }
+  private fun createDocument(
+    treeUri: Uri,
+    displayName: String,
+  ): Uri? {
     val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
-    return DocumentsContract.createDocument(context.contentResolver, parent, "application/json", BUNDLE_NAME)
+    return DocumentsContract.createDocument(context.contentResolver, parent, "application/json", displayName)
   }
+
+  private data class BackupDocuments(
+    val primary: Uri?,
+    val previous: Uri?,
+  )
 
   private companion object {
     const val BUNDLE_NAME = "voiceplus-backup.json"
+    const val PREVIOUS_BUNDLE_NAME = "voiceplus-backup.previous.json"
   }
 }
 
@@ -182,3 +374,30 @@ private fun ReKeyResult.toSummary(): RestoreSummary = RestoreSummary(
   restoredCount = matched.size,
   unmatched = unmatched.map { UnmatchedBookInfo(folderName = it.folderName, relPath = it.relPath, reason = it.reason.name) },
 )
+
+private fun ReKeyResult.toStatus(): BackupStatus {
+  return when {
+    matched.isNotEmpty() && unmatched.isEmpty() -> BackupStatus(
+      BackupStatusKind.RestoreComplete,
+      restoredCount = matched.size,
+    )
+    matched.isNotEmpty() -> BackupStatus(
+      BackupStatusKind.RestorePartial,
+      restoredCount = matched.size,
+      unmatchedCount = unmatched.size,
+    )
+    unmatched.isNotEmpty() -> BackupStatus(BackupStatusKind.RestoreNoMatch, unmatchedCount = unmatched.size)
+    else -> BackupStatus(BackupStatusKind.NoBackupFound)
+  }
+}
+
+private fun ExternalBackupExportDecision.toResult(): BackupExportResult {
+  return when (this) {
+    ExternalBackupExportDecision.BlockedCorruptBackup -> BackupExportResult.BlockedCorruptBackup
+    ExternalBackupExportDecision.BlockedNewerBackup -> BackupExportResult.BlockedNewerBackup
+    ExternalBackupExportDecision.SkippedNoFolder -> BackupExportResult.SkippedNoFolder
+    ExternalBackupExportDecision.SkippedNoSnapshot -> BackupExportResult.SkippedNoSnapshot
+    ExternalBackupExportDecision.SkippedUnchanged -> BackupExportResult.SkippedUnchanged
+    is ExternalBackupExportDecision.Write -> BackupExportResult.Written
+  }
+}

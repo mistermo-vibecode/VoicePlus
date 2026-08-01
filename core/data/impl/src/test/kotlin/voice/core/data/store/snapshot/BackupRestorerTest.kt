@@ -97,27 +97,17 @@ class BackupRestorerTest {
   }
 
   @Test
-  fun `unexplained collapse keeps fresher live progress and reactivates`() = runTest {
-    // Library collapsed to all-inactive, but the live row has fresher progress than the snapshot.
-    contentRepo.put(
-      book("a", active = false).copy(lastPlayedAt = Instant.ofEpochMilli(1000), positionInChapter = 5000),
-    )
-    slot0.updateData {
-      LibrarySnapshot(
-        schemaVersion = 1, dbVersion = AppDb.VERSION, sequence = 1, savedAtEpochMillis = 0,
-        totalCount = 1, activeCount = 1,
-        books = listOf(
-          book("a", active = true).copy(lastPlayedAt = Instant.EPOCH, positionInChapter = 0).toDto(),
-        ),
-        bookmarks = emptyList(), characters = emptyList(), chapterNameOverrides = emptyList(),
-      )
-    }
+  fun `all-inactive non-empty library is not resurrected so an intentional removal sticks`() = runTest {
+    // The user removed the folder, leaving the book inactive in a non-empty DB. Auto-restore must NOT bring
+    // it back — that was the bug where removed books reappeared on the next launch.
+    contentRepo.put(book("a", active = false).copy(positionInChapter = 5000))
+    slot0.updateData { snapshotOf("a") }
 
     restorer().restoreIfNeeded()
 
-    val restored = db.bookContentDao().all().single { it.id.value == "a" }
-    restored.isActive shouldBe true
-    restored.positionInChapter shouldBe 5000L
+    val row = db.bookContentDao().all().single { it.id.value == "a" }
+    row.isActive shouldBe false
+    row.positionInChapter shouldBe 5000L
   }
 
   @Test

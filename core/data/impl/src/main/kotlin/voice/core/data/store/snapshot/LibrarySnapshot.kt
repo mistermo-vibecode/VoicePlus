@@ -33,6 +33,22 @@ internal data class LibrarySnapshot(
 ) {
   fun activeIds(): Set<String> = books.filter { it.isActive }.map { it.id }.toSet()
 
+  // Every book id in the snapshot (active or not). Used by the rotation guard to tell apart a user-data
+  // loss that is EXPLAINED by a book being removed (its rows go with it) from an in-place wipe of user
+  // data while the owning book survives.
+  fun allBookIds(): Set<String> = books.map { it.id }.toSet()
+
+  // Count of user-authored rows (sessions + bookmarks + character notes + chapter-name overrides) that
+  // belong to a book in [bookIds]. Rows whose owning book is absent from [bookIds] are excluded so a
+  // book removal does not look like a user-data collapse. chapterNameOverrides carry bookId directly;
+  // the others reference it as bookId too.
+  fun userDataRowsForBooks(bookIds: Set<String>): Int {
+    return sessions.count { it.bookId in bookIds } +
+      bookmarks.count { it.bookId in bookIds } +
+      characters.count { it.bookId in bookIds } +
+      chapterNameOverrides.count { it.bookId in bookIds }
+  }
+
   companion object {
     // Bump whenever a restore-affecting field is added/changed. Import/restore accepts any bundle whose
     // schemaVersion is <= this (older bundles decode via default-valued fields); a bundle from a NEWER

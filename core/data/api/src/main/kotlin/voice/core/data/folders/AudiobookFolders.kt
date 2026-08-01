@@ -2,6 +2,7 @@ package voice.core.data.folders
 
 import android.net.Uri
 import kotlinx.coroutines.flow.Flow
+import voice.core.data.BookId
 import voice.core.documentfile.CachedDocumentFile
 
 public interface AudiobookFolders {
@@ -18,6 +19,14 @@ public interface AudiobookFolders {
   )
 
   public suspend fun hasAnyFolders(): Boolean
+
+  /**
+   * Whether [bookId] currently lives under a configured audiobook folder, read against the LIVE folder set
+   * (not a snapshot). The scanner consults this immediately before re-activating a book it found on disk, so a
+   * scan that started before a folder was removed cannot resurrect that folder's books after the removal already
+   * deactivated them — closing the remove-during-an-in-flight-scan race. Pure URI membership; performs no SAF IO.
+   */
+  public suspend fun isManaged(bookId: BookId): Boolean
 }
 
 public data class DocumentFileWithUri(

@@ -64,7 +64,19 @@ internal class OsWipeRestorer(
 ) {
 
   @IgnorableReturnValue
-  suspend fun run(snapshot: LibrarySnapshot): ReKeyResult = restoreGate.withRestoreActive {
+  suspend fun run(snapshot: LibrarySnapshot): ReKeyResult {
+    val outcome = doRestore(snapshot)
+    // A clean, complete restore: flush the re-keyed state to the ring + external bundle now (the gate has
+    // cleared) rather than waiting on the debounce. On a PARTIAL restore (some books surfaced as unmatched)
+    // we deliberately do NOT flush — the external bundle still holds those books' data for a re-grant-and-retry,
+    // and an export would overwrite it.
+    if (outcome.matched.isNotEmpty() && outcome.unmatched.isEmpty()) {
+      restoreGate.requestFlush()
+    }
+    return outcome
+  }
+
+  private suspend fun doRestore(snapshot: LibrarySnapshot): ReKeyResult = restoreGate.withRestoreActive {
     // 1. Make the freshly-scanned, new-URI books exist AND the scan's setAllInactiveExcept reconcile complete
     // before we read them. scanAndAwait joins the actual scan job (not the racy scannerActive flag).
     scanWaiter.scanAndAwait(restartIfScanning = true)

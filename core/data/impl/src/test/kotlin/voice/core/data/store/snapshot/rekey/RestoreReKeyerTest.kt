@@ -18,8 +18,14 @@ class RestoreReKeyerTest {
 
   // ---- id schemes (old = pre-wipe URI, new = post-re-grant URI) ----
 
-  private fun oldCid(relPath: String, rel: String) = "oldc://$relPath/$rel"
-  private fun newCid(relPath: String, rel: String) = "newc://$relPath/$rel"
+  private fun oldCid(
+    relPath: String,
+    rel: String,
+  ) = "oldc://$relPath/$rel"
+  private fun newCid(
+    relPath: String,
+    rel: String,
+  ) = "newc://$relPath/$rel"
 
   // ---- builders ----
 
@@ -82,9 +88,19 @@ class RestoreReKeyerTest {
     chapters = chapterRelNames.mapIndexed { i, rel -> ScannedChapter(ChapterId(newCid(relPath, rel)), rel, durations[i]) },
   )
 
-  private fun bookmarkDto(relPath: String, rel: String, time: Long, id: String) = BookmarkDto(
-    bookId = "old://$relPath", chapterId = oldCid(relPath, rel), title = "bm", time = time,
-    addedAtEpochMillis = 5, setBySleepTimer = false, id = id,
+  private fun bookmarkDto(
+    relPath: String,
+    rel: String,
+    time: Long,
+    id: String,
+  ) = BookmarkDto(
+    bookId = "old://$relPath",
+    chapterId = oldCid(relPath, rel),
+    title = "bm",
+    time = time,
+    addedAtEpochMillis = 5,
+    setBySleepTimer = false,
+    id = id,
   )
 
   // ---- scenarios ----
@@ -200,9 +216,13 @@ class RestoreReKeyerTest {
     val r = RestoreReKeyer.reKey(
       snapshot = listOf(
         snapBook(
-          relPath, listOf("01.mp3", "02.mp3"), currentRel = "01.mp3",
+          relPath,
+          listOf("01.mp3", "02.mp3"),
+          currentRel = "01.mp3",
           bookmarks = listOf(bookmarkDto(relPath, "02.mp3", time = 50, id = "00000000-0000-0000-0000-000000000001")),
-          overrides = listOf(ChapterNameOverrideDto(oldCid(relPath, "02.mp3"), markStartMs = 0, bookId = "old://$relPath", name = "Renamed")),
+          overrides = listOf(
+            ChapterNameOverrideDto(oldCid(relPath, "02.mp3"), markStartMs = 0, bookId = "old://$relPath", name = "Renamed"),
+          ),
         ),
       ),
       // scanned in REVERSED order: index 0 is 02.mp3
@@ -227,7 +247,8 @@ class RestoreReKeyerTest {
     val r = RestoreReKeyer.reKey(
       snapshot = listOf(
         snapBook(
-          relPath, listOf("Disc1/01.mp3", "Disc2/01.mp3"),
+          relPath,
+          listOf("Disc1/01.mp3", "Disc2/01.mp3"),
           bookmarks = listOf(bookmarkDto(relPath, "Disc2/01.mp3", time = 10, id = "00000000-0000-0000-0000-000000000002")),
         ),
       ),
@@ -255,7 +276,10 @@ class RestoreReKeyerTest {
     val r = RestoreReKeyer.reKey(
       snapshot = listOf(
         snapBook(
-          relPath, listOf("01.mp3"), currentRel = "01.mp3", position = 9_000,
+          relPath,
+          listOf("01.mp3"),
+          currentRel = "01.mp3",
+          position = 9_000,
           bookmarks = listOf(bookmarkDto(relPath, "01.mp3", time = 9_000, id = "00000000-0000-0000-0000-000000000003")),
         ),
       ),
@@ -277,13 +301,13 @@ class RestoreReKeyerTest {
   }
 
   @Test
-  fun `single-file book is gated out as SINGLE_FILE`() {
+  fun `single-file book re-keys by its stable document id`() {
     val r = RestoreReKeyer.reKey(
       snapshot = listOf(snapBook("primary:Books/book.m4b", listOf("book.m4b"), singleFile = true)),
       scanned = listOf(scanBook("primary:Books/book.m4b", listOf("book.m4b"))),
     )
-    r.matched.shouldBe(emptyList())
-    r.unmatched.single().reason shouldBe UnmatchedReason.SINGLE_FILE
+    r.unmatched.shouldBe(emptyList())
+    r.matched.single().content.id shouldBe BookId("new://primary:Books/book.m4b")
   }
 
   @Test
@@ -310,11 +334,17 @@ class RestoreReKeyerTest {
     val r = RestoreReKeyer.reKey(
       snapshot = listOf(
         snapBook(
-          relPath, listOf("01.mp3"),
+          relPath,
+          listOf("01.mp3"),
           characters = listOf(
             BookCharacterDto(
-              id = 42, bookId = "old://$relPath", name = "Paul", description = "the heir",
-              sortOrder = 1, createdAtEpochMillis = 100, updatedAtEpochMillis = 200,
+              id = 42,
+              bookId = "old://$relPath",
+              name = "Paul",
+              description = "the heir",
+              sortOrder = 1,
+              createdAtEpochMillis = 100,
+              updatedAtEpochMillis = 200,
             ),
           ),
         ),

@@ -26,6 +26,11 @@ public interface ListeningSessionDao {
   @Query("SELECT * FROM listening_session")
   public suspend fun all(): List<ListeningSession>
 
+  // A lightweight change trigger for the snapshot writer (Room re-emits on any insert/update/delete);
+  // cheaper than loading the whole table via allSessions() just to act as a signal.
+  @Query("SELECT COUNT(*) FROM listening_session")
+  public fun count(): Flow<Int>
+
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   public suspend fun upsert(session: ListeningSession)
 }

@@ -17,6 +17,7 @@ import voice.core.data.repo.internals.dao.ListeningSessionDao
 import voice.core.data.repo.internals.transaction
 import voice.core.data.store.ExcludedBooksStore
 import voice.core.logging.api.Logger
+import kotlin.coroutines.cancellation.CancellationException
 
 @SingleIn(AppScope::class)
 @Inject
@@ -38,17 +39,22 @@ internal class BackupRestorer(
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
 
   suspend fun restoreIfNeeded() {
-    runCatching {
+    try {
       val live = bookContentDao.all()
-      val liveActiveIds = live.filter { it.isActive }.map { it.id.value }.toSet()
-      // Healthy library: nothing to restore. Skip the (expensive) snapshot JSON decodes.
-      if (live.isNotEmpty() && liveActiveIds.isNotEmpty()) return
+      // Only auto-restore when the database is genuinely empty (a real clear-data / reinstall). A library
+      // with all books inactive — e.g. the user removed their folders — is intentionally NOT auto-restored;
+      // resurrecting it would fight the removal. Explicit Restore covers recovery from a destructive bug.
+      if (live.isNotEmpty()) return
       val excludedIds = excludedBooksStore.data.first()
-      val candidate = RestoreSelector.select(live.size, liveActiveIds, excludedIds, ring.readAll()) ?: return
+      val candidate = RestoreSelector.select(live.size, ring.readAll()) ?: return
       apply(candidate, excludedIds, live)
       contentRepo.invalidateCache()
       Logger.i("Restored library from snapshot generation ${candidate.sequence}")
-    }.onFailure { Logger.e(it, "Snapshot restore failed; library is unaffected") }
+    } catch (e: CancellationException) {
+      throw e
+    } catch (t: Throwable) {
+      Logger.e(t, "Snapshot restore failed; library is unaffected")
+    }
   }
 
   private suspend fun apply(

@@ -24,53 +24,33 @@ class RestoreSelectorTest {
   fun `empty Room restores the newest non-empty candidate`() {
     RestoreSelector.select(
       liveTotal = 0,
-      liveActiveIds = emptySet(),
-      excludedIds = emptySet(),
       candidates = listOf(snap(1, listOf("a")), snap(3, listOf("a", "b"))),
     )!!.sequence shouldBe 3L
   }
 
   @Test
-  fun `full active-collapse not explained by exclusions restores`() {
+  fun `non-empty Room is never auto-restored, even when all books are inactive`() {
+    // The user removed their folders, leaving inactive rows. Auto-restoring would fight that removal.
     RestoreSelector.select(
       liveTotal = 2,
-      liveActiveIds = emptySet(),
-      excludedIds = emptySet(),
-      candidates = listOf(snap(1, listOf("a", "b"))),
-    )!!.sequence shouldBe 1L
-  }
-
-  @Test
-  fun `collapse fully explained by exclusions does not restore`() {
-    RestoreSelector.select(
-      liveTotal = 2,
-      liveActiveIds = emptySet(),
-      excludedIds = setOf("a", "b"),
-      candidates = listOf(snap(1, listOf("a", "b"))),
-    ) shouldBe null
-  }
-
-  @Test
-  fun `healthy live library does not restore`() {
-    RestoreSelector.select(
-      liveTotal = 2,
-      liveActiveIds = setOf("a", "b"),
-      excludedIds = emptySet(),
       candidates = listOf(snap(1, listOf("a", "b"))),
     ) shouldBe null
   }
 
   @Test
   fun `no non-empty candidate does not restore`() {
-    RestoreSelector.select(0, emptySet(), emptySet(), emptyList()) shouldBe null
+    RestoreSelector.select(liveTotal = 0, candidates = emptyList()) shouldBe null
   }
 
   @Test
-  fun `candidate from a newer schema is rejected`() {
+  fun `an empty Room with only an all-inactive candidate does not restore`() {
+    RestoreSelector.select(liveTotal = 0, candidates = listOf(snap(1, emptyList()))) shouldBe null
+  }
+
+  @Test
+  fun `candidate from a newer db schema is rejected`() {
     RestoreSelector.select(
       liveTotal = 0,
-      liveActiveIds = emptySet(),
-      excludedIds = emptySet(),
       candidates = listOf(snap(5, listOf("a"), dbVersion = AppDb.VERSION + 1)),
     ) shouldBe null
   }
@@ -79,8 +59,6 @@ class RestoreSelectorTest {
   fun `candidate from a newer storage schemaVersion is rejected`() {
     RestoreSelector.select(
       liveTotal = 0,
-      liveActiveIds = emptySet(),
-      excludedIds = emptySet(),
       candidates = listOf(snap(5, listOf("a"), schemaVersion = LibrarySnapshot.SCHEMA_VERSION + 1)),
     ) shouldBe null
   }

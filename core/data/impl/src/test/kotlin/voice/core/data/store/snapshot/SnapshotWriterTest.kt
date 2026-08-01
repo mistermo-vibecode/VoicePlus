@@ -34,9 +34,12 @@ class SnapshotWriterTest {
     override val backupFolder = kotlinx.coroutines.flow.flowOf<android.net.Uri?>(null)
     override val lastBackupAt = kotlinx.coroutines.flow.flowOf<java.time.Instant?>(null)
     override val lastRestore = kotlinx.coroutines.flow.flowOf<RestoreSummary?>(null)
+    override val status = kotlinx.coroutines.flow.flowOf<BackupStatus?>(null)
+    override val busy = kotlinx.coroutines.flow.flowOf(false)
     override suspend fun setBackupFolder(uri: android.net.Uri) {}
     override suspend fun clearBackupFolder() {}
-    override suspend fun exportNow() {}
+    override suspend fun exportNow() = BackupExportResult.SkippedNoFolder
+    override suspend fun exportAfterSnapshot() = BackupExportResult.SkippedNoFolder
     override suspend fun importAndRestore() = false
   }
 

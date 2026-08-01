@@ -6,7 +6,6 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import voice.core.common.DispatcherProvider
 import voice.core.data.MediaScanWaiter
 import voice.core.data.folders.AudiobookFolders
 import voice.core.data.folders.FolderType
@@ -33,6 +33,7 @@ internal constructor(
   private val coverScanner: CoverScanner,
   private val bookRepo: BookRepository,
   private val documentFileFactory: CachedDocumentFileFactory,
+  private val dispatcherProvider: DispatcherProvider,
 ) : MediaScanWaiter {
 
   private val _scannerActive = MutableStateFlow(false)
@@ -40,9 +41,11 @@ internal constructor(
 
   // SupervisorJob + handler so an exception in one scan (e.g. a SAF SecurityException or Room
   // error) is logged instead of cancelling the scope — otherwise every later scan would silently
-  // no-op until the app restarts.
+  // no-op until the app restarts. The dispatcher is injected (not a hardcoded Dispatchers.IO) so a
+  // test can run the scan on a single TestDispatcher and control exactly when it resumes relative to
+  // a folder removal — the seam that makes the remove-during-scan race deterministically reproducible.
   private val scope = CoroutineScope(
-    Dispatchers.IO + SupervisorJob() +
+    dispatcherProvider.io + SupervisorJob() +
       CoroutineExceptionHandler { _, throwable ->
         Logger.e(throwable, "Error while scanning for media")
       },

@@ -307,6 +307,12 @@ class MediaScannerTest {
     val chapterRepo = ChapterRepoImpl(db.chapterDao())
     val ignoreFileTags = MutableStateFlow(false)
     private val mediaAnalyzer = mockk<MediaAnalyzer>()
+
+    // The scanner now gates activation on the LIVE folder set via AudiobookFolders.isManaged. These tests drive
+    // scanner.scan(folders) with a literal folder map, so the fake simply mirrors that same set: every folder
+    // passed to scan() is treated as currently-configured. (The remove-during-scan race — where this set diverges
+    // from the snapshot mid-scan — is covered by ScanFolderRemovalRaceTest.)
+    val configuredFolders = FakeManagedFolders()
     private val scanner = MediaScanner(
       contentRepo = bookContentRepo,
       chapterParser = ChapterParser(
@@ -321,6 +327,7 @@ class MediaScannerTest {
         ignoreFileTagsStore = mockk { every { data } returns ignoreFileTags },
       ),
       deviceHasPermissionBug = mockk(),
+      audiobookFolders = configuredFolders,
       excludedBooksStore = mockk { every { data } returns kotlinx.coroutines.flow.MutableStateFlow(emptySet()) },
     )
 
@@ -333,6 +340,7 @@ class MediaScannerTest {
       vararg roots: File,
       forceReParse: Boolean = false,
     ) {
+      configuredFolders.set(type, roots.map { it.toUri() })
       scanner.scan(mapOf(type to roots.map(::FileBasedDocumentFile)), forceReParse)
     }
 
