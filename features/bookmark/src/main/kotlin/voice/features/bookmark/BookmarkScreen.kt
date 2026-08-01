@@ -24,8 +24,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -81,9 +83,33 @@ fun BookmarkScreen(bookId: BookId) {
   val viewModel = retain(bookId.value) {
     rootGraphAs<Graph>().bookmarkViewModelFactory.create(bookId)
   }
+  val snackbarHostState = remember { SnackbarHostState() }
+  val deletedMessage = stringResource(id = StringsR.string.bookmark_deleted)
+  val undoLabel = stringResource(id = StringsR.string.undo)
+  val unavailableMessage = stringResource(id = StringsR.string.bookmark_unavailable)
+  LaunchedEffect(viewModel) {
+    viewModel.viewEffects.collect { effect ->
+      when (effect) {
+        BookmarkViewEffect.BookmarkDeleted -> {
+          val result = snackbarHostState.showSnackbar(
+            message = deletedMessage,
+            actionLabel = undoLabel,
+            duration = SnackbarDuration.Short,
+          )
+          if (result == SnackbarResult.ActionPerformed) {
+            viewModel.undoDelete()
+          }
+        }
+        BookmarkViewEffect.BookmarkUnavailable -> {
+          snackbarHostState.showSnackbar(message = unavailableMessage)
+        }
+      }
+    }
+  }
   val viewState = viewModel.viewState()
   BookmarkScreen(
     viewState = viewState,
+    snackbarHostState = snackbarHostState,
     onClose = viewModel::closeScreen,
     onAdd = viewModel::onAddClick,
     onDelete = viewModel::deleteBookmark,
@@ -99,6 +125,7 @@ fun BookmarkScreen(bookId: BookId) {
 @Composable
 internal fun BookmarkScreen(
   viewState: BookmarkViewState,
+  snackbarHostState: SnackbarHostState,
   onClose: () -> Unit,
   onAdd: () -> Unit,
   onDelete: (Bookmark.Id) -> Unit,
@@ -110,8 +137,6 @@ internal fun BookmarkScreen(
   onEditBookmark: (Bookmark.Id, String) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val snackbarHostState = remember { SnackbarHostState() }
-
   Scaffold(
     modifier = modifier,
     snackbarHost = {

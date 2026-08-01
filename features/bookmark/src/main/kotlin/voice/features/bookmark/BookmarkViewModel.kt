@@ -14,6 +14,8 @@ import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import voice.core.common.resolveChapterName
@@ -53,6 +55,11 @@ class BookmarkViewModel(
 ) {
 
   private val scope = MainScope()
+
+  private val _viewEffects = MutableSharedFlow<BookmarkViewEffect>(extraBufferCapacity = 1)
+  val viewEffects: Flow<BookmarkViewEffect> get() = _viewEffects
+
+  private var lastDeleted: Bookmark? = null
   private var bookmarks by mutableStateOf<List<Bookmark>>(emptyList())
   private var chapters by mutableStateOf<List<Chapter>>(emptyList())
 
@@ -81,9 +88,16 @@ class BookmarkViewModel(
       }
     }
     return BookmarkViewState(
-      bookmarks = bookmarks.map { bookmark ->
-        val currentChapter = chapters.single { it.id == bookmark.chapterId }
+      bookmarks = bookmarks.mapNotNull { bookmark ->
+        val currentChapter = chapters.find { it.id == bookmark.chapterId }
+          ?: return@mapNotNull null
         val bookmarkTitle = bookmark.title
+        val locationName: String = run {
+          val mark = currentChapter.markForPosition(bookmark.time)
+          val override = overrideMap[Pair(currentChapter.id.value, mark.startMs)]
+          resolveChapterName(mark.name ?: "", chapterNameOffset, override)
+            .ifBlank { currentChapter.name ?: "" }
+        }
         val title: String = when {
           bookmark.setBySleepTimer -> {
             val justNowThreshold = 1.minutes
@@ -100,17 +114,21 @@ class BookmarkViewModel(
             }
           }
           !bookmarkTitle.isNullOrEmpty() -> bookmarkTitle
-          else -> {
-            val mark = currentChapter.markForPosition(bookmark.time)
-            val override = overrideMap[Pair(currentChapter.id.value, mark.startMs)]
-            resolveChapterName(mark.name ?: "", chapterNameOffset, override)
-              .ifBlank { currentChapter.name ?: "" }
-          }
+          else -> locationName
+        }
+
+        // A user title replaces the location as the headline, so surface the chapter
+        // in the subtitle to keep the bookmark locatable.
+        val positionText = formatTime(bookmark.time)
+        val subtitle = if (!bookmarkTitle.isNullOrEmpty() && locationName.isNotBlank()) {
+          "$locationName · $positionText"
+        } else {
+          positionText
         }
 
         BookmarkItemViewState(
           title = title,
-          subtitle = formatTime(bookmark.time),
+          subtitle = subtitle,
           id = bookmark.id,
           showSleepIcon = bookmark.setBySleepTimer,
         )
@@ -121,9 +139,24 @@ class BookmarkViewModel(
   }
 
   fun deleteBookmark(id: Bookmark.Id) {
+    val deleted = bookmarks.find { it.id == id }
     scope.launch {
       bookmarkRepo.deleteBookmark(id)
       bookmarks = bookmarks.filter { it.id != id }
+      if (deleted != null) {
+        lastDeleted = deleted
+        _viewEffects.tryEmit(BookmarkViewEffect.BookmarkDeleted)
+      }
+    }
+  }
+
+  fun undoDelete() {
+    val deleted = lastDeleted ?: return
+    lastDeleted = null
+    scope.launch {
+      bookmarkRepo.addBookmark(deleted)
+      bookmarks = (bookmarks + deleted)
+        .sortedByDescending { it.addedAt }
     }
   }
 
@@ -131,18 +164,21 @@ class BookmarkViewModel(
     val bookmark = bookmarks.find { it.id == id }
       ?: return
 
-    val wasPlaying = playStateManager.playState == PlayStateManager.PlayState.Playing
-
     scope.launch {
+      val book = repo.get(bookId)
+      if (book == null || book.chapters.none { it.id == bookmark.chapterId }) {
+        _viewEffects.tryEmit(BookmarkViewEffect.BookmarkUnavailable)
+        return@launch
+      }
+
+      val wasPlaying = playStateManager.playState == PlayStateManager.PlayState.Playing
       currentBookStore.updateData { bookId }
+      playerController.setPosition(bookmark.time, bookmark.chapterId)
+      if (wasPlaying) {
+        playerController.play()
+      }
+      navigator.goBack()
     }
-    playerController.setPosition(bookmark.time, bookmark.chapterId)
-
-    if (wasPlaying) {
-      playerController.play()
-    }
-
-    navigator.goBack()
   }
 
   fun editBookmark(
@@ -165,6 +201,7 @@ class BookmarkViewModel(
   }
 
   fun addBookmark(name: String) {
+    if (name.isBlank()) return
     scope.launch {
       val book = repo.get(bookId) ?: return@launch
       val newBookmark = bookmarkRepo.addBookmarkAtBookPosition(

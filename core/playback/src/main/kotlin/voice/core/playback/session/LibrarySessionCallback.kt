@@ -1,8 +1,10 @@
 package voice.core.playback.session
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
+import android.widget.Toast
 import androidx.datastore.core.DataStore
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -22,12 +24,14 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.guava.future
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.MediaButtonClickAction
@@ -41,6 +45,7 @@ import voice.core.playback.history.PlaybackIntentHolder
 import voice.core.playback.player.VoicePlayer
 import voice.core.playback.session.search.BookSearchHandler
 import voice.core.playback.session.search.BookSearchParser
+import voice.core.strings.R as StringsR
 
 @Inject
 class LibrarySessionCallback(
@@ -58,6 +63,7 @@ class LibrarySessionCallback(
   private val tripleClickHandlerStore: DataStore<MediaButtonClickAction>,
   private val bookmarkRepo: BookmarkRepo,
   private val intentHolder: PlaybackIntentHolder,
+  private val context: Context,
 ) : MediaLibrarySession.Callback {
 
   private var mediaButtonClickCount = 0
@@ -322,5 +328,8 @@ class LibrarySessionCallback(
     val book = bookRepository.get(bookId) ?: return
     bookmarkRepo.addBookmarkAtBookPosition(book = book, title = null, setBySleepTimer = false)
     Logger.d("Quick bookmark created at current position")
+    withContext(Dispatchers.Main) {
+      Toast.makeText(context, StringsR.string.bookmark_added, Toast.LENGTH_SHORT).show()
+    }
   }
 }

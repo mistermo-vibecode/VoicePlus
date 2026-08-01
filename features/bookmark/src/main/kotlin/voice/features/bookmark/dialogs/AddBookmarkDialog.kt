@@ -54,7 +54,10 @@ internal fun AddBookmarkDialog(
           ),
           keyboardActions = KeyboardActions(
             onDone = {
-              onBookmarkNameChoose(bookmarkName)
+              if (bookmarkName.isNotBlank()) {
+                onBookmarkNameChoose(bookmarkName)
+                onDismissRequest()
+              }
             },
           ),
         )
@@ -63,9 +66,12 @@ internal fun AddBookmarkDialog(
     confirmButton = {
       Button(
         onClick = {
-          onBookmarkNameChoose(bookmarkName)
-          onDismissRequest()
+          if (bookmarkName.isNotBlank()) {
+            onBookmarkNameChoose(bookmarkName)
+            onDismissRequest()
+          }
         },
+        enabled = bookmarkName.isNotBlank(),
       ) {
         Text(stringResource(StringsR.string.dialog_confirm))
       }

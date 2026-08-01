@@ -98,6 +98,9 @@
     <string name="bookmark_edit_title">Edit bookmark</string>
     <string name="bookmark_edit_hint">Bookmark name</string>
     <string name="bookmark_added">Bookmark added</string>
+    <string name="bookmark_deleted">Bookmark deleted</string>
+    <string name="bookmark_unavailable">Bookmark unavailable</string>
+    <string name="undo">Undo</string>
     <string name="action_settings">Preferences</string>
     <plurals name="seconds">
         <item quantity="one">%d second</item>
