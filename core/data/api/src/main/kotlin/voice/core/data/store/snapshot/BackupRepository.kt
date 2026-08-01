@@ -5,15 +5,19 @@ import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 /**
- * Maintains an off-device copy of the latest library snapshot in a user-chosen SAF folder, so the
- * data survives uninstall / clear-data, and can be re-imported on a wiped/fresh install.
+ * Maintains off-device copies of the library snapshot in a user-chosen SAF folder, so the data
+ * survives uninstall / clear-data, and can be re-imported on a wiped/fresh install.
+ *
+ * Every save is a NEW timestamped file — nothing is ever overwritten, so a crashed or corrupt
+ * write can only add a bad file, never destroy a good one. Automatic saves are pruned to the
+ * newest few; manual saves are kept until the user deletes them.
  */
 public interface BackupRepository {
 
   /** The currently configured external backup folder, or null if none chosen. */
   public val backupFolder: Flow<Uri?>
 
-  /** When the external bundle was last written, or null if never. */
+  /** When a backup file was last written, or null if never. */
   public val lastBackupAt: Flow<Instant?>
 
   /** The outcome of the most recent [importAndRestore], or null if none has run this session. */
@@ -25,22 +29,42 @@ public interface BackupRepository {
   /** True while a backup or restore operation is running. */
   public val busy: Flow<Boolean>
 
-  /** Persist [uri] as the export folder (taking a persistable read/write grant). Does not restore or overwrite. */
+  /** Persist [uri] as the export folder (taking a persistable read/write grant). Writes a first backup if the folder has none. */
   public suspend fun setBackupFolder(uri: Uri)
 
   /** Stop backing up and forget the folder (releasing the grant). */
   public suspend fun clearBackupFolder()
 
-  /** Write the latest local snapshot to the external folder. Best-effort; no-op without a folder or a snapshot. */
+  /** The saves found in the backup folder, newest first. Empty without a folder. */
+  public suspend fun listBackups(): List<BackupEntry>
+
+  /** Delete one save file. */
+  @IgnorableReturnValue
+  public suspend fun deleteBackup(entry: BackupEntry): Boolean
+
+  /** Write a manual save point now. Always writes a new file, even if nothing changed. */
   public suspend fun exportNow(): BackupExportResult
 
-  /** Write after an automatic local snapshot. Refuses to overwrite a corrupt existing external bundle. */
+  /** Write an automatic save after a local snapshot. Skips when nothing meaningful changed. */
+  @IgnorableReturnValue
   public suspend fun exportAfterSnapshot(): BackupExportResult
 
-  /** Explicitly restore from the external bundle. Returns true when any matched/unmatched backup data was found. */
+  /**
+   * Restore from [entry], or from the newest readable save when null. Returns true when any
+   * matched/unmatched backup data was found.
+   */
   @IgnorableReturnValue
-  public suspend fun importAndRestore(): Boolean
+  public suspend fun importAndRestore(entry: BackupEntry? = null): Boolean
 }
+
+/** One save file in the backup folder. [savedAt] is parsed from the file name; null for legacy fixed-name bundles. */
+public data class BackupEntry(
+  val uri: Uri,
+  val displayName: String,
+  val savedAt: Instant?,
+  val manual: Boolean,
+  val legacy: Boolean,
+)
 
 public data class BackupStatus(
   val kind: BackupStatusKind,
@@ -66,8 +90,6 @@ public enum class BackupExportResult {
   SkippedUnchanged,
   SkippedNoFolder,
   SkippedNoSnapshot,
-  BlockedCorruptBackup,
-  BlockedNewerBackup,
   Failed,
 }
 
@@ -79,8 +101,8 @@ public enum class BackupExportResult {
 public data class RestoreSummary(
   val restoredCount: Int,
   val unmatched: List<UnmatchedBookInfo>,
-  // The folder held a backup from a NEWER app version than this build can safely read, so it was refused
-  // (and NOT overwritten). The user should update the app, then restore again.
+  // The chosen backup is from a NEWER app version than this build can safely read, so it was refused.
+  // The user should update the app, then restore again.
   val refusedNewerBackup: Boolean = false,
 )
 

@@ -31,6 +31,8 @@ import voice.core.data.store.ExcludedBooksStore
 import voice.core.data.store.snapshot.identity.DeviceRelativePath
 import voice.core.data.store.snapshot.identity.IdentityStampBuilder
 import voice.core.logging.api.Logger
+import java.time.Instant
+import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.minutes
@@ -56,7 +58,6 @@ internal class SnapshotWriter(
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
   private val dirty = AtomicBoolean(false)
   private val flushMutex = Mutex()
-  private val externalBackupCadence = SnapshotExternalBackupCadence()
 
   fun start(scope: CoroutineScope) {
     // Re-snapshot on any change to books OR user-authored data (bookmarks, character notes, chapter-name
@@ -89,10 +90,13 @@ internal class SnapshotWriter(
 
   private fun CoroutineScope.launchPeriodicFlush() {
     launch {
+      // Catch up on app start: if a UTC day boundary passed since the last export (or none was
+      // ever due), write today's automatic save without waiting for a library change.
+      exportExternalBackup(force = false)
       while (isActive) {
         delay(PERIODIC_FLUSH)
         flushIfDirty()
-        exportPendingExternalBackup()
+        exportExternalBackup(force = false)
       }
     }
   }
@@ -148,7 +152,7 @@ internal class SnapshotWriter(
           sessions = listeningSessionDao.all().map { it.toDto() },
           chapters = chapterDtos,
         )
-        if (RotationGuard.isSuspiciousShrink(ring.readAll(), snapshot, excludedIds)) {
+        if (RotationGuard.isSuspiciousShrink(ring.best(), snapshot, excludedIds)) {
           Logger.w(
             "Snapshot rotation declined: suspicious active shrink " +
               "(incoming=${snapshot.activeCount}, totalKnown=${snapshot.totalCount})",
@@ -165,16 +169,20 @@ internal class SnapshotWriter(
     }
   }
 
+  // At most one automatic save per UTC day: the snapshot contains the playback position, so any
+  // change-driven cadence would mint a file per minute of listening and the 7-file retention
+  // would span minutes instead of a week. The on-device ring covers fine-grained recovery;
+  // the daily file is the off-device disaster copy. Manual saves are not gated.
   private suspend fun exportExternalBackup(force: Boolean) {
-    if (!externalBackupCadence.shouldExportAfterSnapshot(force)) return
-    val result = backupRepository.exportAfterSnapshot()
-    externalBackupCadence.record(result)
+    if (!force && !dueDaily()) return
+    backupRepository.exportAfterSnapshot()
   }
 
-  private suspend fun exportPendingExternalBackup() {
-    if (!externalBackupCadence.shouldExportPending()) return
-    val result = backupRepository.exportAfterSnapshot()
-    externalBackupCadence.record(result)
+  private suspend fun dueDaily(): Boolean {
+    val last = backupRepository.lastBackupAt.first() ?: return true
+    val lastDay = last.atZone(ZoneOffset.UTC).toLocalDate()
+    val today = Instant.now().atZone(ZoneOffset.UTC).toLocalDate()
+    return lastDay != today
   }
 
   companion object {

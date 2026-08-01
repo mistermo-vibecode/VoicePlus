@@ -45,7 +45,7 @@
     <string name="backup_status_no_backup_found">No backup found in this folder</string>
     <string name="backup_status_backup_found">Backup found. Restore or back up when you are ready.</string>
     <string name="backup_status_backup_saved">Backup saved</string>
-    <string name="backup_status_backup_unreadable">Backup file is unreadable. It was not overwritten.</string>
+    <string name="backup_status_backup_unreadable">That backup file is unreadable. Pick another save to restore.</string>
     <string name="backup_status_backup_failed">Backup failed</string>
     <string name="backup_status_restore_complete">Restored %1$d books</string>
     <string name="backup_status_restore_partial">Restored %1$d books; %2$d could not be matched</string>

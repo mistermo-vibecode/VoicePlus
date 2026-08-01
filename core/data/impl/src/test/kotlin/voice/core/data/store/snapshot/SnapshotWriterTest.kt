@@ -30,18 +30,6 @@ class SnapshotWriterTest {
   private val slot2 = MemoryDataStore<LibrarySnapshot?>(null)
   private val excluded = MemoryDataStore<Set<String>>(emptySet())
   private val ring = SnapshotRing(listOf(slot0, slot1, slot2))
-  private val noopBackup = object : BackupRepository {
-    override val backupFolder = kotlinx.coroutines.flow.flowOf<android.net.Uri?>(null)
-    override val lastBackupAt = kotlinx.coroutines.flow.flowOf<java.time.Instant?>(null)
-    override val lastRestore = kotlinx.coroutines.flow.flowOf<RestoreSummary?>(null)
-    override val status = kotlinx.coroutines.flow.flowOf<BackupStatus?>(null)
-    override val busy = kotlinx.coroutines.flow.flowOf(false)
-    override suspend fun setBackupFolder(uri: android.net.Uri) {}
-    override suspend fun clearBackupFolder() {}
-    override suspend fun exportNow() = BackupExportResult.SkippedNoFolder
-    override suspend fun exportAfterSnapshot() = BackupExportResult.SkippedNoFolder
-    override suspend fun importAndRestore() = false
-  }
 
   @Before
   fun setup() {
@@ -53,7 +41,7 @@ class SnapshotWriterTest {
   @After
   fun teardown() = db.close()
 
-  private fun writer() = SnapshotWriter(
+  private fun writer(backup: BackupRepository = noopBackupStub) = SnapshotWriter(
     contentRepo = contentRepo,
     bookmarkDao = db.bookmarkDao(),
     bookCharacterDao = db.bookCharacterDao(),
@@ -64,7 +52,7 @@ class SnapshotWriterTest {
     slot1 = slot1,
     slot2 = slot2,
     excludedBooksStore = excluded,
-    backupRepository = noopBackup,
+    backupRepository = backup,
     restoreGate = RestoreGate(),
   )
 
@@ -130,5 +118,53 @@ class SnapshotWriterTest {
     w.writeSnapshot(contentRepo.all())
 
     ring.best()!!.sequence shouldBe good
+  }
+
+  @Test
+  fun `automatic external export runs at most once per UTC day`() = runTest {
+    val exportedToday = RecordingBackup(lastBackup = Instant.now())
+    contentRepo.put(book("b1", active = true))
+    writer(backup = exportedToday).writeSnapshot(contentRepo.all())
+    exportedToday.exportCalls shouldBe 0
+
+    val exportedYesterday = RecordingBackup(lastBackup = Instant.now().minusSeconds(24 * 60 * 60 + 60))
+    writer(backup = exportedYesterday).writeSnapshot(contentRepo.all())
+    exportedYesterday.exportCalls shouldBe 1
+
+    val neverExported = RecordingBackup(lastBackup = null)
+    writer(backup = neverExported).writeSnapshot(contentRepo.all())
+    neverExported.exportCalls shouldBe 1
+  }
+
+  @Test
+  fun `a forced flush exports regardless of the daily gate`() = runTest {
+    val exportedToday = RecordingBackup(lastBackup = Instant.now())
+    contentRepo.put(book("b1", active = true))
+    writer(backup = exportedToday).writeSnapshot(contentRepo.all(), forceExternalBackup = true)
+    exportedToday.exportCalls shouldBe 1
+  }
+}
+
+private val noopBackupStub = object : BackupRepository {
+  override val backupFolder = kotlinx.coroutines.flow.flowOf<android.net.Uri?>(null)
+  override val lastBackupAt = kotlinx.coroutines.flow.flowOf<Instant?>(null)
+  override val lastRestore = kotlinx.coroutines.flow.flowOf<RestoreSummary?>(null)
+  override val status = kotlinx.coroutines.flow.flowOf<BackupStatus?>(null)
+  override val busy = kotlinx.coroutines.flow.flowOf(false)
+  override suspend fun setBackupFolder(uri: android.net.Uri) {}
+  override suspend fun clearBackupFolder() {}
+  override suspend fun listBackups() = emptyList<BackupEntry>()
+  override suspend fun deleteBackup(entry: BackupEntry) = false
+  override suspend fun exportNow() = BackupExportResult.SkippedNoFolder
+  override suspend fun exportAfterSnapshot() = BackupExportResult.SkippedNoFolder
+  override suspend fun importAndRestore(entry: BackupEntry?) = false
+}
+
+private class RecordingBackup(lastBackup: Instant?) : BackupRepository by noopBackupStub {
+  var exportCalls = 0
+  override val lastBackupAt = kotlinx.coroutines.flow.flowOf(lastBackup)
+  override suspend fun exportAfterSnapshot(): BackupExportResult {
+    exportCalls++
+    return BackupExportResult.Written
   }
 }
