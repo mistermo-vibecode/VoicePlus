@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -14,7 +15,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import voice.core.ui.formatTime
+import kotlin.math.abs
 import kotlin.time.Duration
 
 @Composable
@@ -31,14 +34,34 @@ internal fun SliderRow(
     verticalAlignment = Alignment.CenterVertically,
   ) {
     var localValue by remember { mutableFloatStateOf(0F) }
-    var isSeeking by remember { mutableStateOf(false) }
+    var dragging by remember { mutableStateOf(false) }
+    // The reported position lags a seek (it is persisted asynchronously), so after release we keep
+    // showing the value the user chose until the report catches up — otherwise the thumb snaps back
+    // to the stale pre-drag position for a beat and then leaps forward, which reads as jitter.
+    var heldAfterSeek by remember { mutableStateOf<Float?>(null) }
+
+    val liveFraction = (playedTime / duration).toFloat().coerceIn(0F, 1F)
+    heldAfterSeek?.let { held ->
+      // Release the hold as soon as the reported position lands near the chosen target.
+      val caughtUp = abs(liveFraction - held) * duration.inWholeMilliseconds <= CATCH_UP_TOLERANCE_MS
+      if (caughtUp) {
+        heldAfterSeek = null
+      }
+      // Hard deadline keyed on the hold itself (not the ticking position), so a seek that never
+      // reflects back — book switched mid-hold, seek rejected — can't freeze the thumb.
+      LaunchedEffect(held) {
+        delay(HOLD_TIMEOUT_MS)
+        heldAfterSeek = null
+      }
+    }
+
+    val displayedFraction = when {
+      dragging -> localValue
+      else -> heldAfterSeek ?: liveFraction
+    }
     Text(
       text = formatTime(
-        timeMs = if (isSeeking) {
-          (duration * localValue.toDouble()).inWholeMilliseconds
-        } else {
-          playedTime.inWholeMilliseconds
-        },
+        timeMs = (duration * displayedFraction.toDouble()).inWholeMilliseconds,
         durationMs = duration.inWholeMilliseconds,
       ),
     )
@@ -47,19 +70,15 @@ internal fun SliderRow(
         .weight(1F)
         .padding(horizontal = 8.dp),
       enabled = enabled,
-      value = if (isSeeking) {
-        localValue
-      } else {
-        (playedTime / duration).toFloat()
-          .coerceIn(0F, 1F)
-      },
+      value = displayedFraction,
       onValueChange = {
-        isSeeking = true
+        dragging = true
         localValue = it
       },
       onValueChangeFinished = {
         onSeek(duration * localValue.toDouble())
-        isSeeking = false
+        heldAfterSeek = localValue
+        dragging = false
       },
     )
     Text(
@@ -70,3 +89,10 @@ internal fun SliderRow(
     )
   }
 }
+
+// How close (in playback time) the reported position must get to the seek target before the
+// slider trusts it again. Position persists at 1s granularity; 2.5s absorbs one write cycle
+// plus the auto-rewind-free seek landing slightly off the exact target.
+private const val CATCH_UP_TOLERANCE_MS = 2_500L
+
+private const val HOLD_TIMEOUT_MS = 2_000L
