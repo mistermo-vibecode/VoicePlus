@@ -74,7 +74,11 @@ class SleepTimerImpl internal constructor(
 
   override fun reset() {
     val mode = lastMode ?: return
-    if (!_state.value.enabled) return
+    // Only a duration can be "reset to full". Re-enabling an EndOfChapter timer would restore the
+    // ORIGINAL chapter count, so skipping back 30s with 1 of 3 chapters left would silently buy
+    // two more chapters. The volume observer already guards this way; doing it here covers the
+    // skip-seek callers too.
+    if (_state.value !is SleepTimerState.Enabled.WithDuration) return
     scope.launch {
       if (!sleepTimerPreferenceStore.data.first().autoResetEnabled) return@launch
       enable(mode)

@@ -163,7 +163,9 @@ class BookPlayViewModel(
   fun incrementSleepTime() {
     updateSleepTimeViewState {
       val customTime = it.customSleepTime
-      val newTime = customTime + 1
+      // The +/- controls auto-repeat while held; without a cap a stuck long-press sets an
+      // arbitrarily large timer (decrement already clamps at 1).
+      val newTime = (customTime + 1).coerceAtMost(MAX_SLEEP_TIME_MINUTES)
       sleepTimerPreferenceStore.updateData { preference -> preference.copy(duration = newTime.minutes) }
       SleepTimerViewState(newTime, it.chapterCount)
     }
@@ -436,6 +438,9 @@ class BookPlayViewModel(
     fun create(bookId: BookId): BookPlayViewModel
   }
 }
+
+/** 12 hours — longer than any plausible sleep timer, and short enough to bound a stuck long-press. */
+private const val MAX_SLEEP_TIME_MINUTES = 12 * 60
 
 private fun SleepTimerState.toViewState(): BookPlayViewState.SleepTimerViewState = when (this) {
   SleepTimerState.Disabled -> BookPlayViewState.SleepTimerViewState.Disabled

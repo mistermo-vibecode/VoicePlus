@@ -203,6 +203,63 @@ class SleepTimerImplTest {
     sleepTimer.state.value shouldBe SleepTimerState.Disabled
   }
 
+  @Test
+  fun `each chapter boundary decrements the count, and the last one disables the timer`() = testScope.runTest {
+    sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 3))
+    advanceTimeBy(1)
+
+    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(2)
+
+    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(1)
+
+    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.state.value shouldBe SleepTimerState.Disabled
+  }
+
+  @Test
+  fun `a boundary reached while no timer is running does nothing`() = testScope.runTest {
+    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.state.value shouldBe SleepTimerState.Disabled
+  }
+
+  @Test
+  fun `reset does not re-arm a chapter timer to its original count`() = testScope.runTest {
+    // Skipping back 30s calls reset(). For a duration that means "start the countdown again", but
+    // for chapters it used to restore the ORIGINAL count — silently buying back chapters that had
+    // already elapsed.
+    sleepTimerPreferenceStore.updateData { it.copy(autoResetEnabled = true) }
+    sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 3))
+    advanceTimeBy(1)
+    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(1)
+
+    sleepTimer.reset()
+    advanceTimeBy(1.seconds)
+
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(1)
+  }
+
+  @Test
+  fun `resuming after a pause restarts the countdown when auto-reset is on`() = testScope.runTest {
+    sleepTimerPreferenceStore.updateData { it.copy(autoResetEnabled = true) }
+    sleepTimer.enable(SleepTimerMode.TimedWithDuration(10.seconds))
+    advanceTimeBy(4.seconds)
+    val beforePause = sleepTimer.state.value
+    beforePause.shouldBeInstanceOf<SleepTimerState.Enabled.WithDuration>()
+
+    playStateManager.playState = PlayStateManager.PlayState.Paused
+    advanceTimeBy(2.seconds)
+    playStateManager.playState = PlayStateManager.PlayState.Playing
+    advanceTimeBy(1)
+
+    val afterResume = sleepTimer.state.value
+    afterResume.shouldBeInstanceOf<SleepTimerState.Enabled.WithDuration>()
+    (afterResume.leftDuration > beforePause.leftDuration) shouldBe true
+  }
+
   companion object {
 
     @BeforeClass

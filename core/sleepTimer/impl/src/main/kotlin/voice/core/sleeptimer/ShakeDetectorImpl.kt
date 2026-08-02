@@ -16,12 +16,17 @@ class ShakeDetectorImpl(private val context: Context) : ShakeDetector {
     suspendCancellableCoroutine { cont ->
       val sensorManager = context.getSystemService<SensorManager>()
         ?: return@suspendCancellableCoroutine
+      lateinit var shakeDetector: SeismicShakeDetector
       val listener = SeismicShakeDetector.Listener {
-        if (!cont.isCompleted) {
+        if (cont.isActive) {
+          // Stop before resuming: invokeOnCancellation only runs when the wait is cancelled (the
+          // timeout path), so a detected shake would otherwise leave a ~50Hz accelerometer listener
+          // registered for the life of the process — every night, for every shake-to-extend.
+          shakeDetector.stop()
           cont.resume(Unit)
         }
       }
-      val shakeDetector = SeismicShakeDetector(listener)
+      shakeDetector = SeismicShakeDetector(listener)
       shakeDetector.start(sensorManager, SensorManager.SENSOR_DELAY_GAME)
       cont.invokeOnCancellation {
         shakeDetector.stop()
