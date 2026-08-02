@@ -19,9 +19,16 @@ internal constructor(private val dao: BookCharacterDao) : BookCharacterRepo {
     }
   }
 
+  override suspend fun updateAll(characters: List<BookCharacter>) {
+    if (characters.isEmpty()) return
+    dao.update(characters)
+  }
+
   override fun characters(bookId: BookId): Flow<List<BookCharacter>> = dao.charactersForBook(bookId)
 
   override fun characterCount(bookId: BookId): Flow<Int> = dao.countForBook(bookId)
+
+  override suspend fun nextSortOrder(bookId: BookId): Int = dao.nextSortOrder(bookId)
 
   override suspend fun delete(id: Long) {
     dao.delete(id)

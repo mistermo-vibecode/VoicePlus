@@ -188,7 +188,7 @@ internal fun CharacterListScreen(
       AlertDialog(
         onDismissRequest = { dialog = null },
         title = { Text(stringResource(StringsR.string.delete)) },
-        text = { Text("Are you sure you want to delete this character?") },
+        text = { Text(stringResource(StringsR.string.character_delete_confirmation)) },
         confirmButton = {
           TextButton(
             onClick = {
@@ -222,7 +222,9 @@ private fun CharacterItem(
   Column(
     modifier = modifier
       .fillMaxWidth()
-      .clickable(onClick = onToggle)
+      // Edit/Delete only exist while expanded, so without a label TalkBack announces the row as a
+      // bare "clickable" and the only path to them is undiscoverable.
+      .clickable(onClickLabel = stringResource(StringsR.string.character_expand), onClick = onToggle)
       .animateContentSize(),
   ) {
     androidx.compose.foundation.layout.Row(
@@ -314,7 +316,7 @@ private fun CharacterFormDialog(
           OutlinedTextField(
             value = positionText,
             onValueChange = { positionText = it.filter { c -> c.isDigit() } },
-            label = { Text("Position (1–$totalCharacters)") },
+            label = { Text(stringResource(StringsR.string.character_position_label, totalCharacters)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(
               keyboardType = KeyboardType.Number,

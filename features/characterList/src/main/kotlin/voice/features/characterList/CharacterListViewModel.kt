@@ -46,15 +46,13 @@ class CharacterListViewModel(
   ) {
     if (name.isBlank()) return
     scope.launch {
-      val existing = characterRepo.characters(bookId).firstOrNull() ?: emptyList()
-      val nextOrder = (existing.maxOfOrNull { it.sortOrder } ?: -1) + 1
       val now = Instant.now()
       characterRepo.upsert(
         BookCharacter(
           bookId = bookId,
           name = name.trim(),
           description = description.trim(),
-          sortOrder = nextOrder,
+          sortOrder = characterRepo.nextSortOrder(bookId),
           createdAt = now,
           updatedAt = now,
         ),
@@ -80,14 +78,18 @@ class CharacterListViewModel(
       mutable.add(targetIndex, current)
 
       val now = Instant.now()
-      mutable.forEachIndexed { index, char ->
+      // One atomic write of only the rows that actually changed: a partially-applied reorder would
+      // leave duplicate sortOrders that never self-heal, and a row-at-a-time loop would make the
+      // list visibly step through intermediate orders as Room re-emits after each write.
+      val updates = mutable.mapIndexedNotNull { index, char ->
         val updated = if (char.id == id) {
           char.copy(name = name.trim(), description = description.trim(), sortOrder = index, updatedAt = now)
         } else {
           char.copy(sortOrder = index)
         }
-        characterRepo.upsert(updated)
+        updated.takeIf { it != char }
       }
+      characterRepo.updateAll(updates)
     }
   }
 

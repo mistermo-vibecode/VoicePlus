@@ -98,6 +98,9 @@
     <string name="character_name">Character name</string>
     <string name="character_description">Description / Notes</string>
     <string name="character_edit">Edit Character</string>
+    <string name="character_delete_confirmation">Are you sure you want to delete this character?</string>
+    <string name="character_position_label">Position (1–%1$d)</string>
+    <string name="character_expand">Show actions</string>
     <string name="listening_log">Listening Log</string>
     <string name="listening_log_clear_history">Clear History</string>
     <string name="listening_log_empty">No listening sessions yet.\nStart playing to track your progress.</string>

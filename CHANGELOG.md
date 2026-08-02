@@ -128,7 +128,7 @@
 ## v1.0.0 — Foundation
 
 ### Character Lists
-- Per-book character roster with drag-to-reorder and deletion confirmation.
+- Per-book character roster with reordering and deletion confirmation.
 
 ### Listening Logs & Statistics
 - Session tracking with start time, end time, and duration logging.

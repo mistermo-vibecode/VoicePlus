@@ -18,8 +18,16 @@ public interface BookCharacterDao {
   @Update
   public suspend fun update(character: BookCharacter)
 
+  // Room runs a list-parameter @Update as ONE transaction, so a reorder either lands whole or not
+  // at all — a process death mid-reorder can't leave duplicate sortOrders behind.
+  @Update
+  public suspend fun update(characters: List<BookCharacter>)
+
   @Query("SELECT * FROM book_character WHERE bookId = :bookId ORDER BY sortOrder ASC, createdAt ASC")
   public fun charactersForBook(bookId: BookId): Flow<List<BookCharacter>>
+
+  @Query("SELECT COALESCE(MAX(sortOrder) + 1, 0) FROM book_character WHERE bookId = :bookId")
+  public suspend fun nextSortOrder(bookId: BookId): Int
 
   @Query("SELECT COUNT(*) FROM book_character WHERE bookId = :bookId")
   public fun countForBook(bookId: BookId): Flow<Int>
