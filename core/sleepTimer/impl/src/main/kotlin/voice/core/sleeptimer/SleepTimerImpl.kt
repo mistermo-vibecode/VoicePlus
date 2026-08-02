@@ -24,6 +24,7 @@ import voice.core.playback.playstate.PlayStateManager.PlayState.Playing
 import kotlin.math.max
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @SingleIn(AppScope::class)
@@ -46,6 +47,9 @@ class SleepTimerImpl internal constructor(
   private var job: Job? = null
   private var lastMode: SleepTimerMode? = null
 
+  /** Boundaries already counted by the CURRENT timer; cleared whenever a timer is armed or dropped. */
+  private val countedBoundaries = mutableSetOf<String>()
+
   override fun enable(mode: SleepTimerMode) {
     disable() // cancel any active job first
     lastMode = mode
@@ -59,6 +63,11 @@ class SleepTimerImpl internal constructor(
         }
         is SleepTimerMode.EndOfChapter -> {
           _state.value = SleepTimerState.Enabled.WithEndOfChapter(mode.chapters)
+          // A chapter timer has no countdown to expire, so without this it stays armed forever when
+          // the boundary never arrives — the book ends first, or the user just stops listening. It
+          // would then fire in some later session, and meanwhile block the automatic bedtime timer,
+          // which refuses to arm while a timer is active.
+          disableWhenPlaybackStopsForGood()
         }
       }
     }
@@ -68,6 +77,7 @@ class SleepTimerImpl internal constructor(
     job?.cancel()
     job = null
     lastMode = null
+    countedBoundaries.clear()
     _state.value = SleepTimerState.Disabled
     playerController.setVolume(1F)
   }
@@ -97,7 +107,14 @@ class SleepTimerImpl internal constructor(
 
     while (left > Duration.ZERO) {
       val wasPaused = playStateManager.playState != Playing
-      suspendUntilPlaying()
+      if (!suspendUntilPlaying()) {
+        // Nothing resumed for a long time: the user paused and stopped listening. Keeping the timer
+        // armed means it fires against the NEXT listening session — pause at 11pm, press play on
+        // the bus next morning, and playback stops 20 minutes into the commute.
+        Logger.i("Playback stayed paused for $STALE_PAUSE_TIMEOUT — disabling the sleep timer")
+        disable()
+        return
+      }
       if (wasPaused && autoResetEnabled) {
         Logger.i("Playback resumed from pause — resetting sleep timer to $duration")
         left = duration
@@ -145,17 +162,35 @@ class SleepTimerImpl internal constructor(
     playerController.setVolume(volume)
   }
 
-  private suspend fun suspendUntilPlaying() {
-    if (playStateManager.playState != Playing) {
-      Logger.i("Not playing. Waiting for playback to continue.")
-      playStateManager.flow.first { it == Playing }
-      Logger.i("Playback resumed.")
+  private suspend fun disableWhenPlaybackStopsForGood() {
+    while (true) {
+      playStateManager.flow.first { it != Playing }
+      if (!suspendUntilPlaying()) {
+        Logger.i("Playback stayed paused for $STALE_PAUSE_TIMEOUT — disabling the chapter sleep timer")
+        disable()
+        return
+      }
     }
   }
 
-  override fun onChapterBoundaryReached() {
+  /** @return false if playback did not resume within [STALE_PAUSE_TIMEOUT]. */
+  private suspend fun suspendUntilPlaying(): Boolean {
+    if (playStateManager.playState == Playing) return true
+    Logger.i("Not playing. Waiting for playback to continue.")
+    val resumed = withTimeoutOrNull(STALE_PAUSE_TIMEOUT) {
+      playStateManager.flow.first { it == Playing }
+    } != null
+    if (resumed) Logger.i("Playback resumed.")
+    return resumed
+  }
+
+  override fun onChapterBoundaryReached(boundaryId: String) {
     val current = _state.value
     if (current !is SleepTimerState.Enabled.WithEndOfChapter) return
+    // Media3 boundary messages are re-delivered whenever playback reaches the position again, so
+    // rewinding back over a boundary already counted would decrement a second time and end the
+    // timer a whole chapter early.
+    if (!countedBoundaries.add(boundaryId)) return
     val next = current.chaptersRemaining - 1
     if (next > 0) {
       _state.value = SleepTimerState.Enabled.WithEndOfChapter(next)
@@ -166,5 +201,8 @@ class SleepTimerImpl internal constructor(
 
   internal companion object {
     val SHAKE_TO_RESET_TIME = 30.seconds
+
+    /** Long enough that a normal interruption (door, kettle, phone call) keeps the timer armed. */
+    val STALE_PAUSE_TIMEOUT = 30.minutes
   }
 }

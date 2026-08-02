@@ -8,7 +8,13 @@ interface SleepTimer {
   fun enable(mode: SleepTimerMode)
   fun disable()
   fun reset()
-  fun onChapterBoundaryReached()
+
+  /**
+   * @param boundaryId identifies the chapter boundary that was crossed. Boundaries fire again when
+   * playback re-crosses them, so the timer counts each one only once per armed timer — otherwise
+   * skipping back over a boundary you already passed would burn a second chapter.
+   */
+  fun onChapterBoundaryReached(boundaryId: String)
 }
 
 sealed interface SleepTimerState {

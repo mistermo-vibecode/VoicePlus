@@ -338,7 +338,9 @@ class VoicePlayer(
           sleepTimer.state.value is SleepTimerState.Enabled.WithEndOfChapter
         ) {
           Logger.v("Chapter mark reached at $payload, pausing as per sleep timer")
-          sleepTimer.onChapterBoundaryReached()
+          // These messages are registered with setDeleteAfterDelivery(false) and so fire again if
+          // playback re-crosses the mark; the id lets the timer count each boundary only once.
+          sleepTimer.onChapterBoundaryReached(boundaryId = "${payload.chapterIndex}:${payload.positionMs}")
           if (sleepTimer.state.value == SleepTimerState.Disabled) {
             // Direct writes are safe: this handler runs on the media3 main looper, same as the recorder.
             // Flags first: stash where listening actually stopped BEFORE the boundary seek moves the

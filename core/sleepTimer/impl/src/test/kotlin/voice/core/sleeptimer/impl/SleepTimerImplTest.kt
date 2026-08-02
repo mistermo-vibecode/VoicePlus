@@ -32,6 +32,7 @@ import voice.core.sleeptimer.SleepTimer
 import voice.core.sleeptimer.SleepTimerImpl
 import voice.core.sleeptimer.SleepTimerMode
 import voice.core.sleeptimer.SleepTimerState
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 private class TestShakeDetector : ShakeDetector {
@@ -208,20 +209,96 @@ class SleepTimerImplTest {
     sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 3))
     advanceTimeBy(1)
 
-    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.onChapterBoundaryReached("0:1000")
     sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(2)
 
-    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.onChapterBoundaryReached("1:2000")
     sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(1)
 
-    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.onChapterBoundaryReached("2:3000")
+    sleepTimer.state.value shouldBe SleepTimerState.Disabled
+  }
+
+  @Test
+  fun `re-crossing a boundary already counted does not decrement again`() = testScope.runTest {
+    // Media3 re-delivers a boundary message whenever playback reaches it again, so skipping back
+    // over a chapter mark you already passed used to burn a second chapter and stop playback early.
+    sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 2))
+    advanceTimeBy(1)
+
+    sleepTimer.onChapterBoundaryReached("0:1000")
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(1)
+
+    sleepTimer.onChapterBoundaryReached("0:1000")
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(1)
+
+    // A different boundary still counts.
+    sleepTimer.onChapterBoundaryReached("1:2000")
+    sleepTimer.state.value shouldBe SleepTimerState.Disabled
+  }
+
+  @Test
+  fun `arming a new chapter timer counts the same boundary again`() = testScope.runTest {
+    sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 1))
+    advanceTimeBy(1)
+    sleepTimer.onChapterBoundaryReached("0:1000")
+    sleepTimer.state.value shouldBe SleepTimerState.Disabled
+
+    sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 1))
+    advanceTimeBy(1)
+    sleepTimer.onChapterBoundaryReached("0:1000")
     sleepTimer.state.value shouldBe SleepTimerState.Disabled
   }
 
   @Test
   fun `a boundary reached while no timer is running does nothing`() = testScope.runTest {
-    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.onChapterBoundaryReached("0:1000")
     sleepTimer.state.value shouldBe SleepTimerState.Disabled
+  }
+
+  @Test
+  fun `a countdown left paused for too long disarms instead of firing on the next session`() = testScope.runTest {
+    sleepTimer.enable(SleepTimerMode.TimedWithDuration(20.minutes))
+    advanceTimeBy(1.minutes)
+
+    // User pauses and stops listening for the night.
+    playStateManager.playState = PlayStateManager.PlayState.Paused
+    advanceTimeBy(SleepTimerImpl.STALE_PAUSE_TIMEOUT + 1.minutes)
+
+    sleepTimer.state.value shouldBe SleepTimerState.Disabled
+
+    // Pressing play the next morning must not resurrect it.
+    playStateManager.playState = PlayStateManager.PlayState.Playing
+    advanceTimeBy(25.minutes)
+    sleepTimer.state.value shouldBe SleepTimerState.Disabled
+    coVerify(exactly = 0) { playerController.pauseWithRewind(any()) }
+  }
+
+  @Test
+  fun `a chapter timer disarms when playback stops for good`() = testScope.runTest {
+    // The book ends before the next chapter boundary arrives, so the timer would otherwise stay
+    // armed forever — firing in a later book and blocking the automatic bedtime timer meanwhile.
+    sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 2))
+    advanceTimeBy(1)
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(2)
+
+    playStateManager.playState = PlayStateManager.PlayState.Paused
+    advanceTimeBy(SleepTimerImpl.STALE_PAUSE_TIMEOUT + 1.minutes)
+
+    sleepTimer.state.value shouldBe SleepTimerState.Disabled
+  }
+
+  @Test
+  fun `a short pause keeps a chapter timer armed`() = testScope.runTest {
+    sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 2))
+    advanceTimeBy(1)
+
+    playStateManager.playState = PlayStateManager.PlayState.Paused
+    advanceTimeBy(5.minutes)
+    playStateManager.playState = PlayStateManager.PlayState.Playing
+    advanceTimeBy(1)
+
+    sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(2)
   }
 
   @Test
@@ -232,8 +309,8 @@ class SleepTimerImplTest {
     sleepTimerPreferenceStore.updateData { it.copy(autoResetEnabled = true) }
     sleepTimer.enable(SleepTimerMode.EndOfChapter(chapters = 3))
     advanceTimeBy(1)
-    sleepTimer.onChapterBoundaryReached()
-    sleepTimer.onChapterBoundaryReached()
+    sleepTimer.onChapterBoundaryReached("0:1000")
+    sleepTimer.onChapterBoundaryReached("1:2000")
     sleepTimer.state.value shouldBe SleepTimerState.Enabled.WithEndOfChapter(1)
 
     sleepTimer.reset()
