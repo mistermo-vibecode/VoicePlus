@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![F-Droid](https://img.shields.io/f-droid/v/com.github.mistermo_vibecode.voiceplus.svg?logo=f-droid)](https://f-droid.org/packages/com.github.mistermo_vibecode.voiceplus/)
-[![Downloads](https://img.shields.io/github/downloads/Mistermo-vibecode/VoicePlus/total.svg)](https://github.com/Mistermo-vibecode/VoicePlus/releases)
+[![Downloads](https://img.shields.io/badge/downloads-200%2B-brightgreen)](https://github.com/Mistermo-vibecode/VoicePlus/releases)
 [![CI](https://github.com/Mistermo-vibecode/VoicePlus/actions/workflows/ci.yml/badge.svg)](https://github.com/Mistermo-vibecode/VoicePlus/actions/workflows/ci.yml)
 
 A fork of [Voice](https://github.com/PaulWoitaschek/Voice) by Paul Woitaschek — a genuinely great audiobook app that I enjoyed but wanted something a bit different for myself. 
@@ -21,7 +21,8 @@ But you can try both. If the features below add value to your listining experien
 
 ## What's different from Voice
 
-- **[new]** Editable chapter names with ability to fix out of sync chapter numbering
+- **[new]** Backup and restore with automatic daily saves and manual save points
+- Editable chapter names with ability to fix out of sync chapter numbering
 - Listening log and statistics
 - Character lists per book
 - Resizable widget with configurable opacity and text scale

@@ -38,5 +38,6 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           files: app/build/outputs/apk/libre/release/app-libre-release-signed.apk
+          overwrite_files: false
           generate_release_notes: true
           draft: true
