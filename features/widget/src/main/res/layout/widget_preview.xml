@@ -4,7 +4,7 @@
   android:id="@+id/wholeWidget"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  tools:ignore="HardcodedText,UseCompoundDrawables,ContentDescription">
+  tools:ignore="ContentDescription,HardcodedText,UseAppTint,UseCompoundDrawables">
 
   <ImageView
     android:id="@+id/widgetBackground"
