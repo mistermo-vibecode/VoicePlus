@@ -45,6 +45,7 @@ import voice.core.data.store.MediaButtonTripleClickHandlerStore
 import voice.core.logging.api.Logger
 import voice.core.playback.history.PlaybackIntentHolder
 import voice.core.playback.player.VoicePlayer
+import voice.core.playback.playstate.PositionUpdater
 import voice.core.playback.session.search.BookSearchHandler
 import voice.core.playback.session.search.BookSearchParser
 import voice.core.strings.R as StringsR
@@ -65,6 +66,7 @@ class LibrarySessionCallback(
   private val tripleClickHandlerStore: DataStore<MediaButtonClickAction>,
   private val bookmarkRepo: BookmarkRepo,
   private val intentHolder: PlaybackIntentHolder,
+  private val positionUpdater: PositionUpdater,
   private val context: Context,
 ) : MediaLibrarySession.Callback {
 
@@ -262,7 +264,13 @@ class LibrarySessionCallback(
       @Suppress("DEPRECATION")
       intent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
     } ?: return false
-    if (keyEvent.action != KeyEvent.ACTION_DOWN || keyEvent.repeatCount > 0) return false
+
+    val ownsKeyCode = keyEvent.keyCode in HANDLED_MEDIA_KEY_CODES
+    if (keyEvent.action != KeyEvent.ACTION_DOWN || keyEvent.repeatCount > 0) {
+      // Consume rather than delegate: returning false hands repeats to media3's default handler,
+      // which toggles play/pause per repeat — on top of the click this callback already counted.
+      return ownsKeyCode
+    }
 
     when (keyEvent.keyCode) {
       KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_HEADSETHOOK -> {
@@ -270,12 +278,13 @@ class LibrarySessionCallback(
         mediaButtonClickCount++
         mediaButtonClickJob?.cancel()
         mediaButtonClickJob = scope.launch {
-          delay(400)
-          when (mediaButtonClickCount) {
-            1 -> {
-              Logger.d("Executing: Toggle Play/Pause")
-              if (player.isPlaying) player.pause() else player.play()
-            }
+          delay(MULTI_CLICK_WINDOW_MS)
+          // Read and clear BEFORE any suspending call. A click arriving while this job is suspended
+          // in a store read cancels it, and a reset left at the end would never run — the next
+          // gesture would then start from a stale count and fire the wrong action.
+          val clicks = mediaButtonClickCount
+          mediaButtonClickCount = 0
+          when (clicks) {
             2 -> {
               val action = doubleClickHandlerStore.data.first()
               Logger.d("Executing simulated double click action: $action")
@@ -287,11 +296,10 @@ class LibrarySessionCallback(
               handleMediaButtonClickAction(action)
             }
             else -> {
-              Logger.d("Executing more than 3 clicks action: Toggle Play/Pause")
-              if (player.isPlaying) player.pause() else player.play()
+              Logger.d("Executing: Toggle Play/Pause ($clicks clicks)")
+              togglePlayPause()
             }
           }
-          mediaButtonClickCount = 0
         }
         return true
       }
@@ -346,7 +354,27 @@ class LibrarySessionCallback(
     }
   }
 
+  /**
+   * Intercepting the play/pause key bypasses media3's own resumption path, which is what normally
+   * loads the current book when the player is empty. Without this, the first headset press after a
+   * reboot or swipe-away sets playWhenReady on an idle player and silently does nothing.
+   */
+  private suspend fun togglePlayPause() {
+    if (player.isPlaying) {
+      player.pause()
+      return
+    }
+    if (player.currentMediaItem == null) {
+      prepareCurrentBook()
+    }
+    player.play()
+  }
+
   private suspend fun createQuickBookmark() {
+    // The bookmark is written from the book's persisted position, and with experimental playback
+    // persistence enabled that is only flushed every 5 minutes — the bookmark would land minutes
+    // behind the audio the user just heard.
+    positionUpdater.flushPositionNow()
     val bookId = currentBookStoreId.data.first() ?: return
     val book = bookRepository.get(bookId) ?: return
     bookmarkRepo.addBookmarkAtBookPosition(book = book, title = null, setBySleepTimer = false)
@@ -356,3 +384,15 @@ class LibrarySessionCallback(
     }
   }
 }
+
+// Every single click waits this long so the click count can settle. Deliberately more generous than
+// the platform's 300ms double-tap timeout: headset buttons are stiffer than a touchscreen, and a
+// missed double-click runs the wrong action, while the cost of waiting is only play/pause latency.
+private const val MULTI_CLICK_WINDOW_MS = 400L
+
+private val HANDLED_MEDIA_KEY_CODES = setOf(
+  KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+  KeyEvent.KEYCODE_HEADSETHOOK,
+  KeyEvent.KEYCODE_MEDIA_NEXT,
+  KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+)
