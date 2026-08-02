@@ -4,7 +4,7 @@
 
 ### Backup & Restore
 - **Back up to a folder you choose:** Pick any folder (SD card, cloud-synced, USB drive) and VoicePlus keeps timestamped backup files there — positions, bookmarks, listening history and stats, character lists, chapter-name fixes, hidden books, and your settings. Choosing a folder is all it takes: the first backup is written immediately.
-- **Automatic and manual saves:** An automatic save is written about once a day (the newest 7 are kept); "Back up now" creates a manual save point that is never cleaned up.
+- **Automatic and manual saves:** An automatic save is written about once a day (the newest 7 are kept); "Back up now" creates a manual save point that is never cleaned up and always captures the state as of that moment — including changes that touch only settings, hidden books, or the listening log.
 - **Restore from a list:** Every save in the folder is listed with its date — restore the one you want, or delete saves you no longer need. Backups are never overwritten, so a failed write can't damage an existing good save.
 - **Survives reinstall:** After an uninstall or a new phone, re-grant your audiobook folders and restore — books are matched back to their files, with anything unmatchable clearly listed instead of guessed.
 - **Safety rails:** Every backup is verified after writing; unreadable files are skipped at restore time; backups from a newer app version are refused rather than half-read.
@@ -12,6 +12,7 @@
 ### Listening Log Reliability
 - **Sessions survive being killed:** The in-flight session is checkpointed every 30 seconds, so a crash, force-stop, or reboot mid-listen now records the session (with an "Interrupted" badge) instead of losing it entirely.
 - **Fixed listening not being recorded after swiping the app away** — the playback service could end up in a state where nothing was logged until the next reboot.
+- **Fixed pauses sometimes not being recorded:** when the pause's auto-rewind made the player buffer for a moment, the session was never closed — it silently spanned the whole paused stretch and inflated listening stats.
 - **Fixed stuttering playback fragmenting sessions** into pieces small enough to be discarded.
 - **Fixed sleep-timer stops rewinding twice** and leaving a stray "position set" entry in the log; a sleep stop that never played also no longer mislabels the next session.
 - **Switching books mid-play** now ends the previous book's session correctly instead of billing the time to the new book.
