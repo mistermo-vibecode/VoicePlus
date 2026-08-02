@@ -12,6 +12,10 @@
     <string name="widget_skip_back_a11y">Skip back</string>
     <string name="widget_skip_forward_a11y">Skip forward</string>
     <string name="widget_compact_description">Shows cover, title, current chapter, and skip controls. Resize to your preference.</string>
+    <string name="widget_config_title">Widget Settings</string>
+    <string name="widget_config_opacity">Background opacity: %1$d%%</string>
+    <string name="widget_config_text_size">Text size: %1$sx</string>
+    <string name="widget_config_apply">Apply</string>
     <string name="previous_track">Previous track</string>
     <string name="next_track">Next track</string>
     <string name="skip_silence">Skip Silence</string>

@@ -82,6 +82,7 @@
             android:layout_height="wrap_content">
           <ImageView
             android:id="@+id/rewind"
+            android:tint="@color/widget_icon_tint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
@@ -107,6 +108,7 @@
           android:gravity="center">
           <ImageView
             android:id="@+id/playPause"
+            android:tint="@color/widget_icon_tint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
@@ -128,6 +130,7 @@
             android:layout_height="wrap_content">
           <ImageView
             android:id="@+id/fastForward"
+            android:tint="@color/widget_icon_tint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"

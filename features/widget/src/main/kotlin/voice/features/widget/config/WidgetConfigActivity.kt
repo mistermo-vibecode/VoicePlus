@@ -27,9 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.zacsweers.metro.Inject
@@ -40,6 +41,7 @@ import voice.features.widget.WidgetGraph
 import voice.features.widget.WidgetUpdater
 import java.util.Locale
 import kotlin.math.roundToInt
+import voice.core.strings.R as StringsR
 
 class WidgetConfigActivity : ComponentActivity() {
 
@@ -71,11 +73,12 @@ class WidgetConfigActivity : ComponentActivity() {
         Scaffold(
           topBar = {
             @OptIn(ExperimentalMaterial3Api::class)
-            TopAppBar(title = { Text("Widget Settings") })
+            TopAppBar(title = { Text(stringResource(StringsR.string.widget_config_title)) })
           },
         ) { padding ->
-          var alpha by remember { mutableStateOf(configStore.getAlpha(appWidgetId) / 255f) }
-          var scale by remember { mutableStateOf(configStore.getTextScale(appWidgetId)) }
+          // Saveable: a rotation mid-adjustment would otherwise discard the unsaved slider values.
+          var alpha by rememberSaveable { mutableStateOf(configStore.getAlpha(appWidgetId) / 255f) }
+          var scale by rememberSaveable { mutableStateOf(configStore.getTextScale(appWidgetId)) }
 
           Column(
             modifier = Modifier
@@ -108,12 +111,18 @@ class WidgetConfigActivity : ComponentActivity() {
             )
 
             Column {
-              Text("Background opacity: ${(alpha * 100).roundToInt()}%", style = MaterialTheme.typography.titleMedium)
+              Text(
+                stringResource(StringsR.string.widget_config_opacity, (alpha * 100).roundToInt()),
+                style = MaterialTheme.typography.titleMedium,
+              )
               Slider(value = alpha, onValueChange = { alpha = it }, valueRange = 0f..1f)
             }
 
             Column {
-              Text("Text size: ${String.format(Locale.ROOT, "%.1f", scale)}x", style = MaterialTheme.typography.titleMedium)
+              Text(
+                stringResource(StringsR.string.widget_config_text_size, String.format(Locale.ROOT, "%.1f", scale)),
+                style = MaterialTheme.typography.titleMedium,
+              )
               Slider(value = scale, onValueChange = { scale = it }, valueRange = 0.5f..2f)
             }
 
@@ -134,7 +143,9 @@ class WidgetConfigActivity : ComponentActivity() {
                 finish()
               },
             ) {
-              Text("Add Widget")
+              // Not "Add Widget": the widget is reconfigurable, so this same screen opens when
+              // editing one that already exists.
+              Text(stringResource(StringsR.string.widget_config_apply))
             }
           }
         }
