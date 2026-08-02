@@ -1,0 +1,3 @@
+* New: Backup & Restore. Pick a folder and VoicePlus keeps timestamped saves there — positions, bookmarks, listening history, characters, chapter fixes, settings. Daily auto-saves plus "Back up now"; restore any save from a list, even after reinstall.
+* Listening log: sessions survive crashes and swipe-away, sleep stops no longer rewind twice, chapter jumps are labeled, positions shown as time into chapter.
+* Smoother seek slider; no rescan on every library visit; bookmark fixes.
