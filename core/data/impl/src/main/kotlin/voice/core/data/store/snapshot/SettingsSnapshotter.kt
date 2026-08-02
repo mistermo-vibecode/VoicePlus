@@ -4,7 +4,11 @@ import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -75,6 +79,13 @@ internal class SettingsSnapshotter(
   )
 
   suspend fun capture(): Map<String, String> = entries.associate { it.capture() }
+
+  /**
+   * Emits on every change to any captured store (initial replays dropped). This is the snapshot
+   * writer's dirty signal for settings — without it a settings-only change never reaches the
+   * ring, and "Back up now" exports a stale settings map.
+   */
+  fun changes(): Flow<Unit> = merge(*entries.map { entry -> entry.store.data.drop(1).map { } }.toTypedArray())
 
   suspend fun apply(settings: Map<String, String>) {
     entries.forEach { entry ->

@@ -1,7 +1,10 @@
 package voice.core.data.store.snapshot
 
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import voice.core.data.GridMode
@@ -73,6 +76,32 @@ class SettingsSnapshotterTest {
 
     target.seekTime.data.first() shouldBe 20
     target.darkTheme.data.first() shouldBe true
+  }
+
+  /**
+   * Found live in the emulator backup drill: a settings toggle right before "Back up now" was
+   * missing from the manual save — settings changes never marked the snapshot dirty, so the
+   * flushNow() in the manual-backup path had nothing to drain. changes() is that dirty signal.
+   */
+  @Test
+  fun `changes emits once per store change and skips the initial replay`() = runTest {
+    val stores = Stores()
+    var emissions = 0
+    val job = launch(start = CoroutineStart.UNDISPATCHED) {
+      stores.snapshotter().changes().collect { emissions++ }
+    }
+    runCurrent()
+    emissions shouldBe 0 // initial replays of all ten stores are dropped
+
+    stores.gridMode.updateData { GridMode.GRID }
+    runCurrent()
+    emissions shouldBe 1
+
+    stores.darkTheme.updateData { true }
+    runCurrent()
+    emissions shouldBe 2
+
+    job.cancel()
   }
 
   @Test

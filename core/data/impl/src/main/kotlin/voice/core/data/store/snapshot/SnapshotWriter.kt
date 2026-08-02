@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -59,16 +60,21 @@ internal class SnapshotWriter(
   private val flushMutex = Mutex()
 
   fun start(scope: CoroutineScope) {
-    // Re-snapshot on any change to books OR user-authored data (bookmarks, character notes, chapter-name
-    // overrides, listening sessions). This keeps the on-device ring AND the external bundle current, so a
-    // user deletion is reflected promptly and never silently resurrected by a later restore reading a stale
-    // bundle. The count()/allSessions() flows fire on any insert/update/delete to their table.
+    // Re-snapshot on any change the snapshot captures: books, user-authored data (bookmarks,
+    // character notes, chapter-name overrides, listening sessions/events), hidden books, and
+    // settings. This keeps the on-device ring AND the external bundle current, so a user deletion
+    // is reflected promptly and never silently resurrected by a later restore reading a stale
+    // bundle — and so the flushNow() before a manual "Back up now" actually has dirt to drain
+    // (a source missing here means that change silently never reaches any backup).
     merge(
       contentRepo.flow().map { },
       bookmarkDao.count().map { },
       bookCharacterDao.count().map { },
       chapterNameOverrideDao.count().map { },
       listeningSessionDao.count().map { },
+      listeningEventDao.count().map { },
+      excludedBooksStore.data.drop(1).map { },
+      settingsSnapshotter.changes(),
     )
       .onEach { dirty.set(true) }
       .debounce(DEBOUNCE)

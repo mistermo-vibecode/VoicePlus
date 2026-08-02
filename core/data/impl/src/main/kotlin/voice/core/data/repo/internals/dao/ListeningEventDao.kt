@@ -20,6 +20,9 @@ public interface ListeningEventDao {
   @Query("SELECT * FROM listening_event ORDER BY at DESC")
   public suspend fun all(): List<ListeningEvent>
 
+  @Query("SELECT COUNT(*) FROM listening_event")
+  public fun count(): Flow<Int>
+
   @Query("DELETE FROM listening_event WHERE bookId = :bookId")
   public suspend fun deleteAllForBook(bookId: BookId)
 }
