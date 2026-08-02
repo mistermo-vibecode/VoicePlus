@@ -4,6 +4,7 @@ import app.cash.molecule.RecompositionMode
 import app.cash.molecule.launchMolecule
 import app.cash.turbine.test
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,8 @@ import voice.core.data.ChapterNameOverride
 import voice.core.data.MarkData
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterNameOverrideRepo
+import voice.core.playback.LivePlaybackState
+import voice.core.playback.PlayerController
 import voice.navigation.Navigator
 import java.time.Instant
 
@@ -84,6 +87,9 @@ class ChapterEditorViewModelTest {
     overrideRepo: ChapterNameOverrideRepo = mockk(relaxed = true) {
       every { overridesForBook(any()) } returns MutableStateFlow(overrides)
     },
+    playerController: PlayerController = mockk {
+      every { livePlaybackStateFlow(any()) } returns MutableStateFlow<LivePlaybackState?>(null)
+    },
     bookRepository: BookRepository = mockk(relaxed = true) {
       every { flow(book.id) } returns MutableStateFlow(book)
       coEvery { get(book.id) } returns book
@@ -93,6 +99,7 @@ class ChapterEditorViewModelTest {
     return ChapterEditorViewModel(
       bookRepository = bookRepository,
       overrideRepo = overrideRepo,
+      playerController = playerController,
       navigator = navigator,
       dispatcherProvider = DispatcherProvider(
         main = kotlinx.coroutines.Dispatchers.Unconfined,
@@ -220,10 +227,85 @@ class ChapterEditorViewModelTest {
     )
 
     backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
-      val state = awaitNonNull()
+      var state = awaitNonNull()
+      while (state.currentChapterIndex != 1) state = awaitNonNull()
       assertEquals(1, state.currentChapterIndex)
       assertTrue(state.chapters[1].isCurrent)
     }
+  }
+
+  @Test
+  fun `current chapter follows live playback when persisted position is stale`() = runTest {
+    val chapter = chapter(
+      durationMs = 3.minutesMs(),
+      marks = listOf(
+        MarkData(startMs = 0L, name = "Chapter 1"),
+        MarkData(startMs = 60_000L, name = "Chapter 2"),
+      ),
+    )
+    val playerController = mockk<PlayerController> {
+      every { livePlaybackStateFlow(bookId) } returns MutableStateFlow(
+        LivePlaybackState(
+          bookId = bookId,
+          chapterId = chapterId,
+          positionMs = 70_000L,
+          isPlaying = true,
+          playbackSpeed = 1F,
+        ),
+      )
+    }
+    val vm = viewModel(
+      book = book(chapters = listOf(chapter), positionInChapter = 0L),
+      playerController = playerController,
+    )
+
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      var state = awaitNonNull()
+      while (state.currentChapterIndex != 1) state = awaitNonNull()
+      assertEquals(1, state.currentChapterIndex)
+      assertTrue(state.chapters[1].isCurrent)
+    }
+  }
+
+  @Test
+  fun `offset buttons saturate at integer bounds`() = runTest {
+    val vm = viewModel(book())
+
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      assertEquals(0, awaitNonNull().offset)
+
+      vm.onOffsetSet(Int.MAX_VALUE)
+      vm.onOffsetIncrement()
+      var state = awaitNonNull()
+      while (state.offset != Int.MAX_VALUE) state = awaitNonNull()
+
+      vm.onOffsetSet(Int.MIN_VALUE)
+      vm.onOffsetDecrement()
+      state = awaitNonNull()
+      while (state.offset != Int.MIN_VALUE) state = awaitNonNull()
+    }
+  }
+
+  @Test
+  fun `override writes use the exact mark key and trim the name`() = runTest {
+    val overrideRepo = mockk<ChapterNameOverrideRepo>(relaxed = true) {
+      every { overridesForBook(any()) } returns MutableStateFlow(emptyList())
+    }
+    val vm = viewModel(book(), overrideRepo = overrideRepo)
+    val item = ChapterItemState(
+      chapterId = chapterId,
+      markStartMs = 12_345L,
+      displayNumber = 1,
+      displayName = "Chapter 1",
+      hasOverride = false,
+      isCurrent = true,
+    )
+
+    vm.onEditConfirm(item, "  A new name  ")
+    vm.onDeleteOverride(item)
+
+    coVerify { overrideRepo.set(chapterId, 12_345L, bookId, "A new name") }
+    coVerify { overrideRepo.delete(chapterId, 12_345L) }
   }
 }
 

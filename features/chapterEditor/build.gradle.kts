@@ -10,6 +10,7 @@ dependencies {
   implementation(projects.core.strings)
   implementation(projects.core.ui)
   implementation(projects.core.data.api)
+  implementation(projects.core.playback)
 
   testImplementation(libs.bundles.testing.jvm)
   testImplementation(libs.molecule)

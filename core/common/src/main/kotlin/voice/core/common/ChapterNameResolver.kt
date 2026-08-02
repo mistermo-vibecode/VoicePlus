@@ -1,6 +1,7 @@
 package voice.core.common
 
 private val DIGIT_REGEX = Regex("""^(.*?)(\d+)(.*)$""", RegexOption.DOT_MATCHES_ALL)
+private val WORD_REGEX = Regex("[A-Za-z]+(?:-[A-Za-z]+)*")
 
 /**
  * Resolves the display name for a chapter mark.
@@ -28,31 +29,43 @@ public fun resolveChapterName(
     val numStr = match.groupValues[2]
     val suffix = match.groupValues[3]
     val parsed = numStr.toLongOrNull() ?: return rawName
-    val newNum = (parsed + offset).coerceAtLeast(1L)
+    val shifted = runCatching { Math.addExact(parsed, offset.toLong()) }
+      .getOrElse { if (offset > 0) Long.MAX_VALUE else Long.MIN_VALUE }
+    val newNum = shifted.coerceAtLeast(1L)
     return "$prefix$newNum$suffix"
   }
 
-  // Word match: try last two tokens first (e.g. "one hundred"), then last single token.
-  // Split on whitespace runs so doubled/odd spacing never yields an empty token.
-  val tokens = trimmed.split(Regex("\\s+"))
-  val lastTwoPhrase = if (tokens.size >= 2) "${tokens[tokens.size - 2]} ${tokens.last()}" else null
-  val twoWordParsed = lastTwoPhrase?.let { CardinalWordParser.parse(it) }
-  val (parsed, dropCount) = when {
-    twoWordParsed != null -> Pair(twoWordParsed, 2)
-    else -> Pair(CardinalWordParser.parse(tokens.last()), 1)
-  }
-  if (parsed != null) {
-    val referenceToken = tokens[tokens.size - dropCount] // first token of the matched phrase
-    val newN = (parsed + offset).coerceAtLeast(1)
-    val newWord = CardinalWordParser.toWord(newN) ?: newN.toString()
-    val capitalised = if (referenceToken.firstOrNull()?.isUpperCase() == true) {
-      // Capitalise each hyphen-separated segment (e.g. "twenty-three" → "Twenty-Three")
-      newWord.split("-").joinToString("-") { it.replaceFirstChar { c -> c.uppercase() } }
-    } else {
-      newWord
+  // Search backwards so names such as "Book One · Chapter Five" adjust the chapter number,
+  // and accept punctuation or title text after it ("Chapter Five: The Return").
+  val words = WORD_REGEX.findAll(trimmed).toList()
+  for (index in words.indices.reversed()) {
+    val current = words[index]
+    val previous = words.getOrNull(index - 1)
+    val pair = previous?.takeIf {
+      trimmed.substring(it.range.last + 1, current.range.first).all(Char::isWhitespace)
     }
-    val prefix = tokens.dropLast(dropCount).joinToString(" ").let { if (it.isNotEmpty()) "$it " else "" }
-    return "$prefix$capitalised"
+    val parsedWithRange = pair
+      ?.let { first ->
+        CardinalWordParser.parse(trimmed.substring(first.range.first, current.range.last + 1))
+          ?.let { parsed -> parsed to first.range.first..current.range.last }
+      }
+      ?: CardinalWordParser.parse(current.value)?.let { parsed -> parsed to current.range }
+
+    if (parsedWithRange != null) {
+      val (parsed, range) = parsedWithRange
+      val referenceToken = trimmed.substring(range).substringBefore(' ')
+      val newN = (parsed.toLong() + offset.toLong()).coerceAtLeast(1L)
+      val newWord = newN.takeIf { it <= Int.MAX_VALUE }
+        ?.let { CardinalWordParser.toWord(it.toInt()) }
+        ?: newN.toString()
+      val capitalised = if (referenceToken.firstOrNull()?.isUpperCase() == true) {
+        // Capitalise each hyphen-separated segment (e.g. "twenty-three" → "Twenty-Three")
+        newWord.split("-").joinToString("-") { it.replaceFirstChar { c -> c.uppercase() } }
+      } else {
+        newWord
+      }
+      return trimmed.replaceRange(range, capitalised).replace(Regex("\\s+"), " ")
+    }
   }
 
   return rawName

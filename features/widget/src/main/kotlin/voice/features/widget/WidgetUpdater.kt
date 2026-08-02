@@ -25,10 +25,10 @@ import voice.app.features.widget.BaseWidgetProvider
 import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
-import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.SeekTimeStore
+import voice.core.playback.CurrentBookResolver
 import voice.core.playback.notification.MainActivityIntentProvider
 import voice.core.playback.playstate.PlayStateManager
 import voice.core.playback.receiver.WidgetButtonReceiver
@@ -41,7 +41,7 @@ import voice.core.ui.R as UiR
 @Inject
 class WidgetUpdater(
   private val context: Context,
-  private val repo: BookRepository,
+  private val currentBookResolver: CurrentBookResolver,
   private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   @CurrentBookStore
   private val currentBookStore: DataStore<BookId?>,
@@ -71,7 +71,7 @@ class WidgetUpdater(
    */
   suspend fun updateNow() {
     updateMutex.withLock {
-      val book = currentBookStore.data.first()?.let { repo.get(it) }
+      val book = currentBookStore.data.first()?.let { currentBookResolver.book(it) }
       val seekSeconds = seekTimeStore.data.first()
       val chapterName = book?.let { resolveCurrentChapterName(it) }
       val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, BaseWidgetProvider::class.java))

@@ -31,6 +31,7 @@ import voice.core.data.ChapterMark
 import voice.core.data.MarkData
 import voice.core.logging.api.LogWriter
 import voice.core.logging.api.Logger
+import voice.core.playback.ChapterMarkChangeNotifier
 import voice.core.playback.MemoryDataStore
 import voice.core.playback.history.PlaybackIntentHolder
 import voice.core.playback.session.MediaId
@@ -119,6 +120,7 @@ class VoicePlayerTest {
     sleepTimer = mockk(relaxed = true),
     intentHolder = PlaybackIntentHolder(),
     listeningEventRecorder = mockk(relaxed = true),
+    chapterMarkChangeNotifier = mockk<ChapterMarkChangeNotifier>(relaxed = true),
   )
 
   @Test

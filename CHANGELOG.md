@@ -42,8 +42,8 @@
 - **Digits and words:** Recognizes both numerals ("Chapter 5") and English number words ("Chapter Five"), from one to one hundred.
 - **Per-chapter overrides:** Rename any individual chapter by hand. Manual names take precedence over the offset.
 - **Non-destructive and persistent:** Corrections are stored separately from your files, survive library re-scans, and never modify the audio. Reset everything or clear a single override at any time.
-- **Applied everywhere:** Corrected names appear across the playback screen, bookmarks, the listening log, the home-screen widget, and Android Auto.
-- Available for books that have chapter marks.
+- **Applied everywhere:** Corrected names appear across the playback screen, bookmarks, the listening log, the home-screen widget, and Android Auto for one-file-per-chapter books.
+- Available for books with more than one chapter mark.
 
 ### Use Folder Names Instead of File Tags (Experimental)
 - Toggling this option now re-scans your library and updates existing books immediately, instead of only applying to newly added books.

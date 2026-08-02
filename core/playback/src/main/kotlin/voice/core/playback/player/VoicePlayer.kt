@@ -23,6 +23,7 @@ import voice.core.data.store.AutoRewindAmountStore
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.SeekTimeStore
 import voice.core.logging.api.Logger
+import voice.core.playback.ChapterMarkChangeNotifier
 import voice.core.playback.history.ListeningEventRecorder
 import voice.core.playback.history.PlaybackIntentHolder
 import voice.core.playback.misc.Decibel
@@ -54,6 +55,7 @@ class VoicePlayer(
   private val sleepTimer: SleepTimer,
   private val intentHolder: PlaybackIntentHolder,
   private val listeningEventRecorder: ListeningEventRecorder,
+  private val chapterMarkChangeNotifier: ChapterMarkChangeNotifier,
 ) : ForwardingPlayer(player) {
 
   fun forceSeekToNext() {
@@ -333,6 +335,9 @@ class VoicePlayer(
   private fun registerChapterMarkCallbacks(chapters: List<Chapter>) {
     if (player is ExoPlayer) {
       val boundaryHandler = PlayerMessage.Target { _, payload ->
+        if (payload is ChapterPausePayload) {
+          chapterMarkChangeNotifier.notifyChanged()
+        }
         if (payload is ChapterPausePayload &&
           payload != ChapterPausePayload.Zero &&
           sleepTimer.state.value is SleepTimerState.Enabled.WithEndOfChapter

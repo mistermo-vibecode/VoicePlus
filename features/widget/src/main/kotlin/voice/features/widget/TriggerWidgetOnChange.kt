@@ -21,6 +21,7 @@ import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.SeekTimeStore
 import voice.core.initializer.AppInitializer
+import voice.core.playback.ChapterMarkChangeNotifier
 import voice.core.playback.playstate.PlayStateManager
 
 @ContributesIntoSet(AppScope::class)
@@ -31,6 +32,7 @@ class TriggerWidgetOnChange(
   private val seekTimeStore: DataStore<Int>,
   private val repo: BookRepository,
   private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
+  private val chapterMarkChangeNotifier: ChapterMarkChangeNotifier,
   private val playStateManager: PlayStateManager,
   private val widgetUpdater: WidgetUpdater,
   private val scope: CoroutineScope,
@@ -55,6 +57,7 @@ class TriggerWidgetOnChange(
       playStateChanged(),
       bookIdChanged(),
       overridesChanged(),
+      chapterMarkChangeNotifier.flow,
       seekTimeStore.data.distinctUntilChanged().map { },
     )
   }

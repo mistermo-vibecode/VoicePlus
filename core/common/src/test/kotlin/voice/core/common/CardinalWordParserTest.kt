@@ -25,6 +25,11 @@ class CardinalWordParserTest {
     assertEquals(99, CardinalWordParser.parse("ninety-nine"))
   }
 
+  @Test fun `parse space separated compounds`() {
+    assertEquals(21, CardinalWordParser.parse("twenty one"))
+    assertEquals(99, CardinalWordParser.parse("ninety nine"))
+  }
+
   @Test fun `parse one hundred`() {
     assertEquals(100, CardinalWordParser.parse("one hundred"))
   }

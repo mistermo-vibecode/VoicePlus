@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -96,6 +97,13 @@ private fun ChapterEditorContent(
   modifier: Modifier = Modifier,
 ) {
   var menuExpanded by remember { mutableStateOf(false) }
+  var editingChapterId by rememberSaveable { mutableStateOf<String?>(null) }
+  var editingMarkStartMs by rememberSaveable { mutableStateOf<Long?>(null) }
+
+  fun clearSavedEditorTarget() {
+    editingChapterId = null
+    editingMarkStartMs = null
+  }
 
   Scaffold(
     modifier = modifier,
@@ -181,7 +189,11 @@ private fun ChapterEditorContent(
         ) { index, item ->
           ChapterRow(
             item = item,
-            onEdit = { onEditChapterClick(item) },
+            onEdit = {
+              editingChapterId = item.chapterId.value
+              editingMarkStartMs = item.markStartMs
+              onEditChapterClick(item)
+            },
             modifier = Modifier.padding(horizontal = 16.dp),
           )
           if (index < viewState.chapters.lastIndex) {
@@ -197,13 +209,23 @@ private fun ChapterEditorContent(
 
   // Edit chapter dialog
   val editingChapter = viewState.editingChapter
+    ?: viewState.chapters.firstOrNull {
+      it.chapterId.value == editingChapterId && it.markStartMs == editingMarkStartMs
+    }
   if (editingChapter != null) {
     EditChapterDialog(
       item = editingChapter,
-      onConfirm = { text -> onEditConfirm(editingChapter, text) },
-      onDismiss = onEditDismiss,
+      onConfirm = { text ->
+        clearSavedEditorTarget()
+        onEditConfirm(editingChapter, text)
+      },
+      onDismiss = {
+        clearSavedEditorTarget()
+        onEditDismiss()
+      },
       onRestore = if (editingChapter.hasOverride) {
         {
+          clearSavedEditorTarget()
           onDeleteOverride(editingChapter)
           onEditDismiss()
         }
@@ -243,8 +265,8 @@ private fun OffsetRow(
   onOffsetSet: (Int) -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  var editing by remember { mutableStateOf(false) }
-  var editText by remember(offset) { mutableStateOf(offset.toString()) }
+  var editing by rememberSaveable { mutableStateOf(false) }
+  var editText by rememberSaveable(offset) { mutableStateOf(offset.toString()) }
 
   Surface(
     modifier = modifier.fillMaxWidth(),
@@ -306,6 +328,11 @@ private fun ChapterRow(
   onEdit: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  val leadingContentColor = if (item.isCurrent) {
+    MaterialTheme.colorScheme.onPrimaryContainer
+  } else {
+    MaterialTheme.colorScheme.onSurfaceVariant
+  }
   val status = when {
     item.isCurrent && item.hasOverride -> stringResource(StringsR.string.chapter_editor_playing_custom_name)
     item.isCurrent -> stringResource(StringsR.string.chapter_editor_playing)
@@ -329,11 +356,13 @@ private fun ChapterRow(
           Icon(
             imageVector = Icons.Default.PlayArrow,
             contentDescription = null,
+            tint = leadingContentColor,
           )
         }
         Text(
           text = item.displayNumber.toString(),
           style = MaterialTheme.typography.titleMedium,
+          color = leadingContentColor,
         )
       }
     },
@@ -382,7 +411,9 @@ private fun EditChapterDialog(
   onDismiss: () -> Unit,
   onRestore: (() -> Unit)?,
 ) {
-  var text by remember(item) { mutableStateOf(item.displayName) }
+  var text by rememberSaveable(item.chapterId.value, item.markStartMs) {
+    mutableStateOf(item.displayName)
+  }
 
   AlertDialog(
     onDismissRequest = onDismiss,

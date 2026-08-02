@@ -25,10 +25,10 @@ public object CardinalWordParser {
   /** Returns the integer value of an English cardinal word (1–100), or null if not recognised. */
   public fun parse(word: String): Int? {
     val lower = word.lowercase().trim()
-    if (lower == "one hundred") return 100
     wordToInt[lower]?.let { return it }
-    val parts = lower.split("-")
+    val parts = lower.split(Regex("[-\\s]+"))
     if (parts.size == 2) {
+      if (parts[0] == "one" && parts[1] == "hundred") return 100
       val tens = wordToInt[parts[0]] ?: return null
       val ones = wordToInt[parts[1]] ?: return null
       if (tens >= 20 && ones in 1..9) return tens + ones

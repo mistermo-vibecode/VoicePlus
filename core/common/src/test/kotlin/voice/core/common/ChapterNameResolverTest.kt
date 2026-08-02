@@ -82,4 +82,32 @@ class ChapterNameResolverTest {
   @Test fun `consecutive spaces before a cardinal word do not crash`() {
     assertEquals("Chapter Fourteen", resolveChapterName("Chapter  Twelve", offset = 2, override = null))
   }
+
+  @Test fun `word number before punctuation and a title is offset`() {
+    assertEquals(
+      "Chapter Six: The Return",
+      resolveChapterName("Chapter Five: The Return", offset = 1, override = null),
+    )
+  }
+
+  @Test fun `last word number is used when a name contains more than one`() {
+    assertEquals(
+      "Book One · Chapter Six",
+      resolveChapterName("Book One · Chapter Five", offset = 1, override = null),
+    )
+  }
+
+  @Test fun `word arithmetic does not wrap at maximum offset`() {
+    assertEquals(
+      "Chapter 2147483652",
+      resolveChapterName("Chapter Five", offset = Int.MAX_VALUE, override = null),
+    )
+  }
+
+  @Test fun `digit arithmetic saturates instead of wrapping`() {
+    assertEquals(
+      "Chapter ${Long.MAX_VALUE}",
+      resolveChapterName("Chapter ${Long.MAX_VALUE}", offset = 1, override = null),
+    )
+  }
 }
