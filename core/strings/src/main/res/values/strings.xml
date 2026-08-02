@@ -90,7 +90,13 @@
     <string name="listening_stats_current_streak">Current Streak</string>
     <string name="listening_stats_longest_streak">Longest Streak</string>
     <string name="listening_stats_best_day_of_week">Best Day of Week</string>
-    <string name="listening_stats_streak_days">%d days</string>
+    <plurals name="listening_stats_streak_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="listening_stats_summary">Summary</string>
+    <string name="listening_stats_insights">Insights</string>
+    <string name="listening_stats_chart_a11y">%1$s total. Busiest %2$s with %3$s.</string>
     <string name="listening_stats_no_data">No listening data yet.\nStart playing to see your statistics.</string>
     <string name="character_list">Character List</string>
     <string name="character_list_add">Add Character</string>

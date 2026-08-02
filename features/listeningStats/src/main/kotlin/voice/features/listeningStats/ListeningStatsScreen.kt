@@ -33,7 +33,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -73,7 +76,9 @@ interface ListeningStatsProvider {
 @Composable
 fun ListeningStatsScreen() {
   val viewModel = retain { rootGraphAs<ListeningStatsGraph>().listeningStatsViewModel }
-  val viewState = viewModel.viewState()
+  // Null until the first aggregation lands: rendering Empty here would flash "No listening data yet"
+  // at a user who has years of it.
+  val viewState = viewModel.viewState() ?: return
   ListeningStatsScreen(viewState = viewState, onClose = viewModel::onClose)
 }
 
@@ -153,7 +158,7 @@ internal fun ListeningStatsScreen(
 @Composable
 private fun SummarySection(viewState: ListeningStatsViewState) {
   Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-    SectionTitle("Summary")
+    SectionTitle(stringResource(StringsR.string.listening_stats_summary))
     Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -205,7 +210,7 @@ private fun SummarySection(viewState: ListeningStatsViewState) {
 @Composable
 private fun AdditionalStatsSection(viewState: ListeningStatsViewState) {
   Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-    SectionTitle("Insights")
+    SectionTitle(stringResource(StringsR.string.listening_stats_insights))
     Card(
       modifier = Modifier.fillMaxWidth(),
       colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -220,12 +225,20 @@ private fun AdditionalStatsSection(viewState: ListeningStatsViewState) {
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         InsightRow(
           stringResource(StringsR.string.listening_stats_current_streak),
-          if (viewState.currentStreak > 0) stringResource(StringsR.string.listening_stats_streak_days, viewState.currentStreak) else "—",
+          if (viewState.currentStreak > 0) {
+            pluralStringResource(StringsR.plurals.listening_stats_streak_days, viewState.currentStreak, viewState.currentStreak)
+          } else {
+            "—"
+          },
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         InsightRow(
           stringResource(StringsR.string.listening_stats_longest_streak),
-          if (viewState.longestStreak > 0) stringResource(StringsR.string.listening_stats_streak_days, viewState.longestStreak) else "—",
+          if (viewState.longestStreak > 0) {
+            pluralStringResource(StringsR.plurals.listening_stats_streak_days, viewState.longestStreak, viewState.longestStreak)
+          } else {
+            "—"
+          },
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         InsightRow(stringResource(StringsR.string.listening_stats_best_day_of_week), viewState.bestDayOfWeek ?: "—")
@@ -320,10 +333,25 @@ fun BarChart(
   val maxValue = data.maxOfOrNull { it.valueMs } ?: 1L
   val safeMax = maxValue.coerceAtLeast(1L)
 
+  // A Canvas is invisible to TalkBack, so summarise the series: without this the whole chart
+  // section announces as an empty region.
+  val peak = data.maxByOrNull { it.valueMs }
+  val chartDescription = if (peak == null || peak.valueMs == 0L) {
+    stringResource(StringsR.string.listening_stats_no_data)
+  } else {
+    stringResource(
+      StringsR.string.listening_stats_chart_a11y,
+      formatDuration(data.sumOf { it.valueMs }),
+      peak.label,
+      formatDuration(peak.valueMs),
+    )
+  }
+
   Canvas(
     modifier = modifier
       .fillMaxWidth()
-      .height(160.dp),
+      .height(160.dp)
+      .semantics { contentDescription = chartDescription },
   ) {
     val chartTop = 8.dp.toPx()
     val labelHeight = 20.dp.toPx()
