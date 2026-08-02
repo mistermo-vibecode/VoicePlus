@@ -77,6 +77,16 @@ class PlayerController(
     }
   }
 
+  /** Used when a book leaves the library, so playback doesn't continue on a removed (possibly deleted) book. */
+  fun pauseIfCurrentBookIs(id: BookId) {
+    scope.launch {
+      val controller = awaitConnect() ?: return@launch
+      if (controller.currentBookId() == id) {
+        controller.pause()
+      }
+    }
+  }
+
   fun setPosition(
     time: Long,
     id: ChapterId,

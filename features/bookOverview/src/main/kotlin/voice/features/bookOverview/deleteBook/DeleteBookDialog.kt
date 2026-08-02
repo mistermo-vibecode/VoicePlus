@@ -61,7 +61,17 @@ internal fun DeleteBookDialog(
     },
     text = {
       Column {
-        Text(stringResource(StringsR.string.remove_book_description))
+        // The body has to follow the checkbox: it previously kept promising "your audio files will
+        // not be deleted" while the confirm button read "Remove & Delete Files".
+        Text(
+          stringResource(
+            if (viewState.alsoDeleteFiles) {
+              StringsR.string.remove_book_description_delete
+            } else {
+              StringsR.string.remove_book_description
+            },
+          ),
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -70,12 +80,14 @@ internal fun DeleteBookDialog(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-          text = stringResource(StringsR.string.remove_book_restore_hint),
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.primary,
-        )
+        if (!viewState.alsoDeleteFiles) {
+          Spacer(modifier = Modifier.height(12.dp))
+          Text(
+            text = stringResource(StringsR.string.remove_book_restore_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+          )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
         Row(

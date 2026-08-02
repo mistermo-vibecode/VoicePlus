@@ -19,6 +19,8 @@
     <string name="more">More</string>
     <string name="remove_book_title">Remove from Library</string>
     <string name="remove_book_description">This book will be hidden from your library. Your audio files will not be deleted.</string>
+    <string name="remove_book_description_delete">This book will be hidden from your library and its folder will be permanently deleted from storage, including any covers and other files inside it.</string>
+    <string name="remove_book_delete_failed">The book was removed from your library, but its files could not be deleted.</string>
     <string name="remove_book_confirm">Remove</string>
     <string name="remove_book_and_delete">Remove &amp; Delete Files</string>
     <string name="remove_book_restore_hint">You can restore hidden books in Settings → Hidden Books.</string>
