@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+  implementation(libs.compose.runtime.retain)
   implementation(libs.serialization.json)
   implementation(libs.androidxCore)
 

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
+import voice.core.common.RetainedViewModel
 import voice.core.common.resolveChapterName
 import voice.core.data.BookId
 import voice.core.data.byMarkKey
@@ -33,9 +34,7 @@ public class ChapterEditorViewModel(
   private val navigator: Navigator,
   dispatcherProvider: DispatcherProvider,
   @Assisted private val bookId: BookId,
-) {
-
-  private val scope = MainScope(dispatcherProvider)
+) : RetainedViewModel(MainScope(dispatcherProvider)) {
   private val localOffset = MutableStateFlow<Int?>(null)
 
   private val _editingChapter = mutableStateOf<ChapterItemState?>(null)

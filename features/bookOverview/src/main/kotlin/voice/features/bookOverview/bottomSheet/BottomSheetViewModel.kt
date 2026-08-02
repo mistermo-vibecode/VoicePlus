@@ -5,16 +5,14 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.data.BookId
 import voice.features.bookOverview.di.BookOverviewScope
 
 @SingleIn(BookOverviewScope::class)
 @Inject
-class BottomSheetViewModel(private val viewModels: Set<@JvmSuppressWildcards BottomSheetItemViewModel>) {
-
-  private val scope = MainScope()
+class BottomSheetViewModel(private val viewModels: Set<@JvmSuppressWildcards BottomSheetItemViewModel>) : RetainedViewModel() {
 
   private val _state: MutableState<EditBookBottomSheetState> = mutableStateOf(EditBookBottomSheetState(emptyList()))
   internal val state: State<EditBookBottomSheetState> get() = _state

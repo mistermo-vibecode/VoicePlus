@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -470,7 +471,7 @@ public interface ChapterEditorProvider {
   public fun chapterEditorNavEntryProvider(factory: ChapterEditorViewModel.Factory): NavEntryProvider<*> =
     NavEntryProvider<Destination.ChapterEditor> { key ->
       NavEntry(key) {
-        val viewModel = remember(key) { factory.create(key.bookId) }
+        val viewModel = retain(key) { factory.create(key.bookId) }
         ChapterEditorScreen(viewModel = viewModel)
       }
     }

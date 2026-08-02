@@ -4,8 +4,9 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.SingleIn
-import kotlinx.coroutines.MainScope
+import dev.zacsweers.metro.binding
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.data.BookId
 import voice.core.data.repo.BookRepository
 import voice.features.bookOverview.bottomSheet.BottomSheetItem
@@ -13,10 +14,13 @@ import voice.features.bookOverview.bottomSheet.BottomSheetItemViewModel
 import voice.features.bookOverview.di.BookOverviewScope
 
 @SingleIn(BookOverviewScope::class)
-@ContributesIntoSet(BookOverviewScope::class)
-class EditBookTitleViewModel(private val repo: BookRepository) : BottomSheetItemViewModel {
-
-  private val scope = MainScope()
+@ContributesIntoSet(
+  scope = BookOverviewScope::class,
+  binding = binding<BottomSheetItemViewModel>(),
+)
+class EditBookTitleViewModel(private val repo: BookRepository) :
+  RetainedViewModel(),
+  BottomSheetItemViewModel {
 
   private val _state = mutableStateOf<EditBookTitleState?>(null)
   internal val state: State<EditBookTitleState?> get() = _state

@@ -7,9 +7,9 @@ import androidx.compose.runtime.remember
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.data.BookCharacter
 import voice.core.data.BookId
 import voice.core.data.repo.BookCharacterRepo
@@ -21,9 +21,7 @@ class CharacterListViewModel(
   private val characterRepo: BookCharacterRepo,
   private val navigator: Navigator,
   @Assisted private val bookId: BookId,
-) {
-
-  private val scope = MainScope()
+) : RetainedViewModel() {
 
   @Composable
   fun viewState(): CharacterListViewState {

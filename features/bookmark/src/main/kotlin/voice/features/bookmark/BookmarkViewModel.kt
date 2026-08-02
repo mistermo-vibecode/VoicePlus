@@ -13,11 +13,11 @@ import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.common.resolveChapterName
 import voice.core.data.BookId
 import voice.core.data.Bookmark
@@ -55,9 +55,7 @@ class BookmarkViewModel(
   private val context: Context,
   @Assisted
   private val bookId: BookId,
-) {
-
-  private val scope = MainScope()
+) : RetainedViewModel() {
 
   private val _viewEffects = MutableSharedFlow<BookmarkViewEffect>(extraBufferCapacity = 1)
   val viewEffects: Flow<BookmarkViewEffect> get() = _viewEffects

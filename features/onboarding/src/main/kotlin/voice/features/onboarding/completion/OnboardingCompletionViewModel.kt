@@ -2,8 +2,8 @@ package voice.features.onboarding.completion
 
 import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.Inject
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.data.store.OnboardingCompletedStore
 import voice.navigation.Destination
 import voice.navigation.Navigator
@@ -13,9 +13,7 @@ class OnboardingCompletionViewModel(
   @OnboardingCompletedStore
   private val onboardingCompletedStore: DataStore<Boolean>,
   private val navigator: Navigator,
-) {
-
-  private val scope = MainScope()
+) : RetainedViewModel() {
 
   fun next() {
     scope.launch {

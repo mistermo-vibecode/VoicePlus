@@ -6,9 +6,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import dev.zacsweers.metro.Inject
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.data.store.snapshot.BackupEntry
 import voice.core.data.store.snapshot.BackupRepository
 import voice.core.data.store.snapshot.BackupStatus
@@ -24,9 +24,7 @@ class BackupViewModel(
   private val librarySnapshotService: LibrarySnapshotService,
   private val currentBookResolver: CurrentBookResolver,
   private val navigator: Navigator,
-) {
-
-  private val scope = MainScope()
+) : RetainedViewModel() {
   private val saves = MutableStateFlow<List<BackupEntry>>(emptyList())
 
   @Composable

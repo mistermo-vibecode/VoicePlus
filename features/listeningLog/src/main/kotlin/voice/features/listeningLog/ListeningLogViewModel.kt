@@ -9,8 +9,8 @@ import androidx.compose.runtime.remember
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
@@ -52,9 +52,7 @@ class ListeningLogViewModel(
   private val navigator: Navigator,
   private val context: Context,
   @Assisted private val bookId: BookId,
-) {
-
-  private val scope = MainScope()
+) : RetainedViewModel() {
 
   // Respect the device's 12/24-hour setting and locale date order (mirrors the sleep timer's
   // localTimeFormatter, which is internal to features:settings).

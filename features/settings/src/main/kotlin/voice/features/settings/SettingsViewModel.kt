@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import voice.core.common.AppInfoProvider
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
+import voice.core.common.RetainedViewModel
 import voice.core.data.GridMode
 import voice.core.data.MediaButtonClickAction
 import voice.core.data.sleeptimer.SleepTimerPreference
@@ -64,9 +65,8 @@ class SettingsViewModel(
   private val ignoreFileTagsStore: DataStore<Boolean>,
   private val mediaScanTrigger: MediaScanTrigger,
   dispatcherProvider: DispatcherProvider,
-) : SettingsListener {
-
-  private val mainScope = MainScope(dispatcherProvider)
+) : RetainedViewModel(MainScope(dispatcherProvider)),
+  SettingsListener {
   private val _viewEffects = MutableSharedFlow<SettingsViewEffect>(extraBufferCapacity = 1)
   internal val viewEffects: SharedFlow<SettingsViewEffect> = _viewEffects.asSharedFlow()
   private val dialog = mutableStateOf<SettingsViewState.Dialog?>(null)
@@ -125,13 +125,13 @@ class SettingsViewModel(
   }
 
   override fun toggleDarkTheme() {
-    mainScope.launch {
+    scope.launch {
       useDarkThemeStore.updateData { !it }
     }
   }
 
   override fun toggleGrid() {
-    mainScope.launch {
+    scope.launch {
       gridModeStore.updateData { currentMode ->
         when (currentMode) {
           GridMode.LIST -> GridMode.GRID
@@ -147,7 +147,7 @@ class SettingsViewModel(
   }
 
   override fun seekAmountChanged(seconds: Int) {
-    mainScope.launch {
+    scope.launch {
       seekTimeStore.updateData { seconds }
     }
   }
@@ -157,7 +157,7 @@ class SettingsViewModel(
   }
 
   override fun autoRewindAmountChang(seconds: Int) {
-    mainScope.launch {
+    scope.launch {
       autoRewindAmountStore.updateData { seconds }
     }
   }
@@ -179,7 +179,7 @@ class SettingsViewModel(
   }
 
   override fun setAutoSleepTimer(checked: Boolean) {
-    mainScope.launch {
+    scope.launch {
       sleepTimerPreferenceStore.updateData { currentPrefs ->
         currentPrefs.copy(autoSleepTimerEnabled = checked)
       }
@@ -187,7 +187,7 @@ class SettingsViewModel(
   }
 
   override fun setAutoSleepTimerStart(time: LocalTime) {
-    mainScope.launch {
+    scope.launch {
       sleepTimerPreferenceStore.updateData { currentPrefs ->
         currentPrefs.copy(autoSleepStartTime = time)
       }
@@ -195,7 +195,7 @@ class SettingsViewModel(
   }
 
   override fun setAutoSleepTimerEnd(time: LocalTime) {
-    mainScope.launch {
+    scope.launch {
       sleepTimerPreferenceStore.updateData { currentPrefs ->
         currentPrefs.copy(autoSleepEndTime = time)
       }
@@ -203,7 +203,7 @@ class SettingsViewModel(
   }
 
   override fun setAutoSleepTimerDuration(minutes: Int) {
-    mainScope.launch {
+    scope.launch {
       sleepTimerPreferenceStore.updateData { currentPrefs ->
         currentPrefs.copy(duration = minutes.minutes)
       }
@@ -237,19 +237,19 @@ class SettingsViewModel(
   }
 
   override fun setMediaButtonDoubleClickAction(action: MediaButtonClickAction) {
-    mainScope.launch {
+    scope.launch {
       mediaButtonDoubleClickHandlerStore.updateData { action }
     }
   }
 
   override fun setMediaButtonTripleClickAction(action: MediaButtonClickAction) {
-    mainScope.launch {
+    scope.launch {
       mediaButtonTripleClickHandlerStore.updateData { action }
     }
   }
 
   override fun setExperimentalPlaybackPersistence(enabled: Boolean) {
-    mainScope.launch {
+    scope.launch {
       experimentalPlaybackPersistenceStore.updateData { enabled }
     }
   }
@@ -259,7 +259,7 @@ class SettingsViewModel(
   }
 
   override fun setSleepTimerAutoReset(enabled: Boolean) {
-    mainScope.launch {
+    scope.launch {
       sleepTimerPreferenceStore.updateData { it.copy(autoResetEnabled = enabled) }
     }
   }
@@ -279,7 +279,7 @@ class SettingsViewModel(
   override fun confirmIgnoreFileTagsChange() {
     val newValue = (dialog.value as? SettingsViewState.Dialog.IgnoreFileTagsConfirm)?.newValue ?: return
     dismissDialog()
-    mainScope.launch {
+    scope.launch {
       ignoreFileTagsStore.updateData { newValue }
       // forceReParse re-derives chapter names per book during the scan; no global chapter wipe,
       // so a scan that can't read files (e.g. a dropped permission) won't blank the library.

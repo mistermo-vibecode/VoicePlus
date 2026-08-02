@@ -7,10 +7,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.Inject
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.MediaScanWaiter
@@ -25,9 +25,7 @@ class HiddenBooksViewModel(
   private val excludedBooksStore: DataStore<Set<String>>,
   private val mediaScanWaiter: MediaScanWaiter,
   private val navigator: Navigator,
-) {
-
-  private val scope = MainScope()
+) : RetainedViewModel() {
 
   @Composable
   fun viewState(): HiddenBooksViewState {

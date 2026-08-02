@@ -9,9 +9,10 @@ import androidx.documentfile.provider.DocumentFile
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import kotlinx.coroutines.MainScope
+import dev.zacsweers.metro.binding
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.data.BookId
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.store.CurrentBookStore
@@ -25,7 +26,10 @@ import voice.features.bookOverview.di.BookOverviewScope
 import voice.core.strings.R as StringsR
 
 @SingleIn(BookOverviewScope::class)
-@ContributesIntoSet(BookOverviewScope::class)
+@ContributesIntoSet(
+  scope = BookOverviewScope::class,
+  binding = binding<BottomSheetItemViewModel>(),
+)
 @Inject
 class DeleteBookViewModel(
   private val application: Application,
@@ -36,9 +40,8 @@ class DeleteBookViewModel(
   private val playerController: PlayerController,
   @CurrentBookStore
   private val currentBookStoreId: DataStore<BookId?>,
-) : BottomSheetItemViewModel {
-
-  private val scope = MainScope()
+) : RetainedViewModel(),
+  BottomSheetItemViewModel {
 
   private val _state = mutableStateOf<DeleteBookViewState?>(null)
   internal val state: State<DeleteBookViewState?> get() = _state

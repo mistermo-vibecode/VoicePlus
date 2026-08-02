@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
+import voice.core.common.RetainedViewModel
 import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
@@ -76,9 +77,7 @@ class BookPlayViewModel(
   private val experimentalPlaybackPersistenceFeatureFlag: FeatureFlag<Boolean>,
   @Assisted
   private val bookId: BookId,
-) {
-
-  private val scope = MainScope(dispatcherProvider)
+) : RetainedViewModel(MainScope(dispatcherProvider)) {
 
   private val _viewEffects = MutableSharedFlow<BookPlayViewEffect>(extraBufferCapacity = 1)
   internal val viewEffects: Flow<BookPlayViewEffect> get() = _viewEffects

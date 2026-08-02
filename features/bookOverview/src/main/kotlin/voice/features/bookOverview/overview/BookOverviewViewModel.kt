@@ -18,8 +18,8 @@ import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import voice.core.common.RetainedViewModel
 import voice.core.common.comparator.sortedNaturally
 import voice.core.data.Book
 import voice.core.data.BookId
@@ -73,9 +73,7 @@ class BookOverviewViewModel(
   private val finishedExpandedStore: DataStore<Boolean>,
   @ExperimentalPlaybackPersistenceQualifier
   private val experimentalPlaybackPersistenceFeatureFlag: FeatureFlag<Boolean>,
-) {
-
-  private val scope = MainScope()
+) : RetainedViewModel() {
   private var searchActive by mutableStateOf(false)
   private var query by mutableStateOf("")
 
