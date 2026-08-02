@@ -51,9 +51,18 @@ class ListeningEventRecorder(
       open()
     } else {
       val player = player
-      if (player != null && player.playbackState == Player.STATE_BUFFERING && player.playWhenReady) {
+      if (player != null && player.playbackState == Player.STATE_BUFFERING && player.playWhenReady &&
+        holder.pendingPauseEndPositionMs == null
+      ) {
         // A rebuffer mid-listen, not a pause. Keep the session open — otherwise a stuttering
         // stream fragments one listen into sub-3s pieces the duration gate then discards.
+        //
+        // The pendingPauseEndPositionMs check matters: VoicePlayer's pause runs its auto-rewind
+        // seek BEFORE flipping playWhenReady, and if that seek buffers, isPlaying drops while
+        // playWhenReady is still true — indistinguishable from a rebuffer by player state alone.
+        // Without it the pause close is swallowed and the "session" silently spans hours of
+        // paused wall-clock until the next book switch or teardown. The flag is stashed first
+        // thing in the pause path and only there, so it is the reliable pause-in-flight signal.
         return
       }
       close(ListeningSessionEndReason.Paused)

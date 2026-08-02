@@ -312,6 +312,58 @@ class ListeningEventRecorderTest {
     saved.single().durationMs shouldBe 60_000L
   }
 
+  /**
+   * Found live in the emulator drill: VoicePlayer's pause runs its auto-rewind seek BEFORE
+   * flipping playWhenReady, and when that seek buffers, isPlaying drops while the player still
+   * reads BUFFERING+playWhenReady — the rebuffer guard swallowed the close and the session
+   * silently spanned the whole paused sitting (a 12s listen recorded as 16.8 minutes). The
+   * pendingPauseEndPositionMs stash, written first thing in the pause path, is the
+   * pause-in-flight signal that must override the guard.
+   */
+  @Test
+  fun `a pause whose auto-rewind seek buffers still closes the session`() = runTest {
+    val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
+    var position = 0L
+    val player = mockPlayer { position }
+    every { player.playbackState } returns Player.STATE_READY
+    every { player.playWhenReady } returns true
+    recorder.attachTo(player)
+
+    val start = Instant.ofEpochMilli(1_000_000)
+    recorder.clock = { start }
+    recorder.onIsPlayingChanged(true)
+
+    // VoicePlayer's pause: stash the true end position, then the auto-rewind seek buffers —
+    // isPlaying flips false while the player still reports BUFFERING with playWhenReady true.
+    recorder.clock = { start.plusMillis(12_000) }
+    holder.pendingPauseEndPositionMs = 12_000L
+    holder.suppressNextSeek = true
+    position = 10_000L // already rewound
+    every { player.playbackState } returns Player.STATE_BUFFERING
+    recorder.onIsPlayingChanged(false)
+
+    saved shouldHaveSize 1
+    val session = saved.single()
+    session.endReason shouldBe ListeningSessionEndReason.Paused.id
+    session.endPositionMs shouldBe 12_000L // the stashed pre-rewind position, not the rewound one
+    session.durationMs shouldBe 12_000L
+    holder.pendingPauseEndPositionMs shouldBe null
+
+    // A genuine rebuffer (no pause in flight) still keeps the session open.
+    recorder.onIsPlayingChanged(true)
+    recorder.clock = { start.plusMillis(20_000) }
+    recorder.onIsPlayingChanged(false)
+    saved shouldHaveSize 1
+
+    // Close the reopened session so its checkpoint loop doesn't outlive the test (a session left
+    // open spins the 30s checkpoint delay forever under the virtual clock).
+    every { player.playbackState } returns Player.STATE_READY
+    every { player.playWhenReady } returns false
+    recorder.clock = { start.plusMillis(30_000) }
+    recorder.onIsPlayingChanged(false)
+    saved shouldHaveSize 2
+  }
+
   @Test
   fun `a pause with no open session clears stale sleep flags`() = runTest {
     val recorder = recorder(CoroutineScope(UnconfinedTestDispatcher(testScheduler)))
