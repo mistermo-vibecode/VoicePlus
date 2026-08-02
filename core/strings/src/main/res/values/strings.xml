@@ -44,8 +44,10 @@
     <string name="backup_save_legacy">Older backup</string>
     <string name="backup_restore_action">Restore</string>
     <string name="backup_delete_save">Delete save</string>
-    <string name="backup_restore_result">Restored %1$d books</string>
-    <string name="backup_restore_unmatched_title">%1$d books couldn\'t be matched automatically</string>
+    <plurals name="backup_restore_unmatched_title">
+        <item quantity="one">%1$d book couldn\'t be matched automatically</item>
+        <item quantity="other">%1$d books couldn\'t be matched automatically</item>
+    </plurals>
     <string name="backup_restore_unmatched_hint">Re-grant the audiobook folder(s) and restore again, or these books may have moved or changed.</string>
     <string name="backup_restore_refused_newer">This backup is from a newer version of the app. Update the app, then restore again. Your backup was left untouched.</string>
     <string name="backup_busy">Working...</string>
@@ -54,9 +56,18 @@
     <string name="backup_status_backup_saved">Backup saved</string>
     <string name="backup_status_backup_unreadable">That backup file is unreadable. Pick another save to restore.</string>
     <string name="backup_status_backup_failed">Backup failed</string>
-    <string name="backup_status_restore_complete">Restored %1$d books</string>
-    <string name="backup_status_restore_partial">Restored %1$d books; %2$d could not be matched</string>
-    <string name="backup_status_restore_no_match">%1$d books could not be matched</string>
+    <plurals name="backup_status_restore_complete">
+        <item quantity="one">Restored %1$d book</item>
+        <item quantity="other">Restored %1$d books</item>
+    </plurals>
+    <plurals name="backup_status_restore_partial">
+        <item quantity="one">Restored %1$d book; %2$d could not be matched</item>
+        <item quantity="other">Restored %1$d books; %2$d could not be matched</item>
+    </plurals>
+    <plurals name="backup_status_restore_no_match">
+        <item quantity="one">%1$d book could not be matched</item>
+        <item quantity="other">%1$d books could not be matched</item>
+    </plurals>
     <string name="backup_status_permission_denied">Backup folder permission was not granted</string>
     <string name="backup_reason_opaque_provider">folder not selected</string>
     <string name="backup_reason_single_file">single-file book not auto-restored</string>

@@ -35,6 +35,7 @@ import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
@@ -251,7 +252,7 @@ internal fun BackupScreen(
             if (restore.refusedNewerBackup) {
               Text(stringResource(StringsR.string.backup_restore_refused_newer))
             } else if (restore.unmatched.isNotEmpty()) {
-              Text(stringResource(StringsR.string.backup_restore_unmatched_title, restore.unmatched.size))
+              Text(pluralStringResource(StringsR.plurals.backup_restore_unmatched_title, restore.unmatched.size, restore.unmatched.size))
               Text(stringResource(StringsR.string.backup_restore_unmatched_hint))
               restore.unmatched.take(5).forEach { info ->
                 Text("- ${info.folderName}: ${info.reason.restoreReasonLabel()}")
@@ -318,11 +319,11 @@ private fun BackupStatus.message(): String {
     BackupStatusKind.BackupSaved -> stringResource(StringsR.string.backup_status_backup_saved)
     BackupStatusKind.BackupUnreadable -> stringResource(StringsR.string.backup_status_backup_unreadable)
     BackupStatusKind.BackupFailed -> stringResource(StringsR.string.backup_status_backup_failed)
-    BackupStatusKind.RestoreComplete -> stringResource(StringsR.string.backup_status_restore_complete, restoredCount)
+    BackupStatusKind.RestoreComplete -> pluralStringResource(StringsR.plurals.backup_status_restore_complete, restoredCount, restoredCount)
     BackupStatusKind.RestorePartial -> {
-      stringResource(StringsR.string.backup_status_restore_partial, restoredCount, unmatchedCount)
+      pluralStringResource(StringsR.plurals.backup_status_restore_partial, restoredCount, restoredCount, unmatchedCount)
     }
-    BackupStatusKind.RestoreNoMatch -> stringResource(StringsR.string.backup_status_restore_no_match, unmatchedCount)
+    BackupStatusKind.RestoreNoMatch -> pluralStringResource(StringsR.plurals.backup_status_restore_no_match, unmatchedCount, unmatchedCount)
     BackupStatusKind.RefusedNewerBackup -> stringResource(StringsR.string.backup_restore_refused_newer)
     BackupStatusKind.PermissionDenied -> stringResource(StringsR.string.backup_status_permission_denied)
   }
