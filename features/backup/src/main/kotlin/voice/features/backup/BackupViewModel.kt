@@ -14,6 +14,7 @@ import voice.core.data.store.snapshot.BackupRepository
 import voice.core.data.store.snapshot.BackupStatus
 import voice.core.data.store.snapshot.LibrarySnapshotService
 import voice.core.data.store.snapshot.RestoreSummary
+import voice.core.playback.CurrentBookResolver
 import voice.navigation.Navigator
 import java.time.Instant
 
@@ -21,6 +22,7 @@ import java.time.Instant
 class BackupViewModel(
   private val backupRepository: BackupRepository,
   private val librarySnapshotService: LibrarySnapshotService,
+  private val currentBookResolver: CurrentBookResolver,
   private val navigator: Navigator,
 ) {
 
@@ -71,6 +73,7 @@ class BackupViewModel(
     scope.launch {
       // Capture the CURRENT library state: a change made moments ago may still be inside the
       // snapshot writer's debounce, and exporting the stale ring would silently omit it.
+      currentBookResolver.persistCurrentPosition()
       librarySnapshotService.flushNow()
       backupRepository.exportNow()
       reloadSaves()

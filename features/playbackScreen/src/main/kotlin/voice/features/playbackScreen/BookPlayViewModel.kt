@@ -394,7 +394,7 @@ class BookPlayViewModel(
 
   fun seekTo(position: Duration) {
     scope.launch {
-      val book = bookRepository.get(bookId) ?: return@launch
+      val book = currentBook() ?: return@launch
       val currentChapter = book.currentChapter
       val currentMark = currentChapter.markForPosition(book.content.positionInChapter)
       player.setPosition(currentMark.startMs + position.inWholeMilliseconds, currentChapter.id)

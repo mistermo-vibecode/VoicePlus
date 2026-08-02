@@ -31,6 +31,7 @@ import voice.core.data.MarkData
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.BookmarkRepo
 import voice.core.data.repo.ChapterNameOverrideRepo
+import voice.core.playback.CurrentBookResolver
 import voice.navigation.Navigator
 import java.time.Instant
 
@@ -115,6 +116,9 @@ class BookmarkViewModelTest {
       chapterNameOverrideRepo = overrideRepo,
       playStateManager = mockk(relaxed = true),
       playerController = mockk(relaxed = true),
+      currentBookResolver = mockk {
+        coEvery { this@mockk.book(bookId) } returns book
+      },
       navigator = mockk(relaxed = true),
       context = mockk(relaxed = true),
       bookId = bookId,
@@ -239,6 +243,7 @@ class BookmarkViewModelTest {
       chapterNameOverrideRepo = overrideRepo,
       playStateManager = mockk(relaxed = true),
       playerController = mockk(relaxed = true),
+      currentBookResolver = mockk(relaxed = true),
       navigator = navigator,
       context = mockk(relaxed = true),
       bookId = bookId,
@@ -254,6 +259,36 @@ class BookmarkViewModelTest {
       assertEquals(BookmarkViewEffect.BookmarkUnavailable, awaitItem())
     }
     verify(exactly = 0) { navigator.goBack() }
+  }
+
+  @Test
+  fun `named bookmark uses the live resolved position`() = runTest {
+    val persistedBook = book(offset = 0)
+    val liveBook = persistedBook.copy(
+      content = persistedBook.content.copy(positionInChapter = 45_000L),
+    )
+    val created = bookmark(title = "Live position").copy(time = 45_000L)
+    val bookmarkRepo = mockk<BookmarkRepo> {
+      coEvery { addBookmarkAtBookPosition(liveBook, "Live position", false) } returns created
+    }
+    val vm = BookmarkViewModel(
+      currentBookStore = mockk(relaxed = true),
+      repo = mockk(relaxed = true),
+      bookmarkRepo = bookmarkRepo,
+      chapterNameOverrideRepo = mockk(relaxed = true),
+      playStateManager = mockk(relaxed = true),
+      playerController = mockk(relaxed = true),
+      currentBookResolver = mockk {
+        coEvery { book(bookId) } returns liveBook
+      },
+      navigator = mockk(relaxed = true),
+      context = mockk(relaxed = true),
+      bookId = bookId,
+    )
+
+    vm.addBookmark("Live position")
+
+    coVerify(exactly = 1) { bookmarkRepo.addBookmarkAtBookPosition(liveBook, "Live position", false) }
   }
 
   @Test
@@ -276,6 +311,7 @@ class BookmarkViewModelTest {
       chapterNameOverrideRepo = overrideRepo,
       playStateManager = mockk(relaxed = true),
       playerController = mockk(relaxed = true),
+      currentBookResolver = mockk(relaxed = true),
       navigator = mockk(relaxed = true),
       context = mockk(relaxed = true),
       bookId = bookId,

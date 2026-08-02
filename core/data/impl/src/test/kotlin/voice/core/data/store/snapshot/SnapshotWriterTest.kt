@@ -77,6 +77,15 @@ class SnapshotWriterTest {
   }
 
   @Test
+  fun `explicit flush snapshots even before a dirty emission is observed`() = runTest {
+    contentRepo.put(book("b1", active = true))
+
+    writer().flushNow()
+
+    ring.best().shouldNotBeNull().activeIds() shouldBe setOf("b1")
+  }
+
+  @Test
   fun `stamps each chapter with its re-keying relName anchor`() = runTest {
     val auth = "com.android.externalstorage.documents"
     fun docUri(documentId: String): String {

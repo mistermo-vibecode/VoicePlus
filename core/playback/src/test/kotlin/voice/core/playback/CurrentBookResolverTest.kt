@@ -5,9 +5,11 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
+import voice.core.data.repo.BookRepository
 import voice.core.featureflag.MemoryFeatureFlag
 import voice.core.playback.session.search.book
 import java.time.Instant
@@ -69,6 +71,35 @@ class CurrentBookResolverTest {
 
     resolver.currentBook()?.content?.currentChapter shouldBe book.chapters.last().id
     resolver.currentBook()?.content?.positionInChapter shouldBe 1234L
+  }
+
+  @Test
+  fun `persists the live player position for an explicit durable save`() = runTest {
+    var persisted = book.content
+    val bookRepository = mockk<BookRepository> {
+      coEvery { updateBook(book.id, any()) } answers {
+        persisted = secondArg<(BookContent) -> BookContent>()(persisted)
+      }
+    }
+    val resolver = CurrentBookResolver(
+      bookRepository = bookRepository,
+      playerController = mockk {
+        coEvery { livePlaybackState(book.id) } returns LivePlaybackState(
+          bookId = book.id,
+          chapterId = book.chapters.last().id,
+          positionMs = 1234L,
+          isPlaying = true,
+          playbackSpeed = 1f,
+        )
+      },
+      currentBookStore = currentBookStore,
+      experimentalPlaybackPersistenceFeatureFlag = MemoryFeatureFlag(false),
+    )
+
+    resolver.persistCurrentPosition()
+
+    persisted.currentChapter shouldBe book.chapters.last().id
+    persisted.positionInChapter shouldBe 1234L
   }
 
   @Test

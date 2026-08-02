@@ -106,9 +106,12 @@ internal class SnapshotWriter(
     }
   }
 
-  /** Flush pending changes to the ring immediately (no-op when nothing changed). */
+  /** Snapshot the current library immediately, even if a source emission has not marked it dirty yet. */
   suspend fun flushNow() {
-    flushIfDirty()
+    flushMutex.withLock {
+      dirty.set(false)
+      writeSnapshot(contentRepo.all())
+    }
   }
 
   private suspend fun flushIfDirty(forceExternalBackup: Boolean = false) {

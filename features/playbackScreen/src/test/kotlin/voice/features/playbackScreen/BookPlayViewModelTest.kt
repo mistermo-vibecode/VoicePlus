@@ -247,6 +247,26 @@ class BookPlayViewModelTest {
   }
 
   @Test
+  fun `scrubbing uses the live resolved chapter mark`() = scope.runTest {
+    val liveBook = book.copy(
+      content = book.content.copy(positionInChapter = 4.5.minutes.inWholeMilliseconds),
+    )
+    coEvery { currentBookResolver.book(book.id) } returns liveBook
+    every { player.setPosition(any(), any(), any()) } just Runs
+
+    viewModel.seekTo(30.seconds)
+    yield()
+
+    verify(exactly = 1) {
+      player.setPosition(
+        time = 4.5.minutes.inWholeMilliseconds,
+        id = liveBook.currentChapter.id,
+        tag = null,
+      )
+    }
+  }
+
+  @Test
   fun `overlay prefers live controller position`() {
     val persistedBook = book()
     val overlaidBook = persistedBook.overlay(

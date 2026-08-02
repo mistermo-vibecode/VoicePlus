@@ -11,6 +11,7 @@ import voice.core.data.repo.BookRepository
 import voice.core.data.store.CurrentBookStore
 import voice.core.featureflag.ExperimentalPlaybackPersistenceQualifier
 import voice.core.featureflag.FeatureFlag
+import java.time.Instant
 
 @SingleIn(AppScope::class)
 @Inject
@@ -39,6 +40,22 @@ class CurrentBookResolver(
         currentChapter = livePosition.chapterId,
         positionInChapter = livePosition.positionMs,
       )
+    }
+  }
+
+  suspend fun persistCurrentPosition() {
+    val bookId = currentBookStore.data.first() ?: return
+    val livePosition = playerController.livePlaybackState(bookId) ?: return
+    bookRepository.updateBook(bookId) { content ->
+      if (livePosition.chapterId in content.chapters) {
+        content.copy(
+          currentChapter = livePosition.chapterId,
+          positionInChapter = livePosition.positionMs,
+          lastPlayedAt = Instant.now(),
+        )
+      } else {
+        content
+      }
     }
   }
 }

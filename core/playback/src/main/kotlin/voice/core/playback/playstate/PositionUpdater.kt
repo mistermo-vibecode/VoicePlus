@@ -8,8 +8,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import voice.core.data.repo.BookRepository
 import voice.core.featureflag.ExperimentalPlaybackPersistenceQualifier
@@ -41,14 +41,18 @@ class PositionUpdater(
     player.addListener(this)
 
     updateJob = scope.launch {
-      playStateManager.flow
-        .map { it == PlayStateManager.PlayState.Playing }
+      combine(
+        playStateManager.flow,
+        experimentalPlaybackPersistenceFeatureFlag.flow,
+      ) { playState, featureFlag ->
+        (playState == PlayStateManager.PlayState.Playing) to featureFlag.value
+      }
         .distinctUntilChanged()
-        .collectLatest { playing ->
+        .collectLatest { (playing, experimentalPersistence) ->
           if (playing) {
             while (true) {
               delay(
-                if (experimentalPlaybackPersistenceFeatureFlag.get()) {
+                if (experimentalPersistence) {
                   5.minutes
                 } else {
                   1.seconds
@@ -66,7 +70,14 @@ class PositionUpdater(
     newPosition: Player.PositionInfo,
     reason: Int,
   ) {
-    flushPosition()
+    val oldSnapshot = oldPosition.positionSnapshot()
+    val newSnapshot = newPosition.positionSnapshot() ?: player?.positionSnapshot()
+    val snapshots = if (oldSnapshot?.mediaId?.bookId != newSnapshot?.mediaId?.bookId) {
+      listOfNotNull(oldSnapshot, newSnapshot)
+    } else {
+      listOfNotNull(newSnapshot ?: oldSnapshot)
+    }
+    flushPositions(snapshots)
   }
 
   override fun onPlayWhenReadyChanged(
@@ -90,29 +101,33 @@ class PositionUpdater(
   }
 
   private fun flushPosition() {
+    val snapshot = player?.positionSnapshot() ?: return
+    flushPositions(listOf(snapshot))
+  }
+
+  private fun flushPositions(snapshots: List<PositionSnapshot>) {
+    if (snapshots.isEmpty()) return
     scope.launch {
-      flushPositionNow()
+      snapshots.forEach { persistPosition(it) }
     }
   }
 
   suspend fun flushPositionNow() {
-    val player = player ?: return
-    val mediaItem = player.currentMediaItem ?: return
-    val currentPosition = player.currentPosition
-      .takeIf { it >= 0 } ?: return
-    val mediaId = mediaItem.mediaId.toMediaIdOrNull() ?: return
-    mediaId as MediaId.Chapter
-    val chapterId = mediaId.chapterId
-    bookRepo.updateBook(mediaId.bookId) { content ->
-      if (chapterId in content.chapters) {
-        Logger.d("$currentPosition is the new position!")
+    val snapshot = player?.positionSnapshot() ?: return
+    persistPosition(snapshot)
+  }
+
+  private suspend fun persistPosition(snapshot: PositionSnapshot) {
+    bookRepo.updateBook(snapshot.mediaId.bookId) { content ->
+      if (snapshot.mediaId.chapterId in content.chapters) {
+        Logger.d("${snapshot.positionMs} is the new position!")
         content.copy(
-          currentChapter = chapterId,
-          positionInChapter = currentPosition,
+          currentChapter = snapshot.mediaId.chapterId,
+          positionInChapter = snapshot.positionMs,
           lastPlayedAt = Instant.now(),
         )
       } else {
-        Logger.w("$mediaId not in $content")
+        Logger.w("${snapshot.mediaId} not in $content")
         content
       }
     }
@@ -122,4 +137,23 @@ class PositionUpdater(
     player?.removeListener(this)
     updateJob?.cancel()
   }
+}
+
+private data class PositionSnapshot(
+  val mediaId: MediaId.Chapter,
+  val positionMs: Long,
+)
+
+private fun Player.positionSnapshot(): PositionSnapshot? {
+  val mediaItem = currentMediaItem ?: return null
+  val position = currentPosition.takeIf { it >= 0 } ?: return null
+  val mediaId = mediaItem.mediaId.toMediaIdOrNull() as? MediaId.Chapter ?: return null
+  return PositionSnapshot(mediaId, position)
+}
+
+private fun Player.PositionInfo.positionSnapshot(): PositionSnapshot? {
+  val mediaItem = mediaItem ?: return null
+  val position = positionMs.takeIf { it >= 0 } ?: return null
+  val mediaId = mediaItem.mediaId.toMediaIdOrNull() as? MediaId.Chapter ?: return null
+  return PositionSnapshot(mediaId, position)
 }

@@ -29,6 +29,7 @@ import voice.core.data.repo.BookRepository
 import voice.core.data.repo.BookmarkRepo
 import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.store.CurrentBookStore
+import voice.core.playback.CurrentBookResolver
 import voice.core.playback.PlayerController
 import voice.core.playback.playstate.PlayStateManager
 import voice.core.strings.R
@@ -49,6 +50,7 @@ class BookmarkViewModel(
   private val chapterNameOverrideRepo: ChapterNameOverrideRepo,
   private val playStateManager: PlayStateManager,
   private val playerController: PlayerController,
+  private val currentBookResolver: CurrentBookResolver,
   private val navigator: Navigator,
   private val context: Context,
   @Assisted
@@ -200,7 +202,7 @@ class BookmarkViewModel(
   fun addBookmark(name: String) {
     if (name.isBlank()) return
     scope.launch {
-      val book = repo.get(bookId) ?: return@launch
+      val book = currentBookResolver.book(bookId) ?: return@launch
       val newBookmark = bookmarkRepo.addBookmarkAtBookPosition(
         book = book,
         title = name,
