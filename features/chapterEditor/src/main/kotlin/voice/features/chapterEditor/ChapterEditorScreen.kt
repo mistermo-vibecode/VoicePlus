@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -15,17 +16,25 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -37,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -85,6 +95,8 @@ private fun ChapterEditorContent(
   onResetAllDismiss: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  var menuExpanded by remember { mutableStateOf(false) }
+
   Scaffold(
     modifier = modifier,
     topBar = {
@@ -96,6 +108,28 @@ private fun ChapterEditorContent(
               imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
               contentDescription = stringResource(StringsR.string.close),
             )
+          }
+        },
+        actions = {
+          Box {
+            IconButton(onClick = { menuExpanded = true }) {
+              Icon(
+                imageVector = Icons.Outlined.MoreVert,
+                contentDescription = stringResource(StringsR.string.more),
+              )
+            }
+            DropdownMenu(
+              expanded = menuExpanded,
+              onDismissRequest = { menuExpanded = false },
+            ) {
+              DropdownMenuItem(
+                text = { Text(text = stringResource(StringsR.string.chapter_editor_reset_all)) },
+                onClick = {
+                  menuExpanded = false
+                  onResetAllClick()
+                },
+              )
+            }
           }
         },
       )
@@ -122,8 +156,16 @@ private fun ChapterEditorContent(
         onDecrement = onOffsetDecrement,
         onIncrement = onOffsetIncrement,
         onOffsetSet = onOffsetSet,
+        modifier = Modifier
+          .padding(horizontal = 16.dp, vertical = 8.dp),
       )
-      HorizontalDivider()
+
+      Text(
+        text = stringResource(StringsR.string.chapter_editor_chapters),
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier
+          .padding(horizontal = 16.dp, vertical = 12.dp),
+      )
 
       LazyColumn(
         state = listState,
@@ -136,25 +178,17 @@ private fun ChapterEditorContent(
         itemsIndexed(
           items = viewState.chapters,
           key = { _, item -> "${item.chapterId.value}_${item.markStartMs}" },
-        ) { _, item ->
+        ) { index, item ->
           ChapterRow(
             item = item,
             onEdit = { onEditChapterClick(item) },
-            onDeleteOverride = { onDeleteOverride(item) },
+            modifier = Modifier.padding(horizontal = 16.dp),
           )
-        }
-
-        // Reset all button
-        item(key = "reset_all") {
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 8.dp),
-            contentAlignment = Alignment.CenterEnd,
-          ) {
-            TextButton(onClick = onResetAllClick) {
-              Text(text = stringResource(StringsR.string.chapter_editor_reset_all))
-            }
+          if (index < viewState.chapters.lastIndex) {
+            HorizontalDivider(
+              modifier = Modifier.padding(start = 64.dp, end = 16.dp),
+              color = MaterialTheme.colorScheme.outlineVariant,
+            )
           }
         }
       }
@@ -168,6 +202,14 @@ private fun ChapterEditorContent(
       item = editingChapter,
       onConfirm = { text -> onEditConfirm(editingChapter, text) },
       onDismiss = onEditDismiss,
+      onRestore = if (editingChapter.hasOverride) {
+        {
+          onDeleteOverride(editingChapter)
+          onEditDismiss()
+        }
+      } else {
+        null
+      },
     )
   }
 
@@ -204,46 +246,56 @@ private fun OffsetRow(
   var editing by remember { mutableStateOf(false) }
   var editText by remember(offset) { mutableStateOf(offset.toString()) }
 
-  Row(
-    modifier = modifier
-      .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 8.dp),
-    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-    verticalAlignment = Alignment.CenterVertically,
+  Surface(
+    modifier = modifier.fillMaxWidth(),
+    color = MaterialTheme.colorScheme.surfaceContainer,
+    shape = MaterialTheme.shapes.large,
   ) {
-    Text(
-      text = stringResource(StringsR.string.chapter_offset_label),
-      style = MaterialTheme.typography.labelLarge,
-    )
-    IconButton(onClick = onDecrement) {
-      Text(text = "−", style = MaterialTheme.typography.headlineSmall)
-    }
-    if (editing) {
-      OutlinedTextField(
-        value = editText,
-        onValueChange = { editText = it },
+    Row(
+      modifier = Modifier.padding(16.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Text(
+        text = stringResource(StringsR.string.chapter_offset_label),
+        style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.weight(1f),
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(
-          onDone = {
-            val parsed = editText.toIntOrNull()
-            if (parsed != null) onOffsetSet(parsed)
-            editing = false
-          },
-        ),
       )
-    } else {
-      TextButton(onClick = { editing = true }) {
-        Text(
-          text = offset.toString(),
-          style = MaterialTheme.typography.headlineSmall,
-          color = MaterialTheme.colorScheme.primary,
+      OutlinedIconButton(onClick = onDecrement) {
+        Icon(
+          imageVector = Icons.Outlined.Remove,
+          contentDescription = stringResource(StringsR.string.chapter_editor_offset_decrement),
         )
       }
-    }
-    IconButton(onClick = onIncrement) {
-      Text(text = "+", style = MaterialTheme.typography.headlineSmall)
+      if (editing) {
+        OutlinedTextField(
+          value = editText,
+          onValueChange = { editText = it },
+          modifier = Modifier.width(72.dp),
+          singleLine = true,
+          keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+          keyboardActions = KeyboardActions(
+            onDone = {
+              val parsed = editText.toIntOrNull()
+              if (parsed != null) onOffsetSet(parsed)
+              editing = false
+            },
+          ),
+        )
+      } else {
+        TextButton(onClick = { editing = true }) {
+          Text(
+            text = if (offset > 0) "+$offset" else offset.toString(),
+            style = MaterialTheme.typography.titleLarge,
+          )
+        }
+      }
+      OutlinedIconButton(onClick = onIncrement) {
+        Icon(
+          imageVector = Icons.Outlined.Add,
+          contentDescription = stringResource(StringsR.string.chapter_editor_offset_increment),
+        )
+      }
     }
   }
 }
@@ -252,44 +304,72 @@ private fun OffsetRow(
 private fun ChapterRow(
   item: ChapterItemState,
   onEdit: () -> Unit,
-  onDeleteOverride: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val accentColor = MaterialTheme.colorScheme.primary
-  val headlineColor = if (item.hasOverride || item.isCurrent) accentColor else MaterialTheme.colorScheme.onSurface
+  val status = when {
+    item.isCurrent && item.hasOverride -> stringResource(StringsR.string.chapter_editor_playing_custom_name)
+    item.isCurrent -> stringResource(StringsR.string.chapter_editor_playing)
+    item.hasOverride -> stringResource(StringsR.string.chapter_editor_custom_name)
+    else -> null
+  }
 
   ListItem(
-    modifier = modifier,
+    modifier = modifier
+      .then(if (item.isCurrent) Modifier.clip(MaterialTheme.shapes.large) else Modifier),
+    colors = ListItemDefaults.colors(
+      containerColor = if (item.isCurrent) {
+        MaterialTheme.colorScheme.primaryContainer
+      } else {
+        MaterialTheme.colorScheme.surface
+      },
+    ),
     leadingContent = {
-      val leadingText = if (item.isCurrent) "▶ ${item.displayNumber}" else item.displayNumber.toString()
-      Text(
-        text = leadingText,
-        color = if (item.isCurrent) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
-      )
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        if (item.isCurrent) {
+          Icon(
+            imageVector = Icons.Default.PlayArrow,
+            contentDescription = null,
+          )
+        }
+        Text(
+          text = item.displayNumber.toString(),
+          style = MaterialTheme.typography.titleMedium,
+        )
+      }
     },
     headlineContent = {
       Text(
         text = item.displayName,
-        color = headlineColor,
+        color = if (item.isCurrent) {
+          MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+          MaterialTheme.colorScheme.onSurface
+        },
       )
     },
+    supportingContent = status?.let {
+      {
+        Text(
+          text = it,
+          color = if (item.isCurrent) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+          } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+          },
+        )
+      }
+    },
     trailingContent = {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        if (item.hasOverride) {
-          IconButton(onClick = onDeleteOverride) {
-            Icon(
-              imageVector = Icons.Default.Clear,
-              contentDescription = stringResource(StringsR.string.chapter_editor_remove_custom_name),
-              tint = MaterialTheme.colorScheme.error,
-            )
-          }
-        }
-        IconButton(onClick = onEdit) {
-          Icon(
-            imageVector = Icons.Default.Edit,
-            contentDescription = stringResource(StringsR.string.chapter_editor_edit_name),
-          )
-        }
+      IconButton(onClick = onEdit) {
+        Icon(
+          imageVector = Icons.Default.Edit,
+          contentDescription = stringResource(StringsR.string.chapter_editor_edit_name),
+          tint = if (item.isCurrent) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+          } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+          },
+        )
       }
     },
   )
@@ -300,6 +380,7 @@ private fun EditChapterDialog(
   item: ChapterItemState,
   onConfirm: (String) -> Unit,
   onDismiss: () -> Unit,
+  onRestore: (() -> Unit)?,
 ) {
   var text by remember(item) { mutableStateOf(item.displayName) }
 
@@ -324,6 +405,14 @@ private fun EditChapterDialog(
               .align(Alignment.End)
               .padding(top = 4.dp),
           )
+        }
+        onRestore?.let {
+          TextButton(
+            onClick = it,
+            modifier = Modifier.align(Alignment.Start),
+          ) {
+            Text(text = stringResource(StringsR.string.chapter_editor_restore_original_name))
+          }
         }
       }
     },

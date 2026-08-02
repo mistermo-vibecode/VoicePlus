@@ -24,11 +24,12 @@ class ListeningStatsTest {
     startHour: Int,
     durationMinutes: Long,
     startMinute: Int = 0,
+    bookId: BookId = BookId("content://book"),
   ): ListeningSession {
     val start = date.atTime(startHour, startMinute).atZone(zone).toInstant()
     val durationMs = durationMinutes * 60_000
     return ListeningSession(
-      bookId = BookId("content://book"),
+      bookId = bookId,
       chapterId = ChapterId("content://chapter"),
       startedAt = start,
       endedAt = start.plusMillis(durationMs),
@@ -38,10 +39,14 @@ class ListeningStatsTest {
     )
   }
 
-  private fun stats(sessions: List<ListeningSession>) = computeStats(
+  private fun stats(
+    sessions: List<ListeningSession>,
+    bookNames: Map<BookId, String> = emptyMap(),
+  ) = computeStats(
     sessions = sessions,
     librarySize = 3,
     booksCompleted = 1,
+    bookNames = bookNames,
     zone = zone,
     today = today,
     locale = Locale.UK,
@@ -141,6 +146,44 @@ class ListeningStatsTest {
     )
     // 120 minutes over the 4 days since the first session.
     stats(sessions).avgDailyMs shouldBe 30 * 60_000L
+  }
+
+  @Test
+  fun `active days and average session use the recent calendar window and recorded sessions`() {
+    val sessions = listOf(
+      session(today, startHour = 10, durationMinutes = 30),
+      session(today.minusDays(2), startHour = 10, durationMinutes = 90),
+      session(today.minusDays(30), startHour = 10, durationMinutes = 60),
+    )
+    val result = stats(sessions)
+
+    result.activeDaysLast30 shouldBe 2
+    result.avgSessionMs shouldBe 60 * 60_000L
+  }
+
+  @Test
+  fun `week change compares week to date with the same days last week`() {
+    val thisWeek = session(today, startHour = 10, durationMinutes = 60)
+    val samePeriodLastWeek = session(today.minusWeeks(1), startHour = 10, durationMinutes = 50)
+
+    stats(listOf(thisWeek, samePeriodLastWeek)).weekChangePercent shouldBe 20
+  }
+
+  @Test
+  fun `top book is the available library book with the most listening time`() {
+    val first = BookId("content://first")
+    val second = BookId("content://second")
+    val sessions = listOf(
+      session(today, startHour = 9, durationMinutes = 20, bookId = first),
+      session(today, startHour = 10, durationMinutes = 40, bookId = second),
+      session(today, startHour = 11, durationMinutes = 30, bookId = second),
+    )
+
+    stats(sessions, mapOf(first to "First book", second to "Second book")).topBook shouldBe TopBookStats(
+      bookId = second,
+      name = "Second book",
+      durationMs = 70 * 60_000L,
+    )
   }
 
   @Test

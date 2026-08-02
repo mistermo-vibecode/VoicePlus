@@ -1,6 +1,5 @@
 package voice.features.characterList
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,18 +9,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -101,7 +101,6 @@ internal fun CharacterListScreen(
   modifier: Modifier = Modifier,
 ) {
   var dialog by remember { mutableStateOf<CharacterDialog?>(null) }
-  var expandedId by remember { mutableStateOf<Long?>(null) }
 
   Scaffold(
     modifier = modifier,
@@ -138,17 +137,14 @@ internal fun CharacterListScreen(
       }
     } else {
       LazyColumn(contentPadding = paddingValues) {
-        items(items = viewState.characters, key = { it.id }) { character ->
+        itemsIndexed(items = viewState.characters, key = { _, item -> item.id }) { index, character ->
           CharacterItem(
             character = character,
-            expanded = expandedId == character.id,
-            onToggle = {
-              expandedId = if (expandedId == character.id) null else character.id
-            },
             onEdit = { dialog = CharacterDialog.Edit(character) },
-            onDelete = { dialog = CharacterDialog.DeleteConfirm(character) },
           )
-          HorizontalDivider()
+          if (index < viewState.characters.lastIndex) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+          }
         }
         item { Spacer(Modifier.size(80.dp)) }
       }
@@ -163,6 +159,7 @@ internal fun CharacterListScreen(
         initialDescription = "",
         initialPosition = null,
         totalCharacters = viewState.characters.size,
+        confirmLabel = stringResource(StringsR.string.add),
         onConfirm = { name, desc, _ ->
           onAdd(name, desc)
           dialog = null
@@ -177,17 +174,19 @@ internal fun CharacterListScreen(
         initialDescription = d.item.description,
         initialPosition = d.item.position,
         totalCharacters = viewState.characters.size,
+        confirmLabel = stringResource(StringsR.string.character_save),
         onConfirm = { name, desc, position ->
           onUpdate(d.item.id, name, desc, position)
           dialog = null
         },
+        onDelete = { dialog = CharacterDialog.DeleteConfirm(d.item) },
         onDismiss = { dialog = null },
       )
     }
     is CharacterDialog.DeleteConfirm -> {
       AlertDialog(
         onDismissRequest = { dialog = null },
-        title = { Text(stringResource(StringsR.string.delete)) },
+        title = { Text(stringResource(StringsR.string.character_delete_title)) },
         text = { Text(stringResource(StringsR.string.character_delete_confirmation)) },
         confirmButton = {
           TextButton(
@@ -196,7 +195,7 @@ internal fun CharacterListScreen(
               dialog = null
             },
           ) {
-            Text(stringResource(StringsR.string.dialog_confirm))
+            Text(stringResource(StringsR.string.delete))
           }
         },
         dismissButton = {
@@ -213,64 +212,41 @@ internal fun CharacterListScreen(
 @Composable
 private fun CharacterItem(
   character: CharacterItemViewState,
-  expanded: Boolean,
-  onToggle: () -> Unit,
   onEdit: () -> Unit,
-  onDelete: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  Column(
+  ListItem(
     modifier = modifier
       .fillMaxWidth()
-      // Edit/Delete only exist while expanded, so without a label TalkBack announces the row as a
-      // bare "clickable" and the only path to them is undiscoverable.
-      .clickable(onClickLabel = stringResource(StringsR.string.character_expand), onClick = onToggle)
-      .animateContentSize(),
-  ) {
-    androidx.compose.foundation.layout.Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(
-          start = 16.dp,
-          end = if (expanded) 8.dp else 16.dp,
-          top = 12.dp,
-          bottom = if (character.description.isNotBlank()) 4.dp else 12.dp,
-        ),
-      verticalAlignment = Alignment.CenterVertically,
-    ) {
+      .clickable(
+        onClickLabel = stringResource(StringsR.string.character_edit),
+        onClick = onEdit,
+      ),
+    headlineContent = {
       Text(
         text = character.name,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.weight(1f),
-        maxLines = if (expanded) Int.MAX_VALUE else 1,
+        maxLines = 1,
         overflow = TextOverflow.Ellipsis,
       )
-      if (expanded) {
-        IconButton(onClick = onEdit) {
-          Icon(Icons.Outlined.Edit, contentDescription = stringResource(StringsR.string.character_edit))
-        }
-        IconButton(onClick = onDelete) {
-          Icon(
-            Icons.Outlined.Delete,
-            contentDescription = stringResource(StringsR.string.delete),
-            tint = MaterialTheme.colorScheme.error,
-          )
-        }
+    },
+    supportingContent = character.description.takeIf { it.isNotBlank() }?.let { description ->
+      {
+        Text(
+          text = description,
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
+        )
       }
-    }
-    if (character.description.isNotBlank()) {
-      Text(
-        text = character.description,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = if (expanded) Int.MAX_VALUE else 2,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-      )
-    }
-  }
+    },
+    trailingContent = {
+      IconButton(onClick = onEdit) {
+        Icon(
+          imageVector = Icons.Outlined.Edit,
+          contentDescription = stringResource(StringsR.string.character_edit),
+        )
+      }
+    },
+  )
 }
 
 @Composable
@@ -280,7 +256,9 @@ private fun CharacterFormDialog(
   initialDescription: String,
   initialPosition: Int?,
   totalCharacters: Int,
+  confirmLabel: String,
   onConfirm: (name: String, description: String, position: Int) -> Unit,
+  onDelete: (() -> Unit)? = null,
   onDismiss: () -> Unit,
 ) {
   var name by remember { mutableStateOf(initialName) }
@@ -325,6 +303,15 @@ private fun CharacterFormDialog(
             modifier = Modifier.fillMaxWidth(),
           )
         }
+        if (onDelete != null) {
+          Spacer(Modifier.size(8.dp))
+          TextButton(
+            onClick = onDelete,
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+          ) {
+            Text(stringResource(StringsR.string.character_delete))
+          }
+        }
       }
     },
     confirmButton = {
@@ -332,7 +319,7 @@ private fun CharacterFormDialog(
         onClick = { onConfirm(name, description, position) },
         enabled = name.isNotBlank(),
       ) {
-        Text(stringResource(StringsR.string.dialog_confirm))
+        Text(confirmLabel)
       }
     },
     dismissButton = {
