@@ -1,5 +1,6 @@
 package voice.core.scanner
 
+import android.net.Uri
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
@@ -58,6 +59,13 @@ internal constructor(
   @Volatile
   private var lastScanCompletedAt: Instant? = null
 
+  // The folder configuration the last completed scan actually saw. Freshness is time AND
+  // configuration: nothing triggers a scan when a folder is added or removed (the overview's
+  // entry scan is what picks it up), so a purely time-based cooldown would hide a folder the
+  // user just added until the window lapsed.
+  @Volatile
+  private var lastScanFolderKeys: Set<Pair<FolderType, Uri>>? = null
+
   // Test seam, mirroring ListeningEventRecorder.clock.
   internal var clock: () -> Instant = { Instant.now() }
 
@@ -66,17 +74,13 @@ internal constructor(
     forceReParse: Boolean = false,
     // The book overview triggers a scan on every entry into composition — i.e. every navigation
     // back to the library. Without a freshness window that is a full SAF re-walk (seconds of
-    // progress bar) per navigation. Explicit scans (folder changes, delete-rescan, restore) pass
-    // null or restart/force and are never skipped; only a scan that COMPLETED counts as fresh.
+    // progress bar) per navigation. Explicit scans (delete-rescan, restore, tag-mode toggle) pass
+    // null or restart/force and are never skipped; only a scan that COMPLETED, over the SAME
+    // folder set that is configured now, counts as fresh.
     skipIfCompletedWithin: Duration? = null,
   ) {
-    if (skipIfCompletedWithin != null && !restartIfScanning && !forceReParse &&
-      isFresh(lastScanCompletedAt, clock(), skipIfCompletedWithin)
-    ) {
-      Logger.v("Skipping scan; last one completed within $skipIfCompletedWithin")
-      return
-    }
-    scanInternal(restartIfScanning = restartIfScanning, forceReParse = forceReParse)
+    val skipWindow = skipIfCompletedWithin.takeUnless { restartIfScanning || forceReParse }
+    scanInternal(restartIfScanning = restartIfScanning, forceReParse = forceReParse, skipIfCompletedWithin = skipWindow)
   }
 
   // Returns the Job that will (or already does) run this scan. The check-then-launch is guarded so two
@@ -85,6 +89,7 @@ internal constructor(
   private fun scanInternal(
     restartIfScanning: Boolean,
     forceReParse: Boolean,
+    skipIfCompletedWithin: Duration? = null,
   ): Job = synchronized(scanLock) {
     Logger.i("scanForFiles with restartIfScanning=$restartIfScanning, forceReParse=$forceReParse")
     val current = scanningJob
@@ -94,11 +99,21 @@ internal constructor(
     val job = scope.launch {
       // Cancel any in-flight scan before marking active, so a restart can't leave the flag stuck.
       current?.cancelAndJoin()
+      val foldersWithUri = audiobookFolders.all().first()
+      val folderKeys = foldersWithUri
+        .flatMap { (type, files) -> files.map { type to it.uri } }
+        .toSet()
+      if (skipIfCompletedWithin != null &&
+        isFresh(lastScanCompletedAt, clock(), skipIfCompletedWithin) &&
+        folderKeys == lastScanFolderKeys
+      ) {
+        Logger.v("Skipping scan; last one completed within $skipIfCompletedWithin over the same folders")
+        return@launch
+      }
       _scannerActive.value = true
       try {
         measureTime {
-          val folders: Map<FolderType, List<CachedDocumentFile>> = audiobookFolders.all()
-            .first()
+          val folders: Map<FolderType, List<CachedDocumentFile>> = foldersWithUri
             .mapValues { (_, documentFilesWithUri) ->
               documentFilesWithUri.map {
                 documentFileFactory.create(it.documentFile.uri)
@@ -111,6 +126,7 @@ internal constructor(
         // Only a run that got this far refreshes the window; a cancelled or thrown scan must not
         // suppress the retry.
         lastScanCompletedAt = clock()
+        lastScanFolderKeys = folderKeys
       } finally {
         // Always clear the flag, even if the scan throws, so the progress indicator can't hang.
         _scannerActive.value = false
