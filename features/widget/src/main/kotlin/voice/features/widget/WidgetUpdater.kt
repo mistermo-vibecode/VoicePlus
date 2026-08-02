@@ -164,6 +164,14 @@ class WidgetUpdater(
     scale: Float,
     seekSeconds: Int,
   ) {
+    // Visibility has to be restored on every render, not merely hidden on the absent-book path: the
+    // host reuses the inflated view and applies only the actions this RemoteViews carries, so a GONE
+    // set earlier persists and leaves a playing book with no controls. setHorizontalVisibility also
+    // restores the two skip containers, but it is skipped when the widget's size is unknown, so all
+    // three are restored here where a present book always passes.
+    remoteViews.setViewVisibility(R.id.playPause, View.VISIBLE)
+    remoteViews.setViewVisibility(R.id.rewindContainer, View.VISIBLE)
+    remoteViews.setViewVisibility(R.id.fastForwardContainer, View.VISIBLE)
     remoteViews.setOnClickPendingIntent(R.id.playPause, WidgetButtonReceiver.pendingIntent(context, WidgetButtonReceiver.Action.PlayPause))
     remoteViews.setOnClickPendingIntent(
       R.id.fastForward,
