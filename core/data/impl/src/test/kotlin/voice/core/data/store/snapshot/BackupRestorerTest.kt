@@ -20,6 +20,7 @@ import voice.core.data.ListeningSession
 import voice.core.data.repo.BookContentRepoImpl
 import voice.core.data.repo.internals.AppDb
 import voice.core.data.repo.internals.MemoryDataStore
+import java.io.File
 import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
@@ -216,5 +217,19 @@ class BackupRestorerTest {
     val snapshot = snapshotOf("a") // snapshot books carry lastPlayedAt = EPOCH
 
     restorer().applyDirect(snapshot) shouldBe 0
+  }
+
+  @Test
+  fun `applyDirect preserves the live cover instead of restoring a non-portable path`() = runTest {
+    val liveCover = File("/data/user/0/debug/files/covers/live.png")
+    contentRepo.put(book("a", active = true).copy(cover = liveCover))
+    val releaseCover = File("/data/user/0/release/files/covers/release.png")
+    val snapshot = snapshotOf("a").copy(
+      books = listOf(book("a", active = true).copy(cover = releaseCover).toDto()),
+    )
+
+    restorer().applyDirect(snapshot) shouldBe 1
+
+    db.bookContentDao().all().single().cover shouldBe liveCover
   }
 }

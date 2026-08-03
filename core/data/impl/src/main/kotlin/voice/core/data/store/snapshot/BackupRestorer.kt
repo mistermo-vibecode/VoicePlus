@@ -71,7 +71,7 @@ internal class BackupRestorer(
   suspend fun applyDirect(snapshot: LibrarySnapshot): Int {
     val restored = restoreGate.withRestoreActive {
       val excludedIds = excludedBooksStore.data.first() + snapshot.hiddenBooks
-      val written = apply(snapshot, excludedIds, bookContentDao.all())
+      val written = apply(snapshot, excludedIds, bookContentDao.all(), preserveLiveCovers = true)
       excludedBooksStore.updateData { it + snapshot.hiddenBooks }
       settingsSnapshotter.apply(snapshot.settings)
       contentRepo.invalidateCache()
@@ -94,11 +94,16 @@ internal class BackupRestorer(
     snapshot: LibrarySnapshot,
     excludedIds: Set<String>,
     live: List<BookContent>,
+    preserveLiveCovers: Boolean = false,
   ): Int {
     val liveById = live.associateBy { it.id.value }
     val books = snapshot.books
       .filter { it.id !in excludedIds }
-      .mapNotNull { dto -> dto.toBookContentOrNull()?.let { dto.id to it } }
+      .mapNotNull { dto ->
+        dto.toBookContentOrNull()?.let { restored ->
+          dto.id to if (preserveLiveCovers) restored.copy(cover = liveById[dto.id]?.cover) else restored
+        }
+      }
     val bookmarks = snapshot.bookmarks.filter { it.bookId !in excludedIds }.map { it.toBookmark() }
     val characters = snapshot.characters.filter { it.bookId !in excludedIds }.map { it.toBookCharacter() }
     val overrides = snapshot.chapterNameOverrides.filter { it.bookId !in excludedIds }.map { it.toOverride() }
