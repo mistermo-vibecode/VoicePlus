@@ -1,0 +1,1 @@
+* Fixed Bluetooth headphones ignoring configured double/triple-click actions when their firmware reports taps as Previous/Next media keys.

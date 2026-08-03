@@ -341,7 +341,7 @@ class LibrarySessionCallback(
 
   // Headset/earbud events arrive from a virtual or non-alphabetic input device; a physical
   // keyboard reports an alphabetic one. Null device (relayed events) counts as headset.
-  private fun KeyEvent.isFromHardwareKeyboard(): Boolean = device?.keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC
+  private fun KeyEvent.isFromHardwareKeyboard(): Boolean = device.isPhysicalAlphabeticKeyboard()
 
   private fun handleMediaButtonClickAction(action: MediaButtonClickAction) {
     when (action) {
@@ -396,3 +396,6 @@ private val HANDLED_MEDIA_KEY_CODES = setOf(
   KeyEvent.KEYCODE_MEDIA_NEXT,
   KeyEvent.KEYCODE_MEDIA_PREVIOUS,
 )
+
+internal fun InputDevice?.isPhysicalAlphabeticKeyboard(): Boolean =
+  this != null && !isVirtual && keyboardType == InputDevice.KEYBOARD_TYPE_ALPHABETIC

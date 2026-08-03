@@ -1,5 +1,12 @@
 # VoicePlus Changelog
 
+## v1.23.1 — Media Button Hotfix
+
+- Fixed Bluetooth headphones ignoring configured double/triple-click actions when their firmware reports taps as Previous/Next media keys.
+- Physical keyboard Previous/Next keys still keep their literal behavior.
+
+---
+
 ## v1.23 — Backup & Restore, Reliable Listening Log
 
 ### Backup & Restore
