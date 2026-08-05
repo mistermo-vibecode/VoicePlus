@@ -30,6 +30,7 @@ import voice.core.playback.player.onAudioSessionIdChanged
 import voice.core.playback.playstate.PlayStateDelegatingListener
 import voice.core.playback.playstate.PositionUpdater
 import voice.core.playback.session.LibrarySessionCallback
+import voice.core.playback.session.LockscreenSliderPlayer
 import voice.core.playback.session.PlaybackService
 import voice.core.strings.R as StringsR
 
@@ -99,7 +100,7 @@ interface PlaybackModule {
   @SingleIn(PlaybackScope::class)
   fun session(
     service: PlaybackService,
-    player: VoicePlayer,
+    player: LockscreenSliderPlayer,
     callback: LibrarySessionCallback,
     mainActivityIntentProvider: MainActivityIntentProvider,
     context: Context,

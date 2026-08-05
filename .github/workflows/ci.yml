@@ -35,10 +35,8 @@ jobs:
           check_name: "Unit Tests"
 
   instrumentation:
-    # Temporarily disable
-    if: false
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/build_setup
@@ -47,12 +45,11 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Accept Android Licenses
-        run: yes | "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager --licenses || true
-      - name: Setup Managed Devices
-        run: ./gradlew voiceDeviceSetup -Pandroid.testoptions.manageddevices.emulator.gpu="swiftshader_indirect"
-      - name: Run Instrumentation Tests
-        run: ./gradlew voiceDeviceLibreDebugAndroidTest -Pandroid.testoptions.manageddevices.emulator.gpu="swiftshader_indirect"
+      - name: Run Critical Android Smoke Tests
+        run: >-
+          ./gradlew :app:voiceDeviceLibreDebugAndroidTest
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+          -Pandroid.testInstrumentationRunnerArguments.class=voice.app.AppLaunchSmokeTest,voice.app.SleepTimerIntegrationTest
       - name: Publish JUnit Report
         uses: mikepenz/action-junit-report@v6
         if: always()

@@ -13,6 +13,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.services.storage.TestStorage
 import androidx.test.uiautomator.UiDevice
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import voice.core.data.BookId
@@ -31,6 +32,7 @@ import java.io.File
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.hours
 
+@Ignore("Manual screenshot generator requires local cover assets")
 class ScreenshotCapture {
 
   @get:Rule

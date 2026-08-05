@@ -12,6 +12,11 @@ import voice.core.data.store.IgnoreFileTagsStore
 import voice.core.documentfile.CachedDocumentFile
 import java.time.Instant
 
+internal data class ChapterParseResult(
+  val chapters: List<Chapter>,
+  val firstChapterMetadata: Metadata?,
+)
+
 @Inject
 internal class ChapterParser(
   private val chapterRepo: ChapterRepo,
@@ -36,8 +41,9 @@ internal class ChapterParser(
   suspend fun parse(
     documentFile: CachedDocumentFile,
     forceReParse: Boolean = false,
-  ): List<Chapter> {
+  ): ChapterParseResult {
     val result = mutableListOf<Chapter>()
+    val analyzedMetadata = mutableMapOf<ChapterId, Metadata>()
     val ignoreFileTags = ignoreFileTagsStore.data.first()
 
     suspend fun analyze(
@@ -45,12 +51,14 @@ internal class ChapterParser(
       id: ChapterId,
     ): Chapter? {
       val metaData = mediaAnalyzer.analyze(file) ?: return null
+      analyzedMetadata[id] = metaData
       return Chapter(
         id = id,
         duration = metaData.duration,
         fileLastModified = Instant.ofEpochMilli(file.lastModified),
         name = chapterName(metaData, ignoreFileTags),
         markData = metaData.chapters,
+        fileSize = file.length,
       )
     }
 
@@ -64,7 +72,11 @@ internal class ChapterParser(
         val chapter = if (forceReParse) {
           analyze(file, id)?.also { chapterRepo.put(it) } ?: chapterRepo.get(id)
         } else {
-          chapterRepo.getOrPut(id, Instant.ofEpochMilli(file.lastModified)) {
+          chapterRepo.getOrPut(
+            id = id,
+            lastModified = Instant.ofEpochMilli(file.lastModified),
+            fileSize = file.length,
+          ) {
             analyze(file, id)
           }
         }
@@ -80,6 +92,10 @@ internal class ChapterParser(
     }
 
     parseChapters(file = documentFile)
-    return result.sorted()
+    val sortedChapters = result.sorted()
+    return ChapterParseResult(
+      chapters = sortedChapters,
+      firstChapterMetadata = sortedChapters.firstOrNull()?.let { analyzedMetadata[it.id] },
+    )
   }
 }

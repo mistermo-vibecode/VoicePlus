@@ -183,10 +183,7 @@ class PlayerController(
   }
 
   fun pauseWithRewind(rewind: Duration) = executeAfterPrepare { controller ->
-    // Must precede pause() so the recorder sees the sleep flag when onIsPlayingChanged fires.
-    controller.sendCustomCommand(CustomCommand.MarkNextPauseAsSleep)
-    controller.pause()
-    controller.seekTo((controller.currentPosition - rewind.inWholeMilliseconds).coerceAtLeast(0))
+    controller.sendCustomCommand(CustomCommand.PauseWithRewind(rewind.inWholeMilliseconds))
   }
 
   fun setSpeed(speed: Float) = executeAfterPrepare { controller ->
@@ -253,6 +250,7 @@ class PlayerController(
         if (events.containsAny(
             Player.EVENT_POSITION_DISCONTINUITY,
             Player.EVENT_PLAYBACK_PARAMETERS_CHANGED,
+            Player.EVENT_MEDIA_METADATA_CHANGED,
           )
         ) {
           emitSnapshot()

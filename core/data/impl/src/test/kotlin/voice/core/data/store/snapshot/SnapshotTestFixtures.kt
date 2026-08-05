@@ -12,6 +12,10 @@ internal val snapshotTestJson: Json = Json {
   encodeDefaults = true
 }
 
+internal fun backupFixture(name: String): String {
+  return requireNotNull(LibrarySnapshot::class.java.getResource("/backups/$name")).readText()
+}
+
 /** A [SettingsSnapshotter] over in-memory stores at their production defaults. */
 internal fun testSettingsSnapshotter(): SettingsSnapshotter = SettingsSnapshotter(
   darkTheme = MemoryDataStore(false),

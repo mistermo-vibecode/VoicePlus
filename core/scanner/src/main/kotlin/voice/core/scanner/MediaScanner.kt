@@ -108,10 +108,16 @@ internal class MediaScanner(
   ) {
     if (BookId(file.uri).value in excludedIds) return
 
-    val chapters = chapterParser.parse(file, forceReParse)
+    val parseResult = chapterParser.parse(file, forceReParse)
+    val chapters = parseResult.chapters
     if (chapters.isEmpty()) return
 
-    val content = bookParser.parseAndStore(chapters, file, forceReParse)
+    val content = bookParser.parseAndStore(
+      chapters = chapters,
+      file = file,
+      firstChapterMetadata = parseResult.firstChapterMetadata,
+      forceReParse = forceReParse,
+    )
 
     val chapterIds = chapters.map { it.id }
     val currentChapterGone = content.currentChapter !in chapterIds

@@ -1,5 +1,6 @@
 package voice.features.bookOverview.search
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,6 +34,7 @@ import voice.core.strings.R as StringsR
 
 @Composable
 internal fun BookSearchContent(
+  sharedTransitionScope: SharedTransitionScope?,
   viewState: BookSearchViewState,
   contentPadding: PaddingValues,
   onQueryChange: (String) -> Unit,
@@ -87,6 +89,7 @@ internal fun BookSearchContent(
                   book = book,
                   onBookClick = onBookClick,
                   onBookLongClick = onBookClick,
+                  sharedTransitionScope = sharedTransitionScope,
                 )
               }
             },
@@ -104,6 +107,7 @@ internal fun BookSearchContent(
                   book = book,
                   onBookClick = onBookClick,
                   onBookLongClick = onBookClick,
+                  sharedTransitionScope = sharedTransitionScope,
                 )
               }
             },

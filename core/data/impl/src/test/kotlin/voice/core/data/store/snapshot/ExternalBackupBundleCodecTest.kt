@@ -70,10 +70,42 @@ class ExternalBackupBundleCodecTest {
   }
 
   @Test
-  fun `legacy raw snapshot json still decodes`() {
-    val legacy = json.encodeToString(LibrarySnapshot.serializer(), snapshot())
+  fun `released raw snapshot fixture still decodes`() {
+    val result = ExternalBackupBundleCodec.decode(json, backupFixture("schema1-raw-snapshot.json"))
+    val restored = (result as ExternalBackupBundleDecodeResult.Valid).snapshot
 
-    ExternalBackupBundleCodec.decode(json, legacy) shouldBe ExternalBackupBundleDecodeResult.Valid(snapshot())
+    restored.schemaVersion shouldBe 1
+    restored.dbVersion shouldBe 64
+    restored.books.single().name shouldBe "Legacy Book"
+    restored.books.single().positionInChapter shouldBe 15_000
+    restored.bookmarks.single().time shouldBe 5_000
+    restored.sessions shouldBe emptyList()
+    restored.chapters shouldBe emptyList()
+    restored.events shouldBe emptyList()
+    restored.hiddenBooks shouldBe emptySet()
+    restored.settings shouldBe emptyMap()
+  }
+
+  @Test
+  fun `released db65 envelope restores every user data category`() {
+    val result = ExternalBackupBundleCodec.decode(
+      json,
+      backupFixture("db65-envelope-without-chapter-file-size.json"),
+    )
+    val restored = (result as ExternalBackupBundleDecodeResult.Valid).snapshot
+
+    restored.dbVersion shouldBe 65
+    restored.books.single().name shouldBe "Compatibility Book"
+    restored.books.single().positionInChapter shouldBe 42_000
+    restored.bookmarks.single().title shouldBe "Test Bookmark"
+    restored.characters.single().name shouldBe "Test Character"
+    restored.chapterNameOverrides.single().name shouldBe "Renamed Section"
+    restored.sessions.single().durationMs shouldBe 60_000
+    restored.chapters.single().relName shouldBe "Compatibility Book/chapter-1.mp3"
+    restored.chapters.single().fileSize shouldBe 0
+    restored.events.single().positionMs shouldBe 42_000
+    restored.hiddenBooks shouldBe emptySet()
+    restored.settings shouldBe mapOf("darkTheme" to "false", "seekTime" to "30")
   }
 
   @Test

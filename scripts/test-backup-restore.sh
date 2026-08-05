@@ -1,31 +1,39 @@
-#!/bin/bash -eu
+#!/bin/bash
+set -euo pipefail
 
-PACKAGE=de.ph1b.audiobook.debug
+package_name=${1:-com.github.mistermo_vibecode.voiceplus.debug}
+temp_dir=$(mktemp -d)
+original_transport=$(adb shell bmgr list transports | sed -n 's/^[[:space:]]*\* //p' | tr -d '\r')
 
-# Initialize and create a backup
+cleanup() {
+  if [[ -n "$original_transport" ]]; then
+    adb shell bmgr transport "$original_transport" >/dev/null || true
+  fi
+  rm -rf "$temp_dir"
+}
+trap cleanup EXIT
+
+echo "WARNING: this test will uninstall and reinstall $package_name"
+
 adb shell bmgr enable true
-adb shell bmgr transport com.android.localtransport/.LocalTransport | grep -q "Selected transport" || (echo "Error: error selecting local transport"; exit 1)
+adb shell bmgr transport com.android.localtransport/.LocalTransport | grep -q "Selected transport"
 adb shell settings put secure backup_local_transport_parameters 'is_encrypted=true'
-adb shell bmgr backupnow "$PACKAGE" | grep -F "Package $PACKAGE with result: Success" || (echo "Backup failed"; exit 1)
+adb shell bmgr backupnow "$package_name" | grep -F "Package $package_name with result: Success"
 
-# Uninstall and reinstall the app to clear the data and trigger a restore
-apk_path_list=$(adb shell pm path "$PACKAGE")
-OIFS=$IFS
-IFS=$'\n'
-apk_number=0
-for apk_line in $apk_path_list
-do
-    (( ++apk_number ))
-    apk_path=${apk_line:8:1000}
-    adb pull "$apk_path" "myapk${apk_number}.apk"
-done
-IFS=$OIFS
-adb shell pm uninstall --user 0 "$PACKAGE"
-apks=$(seq -f 'myapk%.f.apk' 1 $apk_number)
-adb install-multiple -t --user 0 $apks
+apk_files=()
+while IFS= read -r apk_line; do
+  apk_path=${apk_line#package:}
+  apk_file="$temp_dir/$(basename "$apk_path")"
+  adb pull "$apk_path" "$apk_file"
+  apk_files+=("$apk_file")
+done < <(adb shell pm path "$package_name" | tr -d '\r')
 
-# Clean up
-adb shell bmgr transport com.google.android.gms/.backup.BackupTransportService
-rm $apks
+if [[ ${#apk_files[@]} -eq 0 ]]; then
+  echo "No installed APKs found for $package_name" >&2
+  exit 1
+fi
 
-echo "Done"
+adb shell pm uninstall --user 0 "$package_name"
+adb install-multiple -t --user 0 "${apk_files[@]}"
+
+echo "Restore install completed for $package_name"

@@ -28,6 +28,7 @@ internal class BookParser(
   suspend fun parseAndStore(
     chapters: List<Chapter>,
     file: CachedDocumentFile,
+    firstChapterMetadata: Metadata? = null,
     forceReParse: Boolean = false,
   ): BookContent {
     val id = BookId(file.uri)
@@ -40,8 +41,10 @@ internal class BookParser(
     val analyzed = if (ignoreFileTags) {
       null
     } else {
-      val uri = chapters.first().id.toUri()
-      mediaAnalyzer.analyze(fileFactory.create(uri))
+      firstChapterMetadata ?: run {
+        val uri = chapters.first().id.toUri()
+        mediaAnalyzer.analyze(fileFactory.create(uri))
+      }
     }
     val parsed = parse(chapters, id, analyzed, file)
 

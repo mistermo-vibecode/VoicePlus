@@ -1,17 +1,26 @@
 package voice.features.settings.views
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -19,7 +28,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -33,9 +44,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.retain.retain
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
@@ -44,6 +58,7 @@ import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
+import voice.core.data.LockscreenSliderMode
 import voice.core.ui.VoiceTheme
 import voice.features.settings.SettingsListener
 import voice.features.settings.SettingsViewEffect
@@ -99,219 +114,237 @@ private fun Settings(
       )
     },
   ) { contentPadding ->
-    LazyColumn(contentPadding = contentPadding) {
-      if (viewState.showFolderPickerEntry) {
-        item {
-          ListItem(
-            modifier = Modifier.clickable { listener.openFolderPicker() },
-            leadingContent = {
-              Icon(
-                imageVector = Icons.Outlined.Book,
-                contentDescription = stringResource(StringsR.string.audiobook_folders_title),
+    LazyColumn(
+      modifier = Modifier.padding(contentPadding),
+      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
+      verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+      item(key = "library") {
+        SettingsSection(stringResource(StringsR.string.settings_section_library)) {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PrioritySettingsItem(
+              title = stringResource(StringsR.string.listening_stats),
+              supportingText = stringResource(StringsR.string.settings_listening_stats_summary),
+              icon = Icons.Outlined.BarChart,
+              containerColor = MaterialTheme.colorScheme.primaryContainer,
+              contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+              onClick = listener::openListeningStats,
+            )
+            PrioritySettingsItem(
+              title = stringResource(StringsR.string.backup_title),
+              supportingText = stringResource(StringsR.string.settings_backup_summary),
+              icon = Icons.Outlined.FolderOpen,
+              containerColor = MaterialTheme.colorScheme.secondaryContainer,
+              contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+              onClick = listener::openBackup,
+            )
+          }
+        }
+      }
+
+      item(key = "playback") {
+        SettingsSection(stringResource(StringsR.string.settings_section_playback)) {
+          SettingsGroup {
+            SeekTimeRow(viewState.seekTimeInSeconds, listener::onSeekAmountRowClick)
+            SettingsDivider()
+            AutoRewindRow(viewState.autoRewindInSeconds, listener::onAutoRewindRowClick)
+            SettingsDivider()
+            LockscreenSliderRow(
+              currentMode = viewState.lockscreenSliderMode,
+              onClick = listener::onLockscreenSliderRowClick,
+            )
+            SettingsDivider()
+            MediaButtonActionRow(
+              title = stringResource(StringsR.string.pref_media_button_double_click),
+              currentAction = viewState.mediaButtonDoubleClickAction,
+              onClick = listener::onMediaButtonDoubleClickRowClick,
+            )
+            SettingsDivider()
+            MediaButtonActionRow(
+              title = stringResource(StringsR.string.pref_media_button_triple_click),
+              currentAction = viewState.mediaButtonTripleClickAction,
+              onClick = listener::onMediaButtonTripleClickRowClick,
+            )
+          }
+        }
+      }
+
+      item(key = "sleep_timer") {
+        SettingsSection(stringResource(StringsR.string.settings_section_sleep_timer)) {
+          SettingsGroup {
+            SleepTimerCard(
+              autoSleepTimer = viewState.autoSleepTimer,
+              autoResetEnabled = viewState.sleepTimerAutoResetEnabled,
+              listener = listener,
+            )
+          }
+        }
+      }
+
+      item(key = "books") {
+        SettingsSection(stringResource(StringsR.string.settings_section_books)) {
+          SettingsGroup {
+            if (viewState.showFolderPickerEntry) {
+              ListItem(
+                modifier = Modifier.clickable { listener.openFolderPicker() },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                leadingContent = {
+                  Icon(Icons.Outlined.Book, contentDescription = null)
+                },
+                headlineContent = {
+                  Text(stringResource(StringsR.string.audiobook_folders_title))
+                },
+                supportingContent = {
+                  Text(stringResource(StringsR.string.pref_audiobook_folders_explanation))
+                },
+                trailingContent = {
+                  Icon(Icons.Outlined.ChevronRight, contentDescription = null)
+                },
               )
-            },
-            headlineContent = {
-              Text(stringResource(StringsR.string.audiobook_folders_title))
-            },
-            supportingContent = {
-              Text(stringResource(StringsR.string.pref_audiobook_folders_explanation))
-            },
-          )
-        }
-      }
-      if (viewState.showDarkThemePref) {
-        item {
-          DarkThemeRow(viewState.useDarkTheme, listener::toggleDarkTheme)
-        }
-      }
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.toggleGrid() },
-          leadingContent = {
-            val imageVector = if (viewState.useGrid) {
-              Icons.Outlined.GridView
-            } else {
-              Icons.AutoMirrored.Outlined.ViewList
+              SettingsDivider()
             }
-            Icon(imageVector, stringResource(StringsR.string.pref_use_grid))
-          },
-          headlineContent = { Text(stringResource(StringsR.string.pref_use_grid)) },
-          trailingContent = {
-            Switch(
-              checked = viewState.useGrid,
-              onCheckedChange = {
-                listener.toggleGrid()
+            ListItem(
+              modifier = Modifier.clickable { listener.openHiddenBooks() },
+              colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+              leadingContent = {
+                Icon(Icons.Outlined.VisibilityOff, contentDescription = null)
+              },
+              headlineContent = {
+                Text(stringResource(StringsR.string.hidden_books))
+              },
+              trailingContent = {
+                Icon(Icons.Outlined.ChevronRight, contentDescription = null)
               },
             )
-          },
-        )
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openListeningStats() },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.BarChart,
-              contentDescription = stringResource(StringsR.string.listening_stats),
+            SettingsDivider()
+            ListItem(
+              modifier = Modifier.clickable { listener.setIgnoreFileTags(!viewState.ignoreFileTags) },
+              colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+              leadingContent = {
+                Icon(Icons.Outlined.FolderOpen, contentDescription = null)
+              },
+              headlineContent = {
+                Text(stringResource(StringsR.string.pref_ignore_file_tags))
+              },
+              supportingContent = {
+                Text(
+                  text = stringResource(StringsR.string.experimental),
+                  style = MaterialTheme.typography.labelMedium,
+                  color = MaterialTheme.colorScheme.primary,
+                )
+              },
+              trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  IconButton(onClick = listener::onIgnoreFileTagsInfoClick) {
+                    Icon(
+                      imageVector = Icons.Outlined.Info,
+                      contentDescription = stringResource(StringsR.string.pref_sleep_timer_info),
+                    )
+                  }
+                  Switch(
+                    checked = viewState.ignoreFileTags,
+                    onCheckedChange = listener::setIgnoreFileTags,
+                  )
+                }
+              },
             )
-          },
-          headlineContent = {
-            Text(stringResource(StringsR.string.listening_stats))
-          },
-        )
-      }
-
-      item {
-        SeekTimeRow(viewState.seekTimeInSeconds) {
-          listener.onSeekAmountRowClick()
+          }
         }
       }
 
-      item {
-        AutoRewindRow(viewState.autoRewindInSeconds) {
-          listener.onAutoRewindRowClick()
+      item(key = "appearance") {
+        SettingsSection(stringResource(StringsR.string.settings_section_appearance)) {
+          SettingsGroup {
+            ListItem(
+              modifier = Modifier.clickable { listener.toggleGrid() },
+              colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+              leadingContent = {
+                val imageVector = if (viewState.useGrid) {
+                  Icons.Outlined.GridView
+                } else {
+                  Icons.AutoMirrored.Outlined.ViewList
+                }
+                Icon(imageVector, contentDescription = null)
+              },
+              headlineContent = { Text(stringResource(StringsR.string.pref_use_grid)) },
+              trailingContent = {
+                Switch(
+                  checked = viewState.useGrid,
+                  onCheckedChange = { listener.toggleGrid() },
+                )
+              },
+            )
+            if (viewState.showDarkThemePref) {
+              SettingsDivider()
+              DarkThemeRow(viewState.useDarkTheme, listener::toggleDarkTheme)
+            }
+          }
         }
       }
 
-      item {
-        MediaButtonActionRow(
-          title = stringResource(StringsR.string.pref_media_button_double_click),
-          currentAction = viewState.mediaButtonDoubleClickAction,
-          onClick = listener::onMediaButtonDoubleClickRowClick,
-        )
-      }
-      item {
-        MediaButtonActionRow(
-          title = stringResource(StringsR.string.pref_media_button_triple_click),
-          currentAction = viewState.mediaButtonTripleClickAction,
-          onClick = listener::onMediaButtonTripleClickRowClick,
-        )
-      }
-
-      item {
-        SleepTimerCard(
-          autoSleepTimer = viewState.autoSleepTimer,
-          autoResetEnabled = viewState.sleepTimerAutoResetEnabled,
-          listener = listener,
-        )
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openHiddenBooks() },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.VisibilityOff,
-              contentDescription = stringResource(StringsR.string.hidden_books),
-            )
-          },
-          headlineContent = {
-            Text(stringResource(StringsR.string.hidden_books))
-          },
-        )
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openBackup() },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.FolderOpen,
-              contentDescription = stringResource(StringsR.string.backup_title),
-            )
-          },
-          headlineContent = {
-            Text(stringResource(StringsR.string.backup_title))
-          },
-        )
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.openLicenses() },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.Gavel,
-              contentDescription = stringResource(StringsR.string.open_source_licenses),
-            )
-          },
-          headlineContent = {
-            Text(stringResource(StringsR.string.open_source_licenses))
-          },
-        )
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable { listener.setIgnoreFileTags(!viewState.ignoreFileTags) },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.FolderOpen,
-              contentDescription = stringResource(StringsR.string.pref_ignore_file_tags),
-            )
-          },
-          headlineContent = {
-            Text(stringResource(StringsR.string.pref_ignore_file_tags))
-          },
-          supportingContent = {
-            Text(
-              text = stringResource(StringsR.string.experimental),
-              style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.primary,
-            )
-          },
-          trailingContent = {
-            Row {
-              IconButton(onClick = listener::onIgnoreFileTagsInfoClick) {
-                Icon(
-                  imageVector = Icons.Outlined.Info,
-                  contentDescription = stringResource(StringsR.string.pref_ignore_file_tags),
+      item(key = "advanced") {
+        SettingsSection(stringResource(StringsR.string.settings_section_advanced)) {
+          SettingsGroup {
+            ListItem(
+              modifier = Modifier.clickable {
+                listener.setExperimentalPlaybackPersistence(!viewState.experimentalPlaybackPersistenceEnabled)
+              },
+              colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+              leadingContent = {
+                Icon(Icons.Outlined.Science, contentDescription = null)
+              },
+              headlineContent = {
+                Text(stringResource(StringsR.string.pref_experimental_playback_persistence))
+              },
+              supportingContent = {
+                Text(
+                  text = stringResource(StringsR.string.experimental),
+                  style = MaterialTheme.typography.labelMedium,
+                  color = MaterialTheme.colorScheme.primary,
                 )
-              }
-              Switch(
-                checked = viewState.ignoreFileTags,
-                onCheckedChange = { listener.setIgnoreFileTags(it) },
-              )
-            }
-          },
-        )
-      }
-
-      item {
-        ListItem(
-          modifier = Modifier.clickable {
-            listener.setExperimentalPlaybackPersistence(!viewState.experimentalPlaybackPersistenceEnabled)
-          },
-          leadingContent = {
-            Icon(
-              imageVector = Icons.Outlined.Science,
-              contentDescription = stringResource(StringsR.string.pref_experimental_playback_persistence),
+              },
+              trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  IconButton(onClick = listener::onExperimentalPlaybackPersistenceInfoClick) {
+                    Icon(
+                      imageVector = Icons.Outlined.Info,
+                      contentDescription = stringResource(StringsR.string.pref_sleep_timer_info),
+                    )
+                  }
+                  Switch(
+                    checked = viewState.experimentalPlaybackPersistenceEnabled,
+                    onCheckedChange = listener::setExperimentalPlaybackPersistence,
+                  )
+                }
+              },
             )
-          },
-          headlineContent = { Text(stringResource(StringsR.string.pref_experimental_playback_persistence)) },
-          trailingContent = {
-            Row {
-              IconButton(onClick = listener::onExperimentalPlaybackPersistenceInfoClick) {
-                Icon(
-                  imageVector = Icons.Outlined.Info,
-                  contentDescription = stringResource(StringsR.string.pref_sleep_timer_info),
-                )
-              }
-              Switch(
-                checked = viewState.experimentalPlaybackPersistenceEnabled,
-                onCheckedChange = { listener.setExperimentalPlaybackPersistence(it) },
-              )
-            }
-          },
-        )
+          }
+        }
       }
 
-      item {
-        AppVersion(
-          appVersion = viewState.appVersion,
-          onClick = listener::onAppVersionClick,
-        )
+      item(key = "about") {
+        SettingsSection(stringResource(StringsR.string.settings_section_about)) {
+          SettingsGroup {
+            ListItem(
+              modifier = Modifier.clickable { listener.openLicenses() },
+              colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+              leadingContent = {
+                Icon(Icons.Outlined.Gavel, contentDescription = null)
+              },
+              headlineContent = {
+                Text(stringResource(StringsR.string.open_source_licenses))
+              },
+              trailingContent = {
+                Icon(Icons.Outlined.ChevronRight, contentDescription = null)
+              },
+            )
+            SettingsDivider()
+            AppVersion(
+              appVersion = viewState.appVersion,
+              onClick = listener::onAppVersionClick,
+            )
+          }
+        }
       }
     }
     Dialog(viewState, listener)
@@ -406,6 +439,16 @@ private fun Dialog(
         onDismiss = listener::dismissDialog,
       )
     }
+    SettingsViewState.Dialog.LockscreenSliderMode -> {
+      LockscreenSliderDialog(
+        currentMode = viewState.lockscreenSliderMode,
+        onModeSelect = {
+          listener.setLockscreenSliderMode(it)
+          listener.dismissDialog()
+        },
+        onDismiss = listener::dismissDialog,
+      )
+    }
     SettingsViewState.Dialog.SleepTimerAutoResetInfo -> {
       AlertDialog(
         onDismissRequest = listener::dismissDialog,
@@ -465,4 +508,72 @@ private fun Dialog(
       )
     }
   }
+}
+
+@Composable
+private fun LockscreenSliderRow(
+  currentMode: LockscreenSliderMode,
+  onClick: () -> Unit,
+) {
+  val title = stringResource(StringsR.string.pref_lockscreen_slider)
+  ListItem(
+    modifier = Modifier
+      .clickable(onClick = onClick)
+      .fillMaxWidth(),
+    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    leadingContent = {
+      Icon(Icons.Outlined.Lock, contentDescription = null)
+    },
+    headlineContent = {
+      Text(title)
+    },
+    trailingContent = {
+      Text(stringResource(currentMode.toLabelRes()))
+    },
+  )
+}
+
+@Composable
+private fun LockscreenSliderDialog(
+  currentMode: LockscreenSliderMode,
+  onModeSelect: (LockscreenSliderMode) -> Unit,
+  onDismiss: () -> Unit,
+) {
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text(stringResource(StringsR.string.pref_lockscreen_slider)) },
+    text = {
+      Column(Modifier.selectableGroup()) {
+        LockscreenSliderMode.entries.forEach { mode ->
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .selectable(
+                selected = mode == currentMode,
+                onClick = { onModeSelect(mode) },
+                role = Role.RadioButton,
+              ),
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            RadioButton(
+              selected = mode == currentMode,
+              onClick = null,
+            )
+            Text(stringResource(mode.toLabelRes()))
+          }
+        }
+      }
+    },
+    confirmButton = {
+      TextButton(onClick = onDismiss) {
+        Text(stringResource(StringsR.string.close))
+      }
+    },
+  )
+}
+
+private fun LockscreenSliderMode.toLabelRes(): Int = when (this) {
+  LockscreenSliderMode.AUDIOBOOK -> StringsR.string.lockscreen_slider_audiobook
+  LockscreenSliderMode.CHAPTER -> StringsR.string.lockscreen_slider_chapter
+  LockscreenSliderMode.DISABLED -> StringsR.string.lockscreen_slider_disabled
 }

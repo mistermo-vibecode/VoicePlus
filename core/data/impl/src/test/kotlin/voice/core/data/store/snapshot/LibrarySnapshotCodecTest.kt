@@ -56,8 +56,25 @@ class LibrarySnapshotCodecTest {
       duration = 1_000,
       fileLastModified = Instant.ofEpochMilli(42),
       markData = listOf(MarkData(0, "intro"), MarkData(500, "two")),
+      fileSize = 321L,
     )
-    original.toDto(relName = "01.mp3").toChapter() shouldBe original
+    val dto = original.toDto(relName = "01.mp3")
+    val text = json.encodeToString(ChapterDto.serializer(), dto)
+    val decoded = json.decodeFromString(ChapterDto.serializer(), text)
+
+    decoded.relName shouldBe "01.mp3"
+    decoded.toChapter() shouldBe original
+  }
+
+  @Test
+  fun `legacy ChapterDto json without fileSize defaults fileSize to zero`() {
+    val text = """{"id":"ch-legacy","name":"Legacy","duration":1000,"fileLastModifiedEpochMillis":42,""" +
+      """"markData":[{"startMs":0,"name":"intro"}],"relName":"legacy.mp3"}"""
+
+    val dto = json.decodeFromString(ChapterDto.serializer(), text)
+
+    dto.fileSize shouldBe 0L
+    dto.toChapter().fileSize shouldBe 0L
   }
 
   @Test

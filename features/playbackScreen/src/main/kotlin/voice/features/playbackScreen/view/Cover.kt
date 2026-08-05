@@ -1,5 +1,6 @@
 package voice.features.playbackScreen.view
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,18 +13,23 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import voice.core.data.BookId
 import voice.core.ui.ImmutableFile
+import voice.core.ui.sharedBookCover
 import voice.core.strings.R as StringsR
 import voice.core.ui.R as UiR
 
 @Composable
 internal fun Cover(
+  bookId: BookId,
+  sharedTransitionScope: SharedTransitionScope?,
   onDoubleClick: () -> Unit,
   cover: ImmutableFile?,
 ) {
   AsyncImage(
     modifier = Modifier
       .fillMaxSize()
+      .sharedBookCover(bookId, sharedTransitionScope)
       .pointerInput(Unit) {
         detectTapGestures(
           onDoubleTap = {

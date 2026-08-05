@@ -89,7 +89,7 @@ internal fun OverflowMenu(
       )
       onEditChapterNamesClick?.let { onClick ->
         DropdownMenuItem(
-          text = { Text(stringResource(StringsR.string.edit_chapter_names)) },
+          text = { Text(stringResource(StringsR.string.chapter_fix_menu)) },
           onClick = {
             expanded = false
             onClick()

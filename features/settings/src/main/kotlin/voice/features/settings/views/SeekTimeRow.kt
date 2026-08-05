@@ -6,9 +6,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import voice.core.strings.R as StringsR
@@ -24,6 +26,7 @@ internal fun SeekTimeRow(
         openSeekTimeDialog()
       }
       .fillMaxWidth(),
+    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     leadingContent = {
       Icon(
         imageVector = Icons.Outlined.Timelapse,
@@ -33,7 +36,7 @@ internal fun SeekTimeRow(
     headlineContent = {
       Text(text = stringResource(StringsR.string.pref_seek_time))
     },
-    supportingContent = {
+    trailingContent = {
       Text(
         text = LocalResources.current.getQuantityString(
           StringsR.plurals.seconds,

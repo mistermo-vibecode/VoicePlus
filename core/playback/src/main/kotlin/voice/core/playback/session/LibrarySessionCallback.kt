@@ -242,8 +242,8 @@ class LibrarySessionCallback(
       is CustomCommand.SetGain -> {
         player.setGain(command.gain)
       }
-      CustomCommand.MarkNextPauseAsSleep -> {
-        intentHolder.stoppedBySleepTimer = true
+      is CustomCommand.PauseWithRewind -> {
+        pauseWithRewind(player, intentHolder, command.rewindMs)
       }
       is CustomCommand.TagNextSeek -> {
         intentHolder.pendingSeekIntent = ListeningEventType.fromId(command.typeId)
@@ -383,6 +383,16 @@ class LibrarySessionCallback(
       Toast.makeText(context, StringsR.string.bookmark_added, Toast.LENGTH_SHORT).show()
     }
   }
+}
+
+internal fun pauseWithRewind(
+  player: VoicePlayer,
+  intentHolder: PlaybackIntentHolder,
+  rewindMs: Long,
+) {
+  intentHolder.stoppedBySleepTimer = true
+  player.pause()
+  player.seekTo((player.currentPosition - rewindMs).coerceAtLeast(0L))
 }
 
 // Every single click waits this long so the click count can settle. Deliberately more generous than

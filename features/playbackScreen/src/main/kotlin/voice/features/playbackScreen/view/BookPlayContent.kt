@@ -1,5 +1,6 @@
 package voice.features.playbackScreen.view
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,11 +13,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import voice.core.data.BookId
 import voice.features.playbackScreen.BookPlayViewState
 import kotlin.time.Duration
 
 @Composable
 internal fun BookPlayContent(
+  bookId: BookId,
+  sharedTransitionScope: SharedTransitionScope?,
   contentPadding: PaddingValues,
   viewState: BookPlayViewState,
   onPlayClick: () -> Unit,
@@ -31,6 +35,8 @@ internal fun BookPlayContent(
   if (useLandscapeLayout) {
     Row(Modifier.padding(contentPadding)) {
       CoverRow(
+        bookId = bookId,
+        sharedTransitionScope = sharedTransitionScope,
         cover = viewState.cover,
         onPlayClick = onPlayClick,
         sleepTimerState = viewState.sleepTimerState,
@@ -72,6 +78,8 @@ internal fun BookPlayContent(
   } else {
     Column(Modifier.padding(contentPadding)) {
       CoverRow(
+        bookId = bookId,
+        sharedTransitionScope = sharedTransitionScope,
         onPlayClick = onPlayClick,
         cover = viewState.cover,
         sleepTimerState = viewState.sleepTimerState,

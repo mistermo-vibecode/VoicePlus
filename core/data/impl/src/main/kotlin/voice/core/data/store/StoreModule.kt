@@ -13,6 +13,7 @@ import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
 import voice.core.data.BookId
 import voice.core.data.GridMode
+import voice.core.data.LockscreenSliderMode
 import voice.core.data.MediaButtonClickAction
 import voice.core.data.OpenSessionCheckpoint
 import voice.core.data.sleeptimer.SleepTimerPreference
@@ -200,6 +201,17 @@ public interface StoreModule {
       serializer = MediaButtonClickAction.serializer(),
       defaultValue = MediaButtonClickAction.SKIP_BACKWARD,
       fileName = "mediaButtonTripleClickHandlerStore",
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @LockscreenSliderModeStore
+  private fun lockscreenSliderModeStore(factory: VoiceDataStoreFactory): DataStore<LockscreenSliderMode> {
+    return factory.create(
+      serializer = LockscreenSliderMode.serializer(),
+      defaultValue = LockscreenSliderMode.CHAPTER,
+      fileName = "lockscreenSliderMode",
     )
   }
 

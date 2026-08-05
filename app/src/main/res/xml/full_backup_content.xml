@@ -1,20 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pre-Android-12 counterpart of data_extraction_rules.xml: exclude everything,
-     matching allowBackup="false". -->
+<!-- Encrypted Auto Backup rules for Android 11 and earlier. -->
 <full-backup-content>
-  <exclude
-    domain="root"
-    path="." />
+  <include
+    domain="database"
+    path="."
+    requireFlags="clientSideEncryption" />
+  <include
+    domain="file"
+    path="datastore/"
+    requireFlags="clientSideEncryption" />
+  <include
+    domain="file"
+    path="bookCovers/"
+    requireFlags="clientSideEncryption" />
   <exclude
     domain="file"
-    path="." />
+    path="datastore/audiobookFolders" />
   <exclude
-    domain="database"
-    path="." />
+    domain="file"
+    path="datastore/audiobookFolders.tmp" />
   <exclude
-    domain="sharedpref"
-    path="." />
+    domain="file"
+    path="datastore/SingleFolderAudiobookFolders" />
   <exclude
-    domain="external"
-    path="." />
+    domain="file"
+    path="datastore/SingleFolderAudiobookFolders.tmp" />
+  <exclude
+    domain="file"
+    path="datastore/SingleFileAudiobookFolders" />
+  <exclude
+    domain="file"
+    path="datastore/SingleFileAudiobookFolders.tmp" />
+  <exclude
+    domain="file"
+    path="datastore/AuthorAudiobookFolders" />
+  <exclude
+    domain="file"
+    path="datastore/AuthorAudiobookFolders.tmp" />
+  <exclude
+    domain="file"
+    path="datastore/librarySnapshot0" />
+  <exclude
+    domain="file"
+    path="datastore/librarySnapshot0.tmp" />
+  <exclude
+    domain="file"
+    path="datastore/librarySnapshot1" />
+  <exclude
+    domain="file"
+    path="datastore/librarySnapshot1.tmp" />
+  <exclude
+    domain="file"
+    path="datastore/librarySnapshot2" />
+  <exclude
+    domain="file"
+    path="datastore/librarySnapshot2.tmp" />
+  <exclude
+    domain="file"
+    path="datastore/snapshotBackupState" />
+  <exclude
+    domain="file"
+    path="datastore/snapshotBackupState.tmp" />
+  <exclude
+    domain="file"
+    path="datastore/openListeningSession" />
+  <exclude
+    domain="file"
+    path="datastore/openListeningSession.tmp" />
 </full-backup-content>

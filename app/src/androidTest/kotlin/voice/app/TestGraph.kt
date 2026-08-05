@@ -13,8 +13,9 @@ import voice.app.di.AppGraph
 )
 interface TestGraph : AppGraph {
 
+  fun inject(target: AppLaunchSmokeTest)
+
   fun inject(target: SleepTimerIntegrationTest)
-  fun inject(target: VoicePlusStressTest)
 
   @DependencyGraph.Factory
   interface Factory {

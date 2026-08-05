@@ -1,40 +1,133 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-  Mirrors android:allowBackup="false" for Android 12+: nothing is cloud-backed-up or
-  device-transferred by the OS. VoicePlus has its own explicit, user-controlled backup.
--->
+<?xml version="1.0" encoding="utf-8"?><!-- These are scoped cloud-backup and device-transfer rules for Android 12 and later. -->
 <data-extraction-rules>
-    <cloud-backup>
-        <exclude
-            domain="root"
-            path="." />
-        <exclude
-            domain="sharedpref"
-            path="." />
-        <exclude
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include
             domain="database"
             path="." />
+        <include
+            domain="file"
+            path="datastore/" />
+        <include
+            domain="file"
+            path="bookCovers/" />
         <exclude
             domain="file"
-            path="." />
+            path="datastore/audiobookFolders" />
         <exclude
-            domain="external"
-            path="." />
+            domain="file"
+            path="datastore/audiobookFolders.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/SingleFolderAudiobookFolders" />
+        <exclude
+            domain="file"
+            path="datastore/SingleFolderAudiobookFolders.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/SingleFileAudiobookFolders" />
+        <exclude
+            domain="file"
+            path="datastore/SingleFileAudiobookFolders.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/AuthorAudiobookFolders" />
+        <exclude
+            domain="file"
+            path="datastore/AuthorAudiobookFolders.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot0" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot0.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot1" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot1.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot2" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot2.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/snapshotBackupState" />
+        <exclude
+            domain="file"
+            path="datastore/snapshotBackupState.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/openListeningSession" />
+        <exclude
+            domain="file"
+            path="datastore/openListeningSession.tmp" />
     </cloud-backup>
     <device-transfer>
-        <exclude
-            domain="root"
-            path="." />
-        <exclude
-            domain="sharedpref"
-            path="." />
-        <exclude
+        <include
             domain="database"
             path="." />
+        <include
+            domain="file"
+            path="datastore/" />
+        <include
+            domain="file"
+            path="bookCovers/" />
         <exclude
             domain="file"
-            path="." />
+            path="datastore/audiobookFolders" />
         <exclude
-            domain="external"
-            path="." />
+            domain="file"
+            path="datastore/audiobookFolders.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/SingleFolderAudiobookFolders" />
+        <exclude
+            domain="file"
+            path="datastore/SingleFolderAudiobookFolders.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/SingleFileAudiobookFolders" />
+        <exclude
+            domain="file"
+            path="datastore/SingleFileAudiobookFolders.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/AuthorAudiobookFolders" />
+        <exclude
+            domain="file"
+            path="datastore/AuthorAudiobookFolders.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot0" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot0.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot1" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot1.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot2" />
+        <exclude
+            domain="file"
+            path="datastore/librarySnapshot2.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/snapshotBackupState" />
+        <exclude
+            domain="file"
+            path="datastore/snapshotBackupState.tmp" />
+        <exclude
+            domain="file"
+            path="datastore/openListeningSession" />
+        <exclude
+            domain="file"
+            path="datastore/openListeningSession.tmp" />
     </device-transfer>
 </data-extraction-rules>

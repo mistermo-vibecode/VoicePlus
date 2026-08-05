@@ -1,5 +1,6 @@
 package voice.features.bookOverview.views.topbar
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +25,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @Composable
 internal fun BookOverviewTopBar(
+  sharedTransitionScope: SharedTransitionScope?,
   viewState: BookOverviewViewState,
   onBookFolderClick: () -> Unit,
   onSettingsClick: () -> Unit,
@@ -37,6 +39,7 @@ internal fun BookOverviewTopBar(
       label = "horizontalPadding",
     )
     BookOverviewSearchBar(
+      sharedTransitionScope = sharedTransitionScope,
       horizontalPadding = horizontalPadding,
       onQueryChange = onQueryChange,
       onActiveChange = onActiveChange,
@@ -70,6 +73,7 @@ internal fun BookOverviewTopBar(
 private fun BookOverviewTopBarPreview() {
   VoiceTheme {
     BookOverviewTopBar(
+      sharedTransitionScope = null,
       viewState = BookOverviewViewState(
         books = emptyMap(),
         layoutMode = BookOverviewLayoutMode.List,

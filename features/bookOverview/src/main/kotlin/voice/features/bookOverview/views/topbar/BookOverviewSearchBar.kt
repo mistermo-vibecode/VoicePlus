@@ -1,5 +1,6 @@
 package voice.features.bookOverview.views.topbar
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,7 @@ import voice.features.bookOverview.search.BookSearchViewState
 
 @Composable
 internal fun ColumnScope.BookOverviewSearchBar(
+  sharedTransitionScope: SharedTransitionScope?,
   horizontalPadding: Dp,
   onQueryChange: (String) -> Unit,
   onActiveChange: (Boolean) -> Unit,
@@ -62,6 +64,7 @@ internal fun ColumnScope.BookOverviewSearchBar(
       .padding(horizontal = horizontalPadding),
     content = {
       BookSearchContent(
+        sharedTransitionScope = sharedTransitionScope,
         viewState = searchViewState,
         contentPadding = PaddingValues(),
         onQueryChange = onQueryChange,

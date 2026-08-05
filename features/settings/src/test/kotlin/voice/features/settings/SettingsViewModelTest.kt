@@ -19,6 +19,7 @@ import org.junit.Test
 import voice.core.common.AppInfoProvider
 import voice.core.common.DispatcherProvider
 import voice.core.data.GridMode
+import voice.core.data.LockscreenSliderMode
 import voice.core.data.MediaButtonClickAction
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.featureflag.MemoryFeatureFlag
@@ -46,6 +47,7 @@ class SettingsViewModelTest {
   private val folderPickerFeatureFlag = MemoryFeatureFlag(false)
   private val mediaButtonDoubleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_FORWARD)
   private val mediaButtonTripleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_BACKWARD)
+  private val lockscreenSliderModeStore = MemoryDataStore(LockscreenSliderMode.CHAPTER)
   private val experimentalPlaybackPersistenceStore = MemoryDataStore(false)
   private val ignoreFileTagsStore = MemoryDataStore(false)
   private val mediaScanTrigger = mockk<MediaScanTrigger>(relaxed = true)
@@ -62,6 +64,7 @@ class SettingsViewModelTest {
     folderPickerInSettingsFeatureFlag = folderPickerFeatureFlag,
     mediaButtonDoubleClickHandlerStore = mediaButtonDoubleClickHandlerStore,
     mediaButtonTripleClickHandlerStore = mediaButtonTripleClickHandlerStore,
+    lockscreenSliderModeStore = lockscreenSliderModeStore,
     experimentalPlaybackPersistenceStore = experimentalPlaybackPersistenceStore,
     ignoreFileTagsStore = ignoreFileTagsStore,
     mediaScanTrigger = mediaScanTrigger,
@@ -78,6 +81,19 @@ class SettingsViewModelTest {
       viewModel.toggleGrid()
 
       awaitItem().useGrid shouldBe false
+    }
+  }
+
+  @Test
+  fun `lockscreen slider mode is persisted`() = scope.runTest {
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) {
+      viewModel.viewState()
+    }.test {
+      awaitItem().lockscreenSliderMode shouldBe LockscreenSliderMode.CHAPTER
+
+      viewModel.setLockscreenSliderMode(LockscreenSliderMode.AUDIOBOOK)
+
+      awaitItem().lockscreenSliderMode shouldBe LockscreenSliderMode.AUDIOBOOK
     }
   }
 }

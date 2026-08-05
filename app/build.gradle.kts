@@ -13,6 +13,7 @@ plugins {
 
 val keystoreProps = Properties()
 val keystorePropsFile = rootProject.file("signing/keystore.properties")
+val debugVersionNameOverride = providers.gradleProperty("voice.debugVersionName")
 if (keystorePropsFile.exists()) {
   keystorePropsFile.inputStream().use { keystoreProps.load(it) }
 }
@@ -119,6 +120,16 @@ android {
 
   buildFeatures {
     buildConfig = true
+  }
+}
+
+androidComponents {
+  onVariants(selector().withBuildType("debug")) { variant ->
+    if (debugVersionNameOverride.isPresent) {
+      variant.outputs.forEach { output ->
+        output.versionName.set(debugVersionNameOverride)
+      }
+    }
   }
 }
 

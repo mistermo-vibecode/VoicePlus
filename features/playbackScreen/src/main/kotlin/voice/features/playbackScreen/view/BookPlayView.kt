@@ -1,5 +1,6 @@
 package voice.features.playbackScreen.view
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -8,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import voice.core.data.BookId
 import voice.core.ui.VoiceTheme
 import voice.features.playbackScreen.BookPlayViewState
 import kotlin.time.Duration
@@ -15,6 +17,8 @@ import kotlin.time.Duration.Companion.minutes
 
 @Composable
 internal fun BookPlayView(
+  bookId: BookId,
+  sharedTransitionScope: SharedTransitionScope?,
   viewState: BookPlayViewState,
   useLandscapeLayout: Boolean,
   onPlayClick: () -> Unit,
@@ -58,6 +62,8 @@ internal fun BookPlayView(
     },
     content = {
       BookPlayContent(
+        bookId = bookId,
+        sharedTransitionScope = sharedTransitionScope,
         contentPadding = it,
         viewState = viewState,
         onPlayClick = onPlayClick,
@@ -81,6 +87,8 @@ private fun BookPlayPreview(
 ) {
   VoiceTheme {
     BookPlayView(
+      bookId = BookId("preview"),
+      sharedTransitionScope = null,
       viewState = viewState,
       onPlayClick = {},
       onRewindClick = {},

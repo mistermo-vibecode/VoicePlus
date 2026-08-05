@@ -15,4 +15,5 @@ dependencies {
   implementation(projects.core.initializer)
   implementation(projects.core.strings)
   implementation(libs.lifecycle.viewmodel.compose)
+  implementation(libs.navigation3.ui)
 }

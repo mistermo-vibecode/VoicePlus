@@ -1,5 +1,6 @@
 package voice.features.bookOverview.views
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.ElevatedCard
@@ -38,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import voice.core.data.BookId
+import voice.core.ui.sharedBookCover
 import voice.features.bookOverview.overview.BookOverviewCategory
 import voice.features.bookOverview.overview.BookOverviewItemViewState
 import voice.features.bookOverview.overview.isCollapsible
@@ -46,6 +49,8 @@ import voice.core.ui.R as UiR
 
 @Composable
 internal fun GridBooks(
+  sharedTransitionScope: SharedTransitionScope?,
+  state: LazyGridState,
   books: Map<BookOverviewCategory, Map<BookId, State<BookOverviewItemViewState>>>,
   categoryExpanded: (BookOverviewCategory) -> Boolean,
   onCategoryToggle: (BookOverviewCategory) -> Unit,
@@ -56,6 +61,7 @@ internal fun GridBooks(
 ) {
   val cellCount = gridColumnCount()
   LazyVerticalGrid(
+    state = state,
     columns = GridCells.Fixed(cellCount),
     verticalArrangement = Arrangement.spacedBy(8.dp),
     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -95,6 +101,7 @@ internal fun GridBooks(
           contentType = { "item" },
         ) { (_, bookState) ->
           GridBook(
+            sharedTransitionScope = sharedTransitionScope,
             book = bookState.value,
             onBookClick = onBookClick,
             onBookLongClick = onBookLongClick,
@@ -113,6 +120,7 @@ internal fun GridBook(
   book: BookOverviewItemViewState,
   onBookClick: (BookId) -> Unit,
   onBookLongClick: (BookId) -> Unit,
+  sharedTransitionScope: SharedTransitionScope?,
 ) {
   ElevatedCard(
     shape = MaterialTheme.shapes.extraLarge,
@@ -135,7 +143,10 @@ internal fun GridBook(
         contentAlignment = Alignment.Center,
       ) {
         AsyncImage(
-          modifier = Modifier.fillMaxSize(),
+          modifier = Modifier
+            .fillMaxSize()
+            .sharedBookCover(book.id, sharedTransitionScope)
+            .clip(MaterialTheme.shapes.large),
           contentScale = ContentScale.Crop,
           model = book.cover?.file,
           placeholder = painterResource(id = UiR.drawable.album_art),
@@ -197,11 +208,21 @@ internal fun gridColumnCount(): Int {
 @Composable
 @Preview(widthDp = 200)
 private fun GridBookPreviewWithProgress() {
-  GridBook(BookOverviewPreviewParameterProvider().book().copy(progress = 0.66f), {}, {})
+  GridBook(
+    book = BookOverviewPreviewParameterProvider().book().copy(progress = 0.66f),
+    onBookClick = {},
+    onBookLongClick = {},
+    sharedTransitionScope = null,
+  )
 }
 
 @Composable
 @Preview(widthDp = 200)
 private fun GridBookPreviewWithoutProgress() {
-  GridBook(BookOverviewPreviewParameterProvider().book().copy(progress = 0f), {}, {})
+  GridBook(
+    book = BookOverviewPreviewParameterProvider().book().copy(progress = 0f),
+    onBookClick = {},
+    onBookLongClick = {},
+    sharedTransitionScope = null,
+  )
 }

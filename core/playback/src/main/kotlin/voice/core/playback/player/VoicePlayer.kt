@@ -13,10 +13,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import voice.core.data.Book
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
+import voice.core.data.ChapterMark
 import voice.core.data.ListeningEventType
+import voice.core.data.markForPosition
 import voice.core.data.repo.BookRepository
 import voice.core.data.repo.ChapterRepo
 import voice.core.data.store.AutoRewindAmountStore
@@ -57,6 +60,44 @@ class VoicePlayer(
   private val listeningEventRecorder: ListeningEventRecorder,
   private val chapterMarkChangeNotifier: ChapterMarkChangeNotifier,
 ) : ForwardingPlayer(player) {
+
+  private var currentBook: Book? = null
+
+  init {
+    player.addListener(
+      object : Player.Listener {
+        override fun onPositionDiscontinuity(
+          oldPosition: Player.PositionInfo,
+          newPosition: Player.PositionInfo,
+          reason: Int,
+        ) {
+          chapterMarkChangeNotifier.notifyChanged()
+        }
+      },
+    )
+  }
+
+  internal fun currentBookChapterDurations(): List<Long> {
+    return currentBook?.chapters?.map { it.duration }.orEmpty()
+  }
+
+  internal fun currentChapterMark(): ChapterMark? {
+    return currentChapterMarkInfo()?.mark
+  }
+
+  internal fun currentChapterMarkInfo(): CurrentChapterMarkInfo? {
+    val book = currentBook ?: return null
+    val chapterIndex = player.currentMediaItemIndex
+    val chapter = book.chapters.getOrNull(chapterIndex) ?: return null
+    val position = player.currentPosition.takeUnless { it == C.TIME_UNSET } ?: return null
+    val mark = chapter.markForPosition(position)
+    val markIndex = chapter.chapterMarks.indexOf(mark).takeIf { it >= 0 } ?: return null
+    return CurrentChapterMarkInfo(
+      mark = mark,
+      number = book.chapters.take(chapterIndex).sumOf { it.chapterMarks.size } + markIndex + 1,
+      total = book.chapters.sumOf { it.chapterMarks.size },
+    )
+  }
 
   fun forceSeekToNext() {
     // Tag as a next-chapter (Next) seek so the recorder can label the resulting discontinuity.
@@ -316,6 +357,7 @@ class VoicePlayer(
         }
         if (bookWithChapters != null) {
           val (book, chapters) = bookWithChapters
+          currentBook = book
           player.setPlaybackSpeed(book.content.playbackSpeed)
           setSkipSilenceEnabled(book.content.skipSilence)
           volumeGain.gain = Decibel(book.content.gain)
@@ -408,5 +450,11 @@ class VoicePlayer(
     repo.updateBook(bookId, update)
   }
 }
+
+internal data class CurrentChapterMarkInfo(
+  val mark: ChapterMark,
+  val number: Int,
+  val total: Int,
+)
 
 private const val THRESHOLD_FOR_BACK_SEEK_MS = 2000

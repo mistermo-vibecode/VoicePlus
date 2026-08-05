@@ -4,6 +4,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
 import java.util.zip.CRC32
 
 private const val FORMAT_VERSION = 1
@@ -43,12 +45,17 @@ internal object ExternalBackupBundleCodec {
     json: Json,
     text: String,
   ): ExternalBackupBundleDecodeResult {
-    runCatching { json.decodeFromString<ExternalBackupBundle>(text) }
+    runCatching { json.parseToJsonElement(text).jsonObject }
       .getOrNull()
-      ?.let { bundle ->
+      ?.let { root ->
+        val bundle = runCatching {
+          json.decodeFromJsonElement(ExternalBackupBundle.serializer(), root)
+        }.getOrNull()
+          ?: return@let
         if (bundle.formatVersion > FORMAT_VERSION) return ExternalBackupBundleDecodeResult.NewerFormat
         if (bundle.formatVersion != FORMAT_VERSION) return ExternalBackupBundleDecodeResult.Corrupt
-        return if (bundle.payload.crc32(json) == bundle.payloadCrc32) {
+        val storedPayload = root["payload"] ?: return ExternalBackupBundleDecodeResult.Corrupt
+        return if (storedPayload.crc32(json) == bundle.payloadCrc32) {
           ExternalBackupBundleDecodeResult.Valid(bundle.payload)
         } else {
           ExternalBackupBundleDecodeResult.Corrupt
@@ -72,6 +79,11 @@ internal object ExternalBackupBundleCodec {
 
   private fun LibrarySnapshot.crc32(json: Json): Long {
     val bytes = json.encodeToString(LibrarySnapshot.serializer(), this).encodeToByteArray()
+    return CRC32().apply { update(bytes) }.value
+  }
+
+  private fun JsonElement.crc32(json: Json): Long {
+    val bytes = json.encodeToString(JsonElement.serializer(), this).encodeToByteArray()
     return CRC32().apply { update(bytes) }.value
   }
 }

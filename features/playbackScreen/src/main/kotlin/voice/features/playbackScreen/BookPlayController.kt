@@ -1,6 +1,13 @@
 package voice.features.playbackScreen
 
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -11,6 +18,7 @@ import androidx.compose.runtime.retain.retain
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.ui.NavDisplay
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.IntoSet
@@ -21,10 +29,14 @@ import voice.features.playbackScreen.view.BookPlayView
 import voice.features.sleepTimer.SleepTimerDialog
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
+import voice.navigation.SharedTransitionNavEntryProvider
 import voice.core.strings.R as StringsR
 
 @Composable
-fun BookPlayScreen(bookId: BookId) {
+fun BookPlayScreen(
+  bookId: BookId,
+  sharedTransitionScope: SharedTransitionScope? = null,
+) {
   val viewModel = retain(bookId.value) {
     rootGraphAs<BookPlayGraph>()
       .bookPlayViewModelFactory
@@ -57,7 +69,9 @@ fun BookPlayScreen(bookId: BookId) {
     }
   }
   BookPlayView(
-    viewState,
+    bookId = bookId,
+    sharedTransitionScope = sharedTransitionScope,
+    viewState = viewState,
     onPlayClick = viewModel::playPause,
     onFastForwardClick = viewModel::fastForward,
     onRewindClick = viewModel::rewind,
@@ -115,9 +129,36 @@ interface BookPlayProvider {
 
   @Provides
   @IntoSet
-  fun bookPlayNavEntryProvider(): NavEntryProvider<*> = NavEntryProvider<Destination.Playback> { key ->
-    NavEntry(key) {
-      BookPlayScreen(bookId = key.bookId)
+  fun bookPlayNavEntryProvider(): NavEntryProvider<*> = SharedTransitionNavEntryProvider<Destination.Playback> { key, scope ->
+    NavEntry(
+      key = key,
+      metadata = NavDisplay.transitionSpec { playerForwardTransition() } +
+        NavDisplay.popTransitionSpec { playerBackTransition() } +
+        NavDisplay.predictivePopTransitionSpec { _ -> playerBackTransition() },
+    ) {
+      BookPlayScreen(
+        bookId = key.bookId,
+        sharedTransitionScope = scope,
+      )
     }
   }
+}
+
+private val emphasizedDecelerate = CubicBezierEasing(0.05F, 0.7F, 0.1F, 1F)
+private val emphasizedAccelerate = CubicBezierEasing(0.3F, 0F, 0.8F, 0.15F)
+
+private fun playerForwardTransition(): ContentTransform {
+  return fadeIn(
+    animationSpec = tween(durationMillis = 400, easing = emphasizedDecelerate),
+  ) togetherWith fadeOut(
+    animationSpec = tween(durationMillis = 200, easing = emphasizedAccelerate),
+  )
+}
+
+private fun playerBackTransition(): ContentTransform {
+  return fadeIn(
+    animationSpec = tween(durationMillis = 250, easing = emphasizedDecelerate),
+  ) togetherWith fadeOut(
+    animationSpec = tween(durationMillis = 200, easing = emphasizedAccelerate),
+  )
 }

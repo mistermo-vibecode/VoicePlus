@@ -2,11 +2,14 @@ package voice.features.bookOverview.views
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
@@ -28,8 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.IntoSet
 import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.launch
 import voice.core.common.rootGraphAs
 import voice.core.data.BookId
@@ -48,6 +53,7 @@ import voice.features.bookOverview.search.BookSearchViewState
 import voice.features.bookOverview.views.topbar.BookOverviewTopBar
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
+import voice.navigation.SharedTransitionNavEntryProvider
 import java.util.UUID
 
 @ContributesTo(AppScope::class)
@@ -55,15 +61,74 @@ interface BookOverviewProvider {
 
   @Provides
   @IntoSet
-  fun bookOverviewNavEntryProvider(): NavEntryProvider<*> = NavEntryProvider<Destination.BookOverview> { key ->
-    NavEntry(key) {
-      BookOverviewScreen()
+  fun bookOverviewNavEntryProvider(scrollState: BookOverviewScrollState): NavEntryProvider<*> =
+    SharedTransitionNavEntryProvider<Destination.BookOverview> { key, scope ->
+      NavEntry(key) {
+        BookOverviewScreen(
+          scrollState = scrollState,
+          sharedTransitionScope = scope,
+        )
+      }
+    }
+}
+
+@SingleIn(AppScope::class)
+@Inject
+class BookOverviewScrollState {
+  private var listIndex = 0
+  private var listOffset = 0
+  private var gridIndex = 0
+  private var gridOffset = 0
+  private var listRestorePending = false
+  private var gridRestorePending = false
+
+  fun newListState() = LazyListState(listIndex, listOffset)
+
+  fun newGridState() = LazyGridState(gridIndex, gridOffset)
+
+  fun capture(
+    layoutMode: BookOverviewLayoutMode,
+    listState: LazyListState,
+    gridState: LazyGridState,
+  ) {
+    when (layoutMode) {
+      BookOverviewLayoutMode.List -> {
+        listIndex = listState.firstVisibleItemIndex
+        listOffset = listState.firstVisibleItemScrollOffset
+        listRestorePending = true
+      }
+      BookOverviewLayoutMode.Grid -> {
+        gridIndex = gridState.firstVisibleItemIndex
+        gridOffset = gridState.firstVisibleItemScrollOffset
+        gridRestorePending = true
+      }
+    }
+  }
+
+  suspend fun restore(
+    layoutMode: BookOverviewLayoutMode,
+    listState: LazyListState,
+    gridState: LazyGridState,
+  ) {
+    when (layoutMode) {
+      BookOverviewLayoutMode.List -> if (listRestorePending) {
+        listState.scrollToItem(listIndex, listOffset)
+        listRestorePending = false
+      }
+      BookOverviewLayoutMode.Grid -> if (gridRestorePending) {
+        gridState.scrollToItem(gridIndex, gridOffset)
+        gridRestorePending = false
+      }
     }
   }
 }
 
 @Composable
-fun BookOverviewScreen(modifier: Modifier = Modifier) {
+fun BookOverviewScreen(
+  scrollState: BookOverviewScrollState,
+  modifier: Modifier = Modifier,
+  sharedTransitionScope: SharedTransitionScope? = null,
+) {
   val bookGraph = retain<BookOverviewGraph> {
     rootGraphAs<BookOverviewGraph.Factory.Provider>()
       .bookOverviewGraphProviderFactory.create()
@@ -73,11 +138,18 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
   val bottomSheetViewModel = bookGraph.bottomSheetViewModel
   val deleteBookViewModel = bookGraph.deleteBookViewModel
   val fileCoverViewModel = bookGraph.fileCoverViewModel
+  val listState = remember { scrollState.newListState() }
+  val gridState = remember { scrollState.newGridState() }
 
   LaunchedEffect(Unit) {
     bookOverviewViewModel.attach()
   }
   val viewState = bookOverviewViewModel.state()
+  LaunchedEffect(viewState.isLoading, viewState.books.isNotEmpty(), viewState.layoutMode) {
+    if (!viewState.isLoading && viewState.books.isNotEmpty()) {
+      scrollState.restore(viewState.layoutMode, listState, gridState)
+    }
+  }
 
   val scope = rememberCoroutineScope()
 
@@ -94,9 +166,15 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
   val notStartedExpanded = bookOverviewViewModel.notStartedExpanded()
   val finishedExpanded = bookOverviewViewModel.finishedExpanded()
   BookOverview(
+    sharedTransitionScope = sharedTransitionScope,
+    listState = listState,
+    gridState = gridState,
     viewState = viewState,
     onSettingsClick = bookOverviewViewModel::onSettingsClick,
-    onBookClick = bookOverviewViewModel::onBookClick,
+    onBookClick = { bookId ->
+      scrollState.capture(viewState.layoutMode, listState, gridState)
+      bookOverviewViewModel.onBookClick(bookId)
+    },
     onBookLongClick = { bookId ->
       scope.launch {
         bottomSheetViewModel.bookSelected(bookId)
@@ -107,7 +185,10 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
     onPlayButtonClick = bookOverviewViewModel::playPause,
     onSearchActiveChange = bookOverviewViewModel::onSearchActiveChange,
     onSearchQueryChange = bookOverviewViewModel::onSearchQueryChange,
-    onSearchBookClick = bookOverviewViewModel::onSearchBookClick,
+    onSearchBookClick = { bookId ->
+      scrollState.capture(viewState.layoutMode, listState, gridState)
+      bookOverviewViewModel.onSearchBookClick(bookId)
+    },
     onPermissionBugCardClick = bookOverviewViewModel::onPermissionBugCardClick,
     categoryExpanded = { category ->
       when (category) {
@@ -166,6 +247,9 @@ fun BookOverviewScreen(modifier: Modifier = Modifier) {
 
 @Composable
 internal fun BookOverview(
+  sharedTransitionScope: SharedTransitionScope?,
+  listState: LazyListState,
+  gridState: LazyGridState,
   viewState: BookOverviewViewState,
   onSettingsClick: () -> Unit,
   onBookClick: (BookId) -> Unit,
@@ -185,6 +269,7 @@ internal fun BookOverview(
     modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     topBar = {
       BookOverviewTopBar(
+        sharedTransitionScope = sharedTransitionScope,
         viewState = viewState,
         onBookFolderClick = onBookFolderClick,
         onSettingsClick = onSettingsClick,
@@ -214,6 +299,8 @@ internal fun BookOverview(
       when (viewState.layoutMode) {
         BookOverviewLayoutMode.List -> {
           ListBooks(
+            sharedTransitionScope = sharedTransitionScope,
+            state = listState,
             books = viewState.books,
             categoryExpanded = categoryExpanded,
             onCategoryToggle = onCategoryToggle,
@@ -225,6 +312,8 @@ internal fun BookOverview(
         }
         BookOverviewLayoutMode.Grid -> {
           GridBooks(
+            sharedTransitionScope = sharedTransitionScope,
+            state = gridState,
             books = viewState.books,
             categoryExpanded = categoryExpanded,
             onCategoryToggle = onCategoryToggle,
@@ -248,6 +337,9 @@ fun BookOverviewPreview(
 ) {
   VoiceTheme {
     BookOverview(
+      sharedTransitionScope = null,
+      listState = LazyListState(),
+      gridState = LazyGridState(),
       viewState = viewState,
       onSettingsClick = {},
       onBookClick = {},

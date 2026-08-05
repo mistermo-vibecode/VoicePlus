@@ -1,5 +1,6 @@
 package voice.features.bookOverview.views
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ElevatedCard
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import voice.core.data.BookId
 import voice.core.ui.ImmutableFile
+import voice.core.ui.sharedBookCover
 import voice.features.bookOverview.overview.BookOverviewCategory
 import voice.features.bookOverview.overview.BookOverviewItemViewState
 import voice.features.bookOverview.overview.isCollapsible
@@ -42,6 +45,8 @@ import voice.core.ui.R as UiR
 
 @Composable
 internal fun ListBooks(
+  sharedTransitionScope: SharedTransitionScope?,
+  state: LazyListState,
   books: Map<BookOverviewCategory, Map<BookId, State<BookOverviewItemViewState>>>,
   categoryExpanded: (BookOverviewCategory) -> Boolean,
   onCategoryToggle: (BookOverviewCategory) -> Unit,
@@ -51,6 +56,7 @@ internal fun ListBooks(
   onPermissionBugCardClick: () -> Unit,
 ) {
   LazyColumn(
+    state = state,
     verticalArrangement = Arrangement.spacedBy(8.dp),
     contentPadding = PaddingValues(top = 24.dp, start = 8.dp, end = 8.dp, bottom = 16.dp),
   ) {
@@ -88,6 +94,7 @@ internal fun ListBooks(
           contentType = { "item" },
         ) { (_, bookState) ->
           ListBookRow(
+            sharedTransitionScope = sharedTransitionScope,
             book = bookState.value,
             onBookClick = onBookClick,
             onBookLongClick = onBookLongClick,
@@ -106,6 +113,7 @@ internal fun ListBookRow(
   book: BookOverviewItemViewState,
   onBookClick: (BookId) -> Unit,
   onBookLongClick: (BookId) -> Unit,
+  sharedTransitionScope: SharedTransitionScope?,
   modifier: Modifier = Modifier,
 ) {
   ElevatedCard(
@@ -119,7 +127,11 @@ internal fun ListBookRow(
   ) {
     Column(Modifier.padding()) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        CoverImage(book.cover)
+        CoverImage(
+          bookId = book.id,
+          cover = book.cover,
+          sharedTransitionScope = sharedTransitionScope,
+        )
 
         Column(
           Modifier
@@ -185,13 +197,18 @@ internal fun ListBookRow(
 }
 
 @Composable
-private fun CoverImage(cover: ImmutableFile?) {
+private fun CoverImage(
+  bookId: BookId,
+  cover: ImmutableFile?,
+  sharedTransitionScope: SharedTransitionScope?,
+) {
   val startPadding = 16.dp
   val endPadding = 16.dp
   AsyncImage(
     modifier = Modifier
       .padding(top = 8.dp, start = 8.dp, bottom = 8.dp)
       .size(76.dp)
+      .sharedBookCover(bookId, sharedTransitionScope)
       .clip(RoundedCornerShape(topStart = startPadding, bottomStart = startPadding, topEnd = endPadding, bottomEnd = endPadding)),
     model = cover?.file,
     placeholder = painterResource(id = UiR.drawable.album_art),
@@ -204,11 +221,21 @@ private fun CoverImage(cover: ImmutableFile?) {
 @Composable
 @Preview
 private fun ListBookRowPreviewWithProgress() {
-  ListBookRow(BookOverviewPreviewParameterProvider().book().copy(progress = 0.6f), {}, {})
+  ListBookRow(
+    book = BookOverviewPreviewParameterProvider().book().copy(progress = 0.6f),
+    onBookClick = {},
+    onBookLongClick = {},
+    sharedTransitionScope = null,
+  )
 }
 
 @Composable
 @Preview
 private fun ListBookRowPreviewWithoutProgress() {
-  ListBookRow(BookOverviewPreviewParameterProvider().book().copy(progress = 0f), {}, {})
+  ListBookRow(
+    book = BookOverviewPreviewParameterProvider().book().copy(progress = 0f),
+    onBookClick = {},
+    onBookLongClick = {},
+    sharedTransitionScope = null,
+  )
 }

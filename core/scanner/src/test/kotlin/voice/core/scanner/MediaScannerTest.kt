@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,6 +55,23 @@ class MediaScannerTest {
         chapters = book1Chapters.drop(1),
       ),
     )
+  }
+
+  @Test
+  fun coldImportAnalyzesEachChapterOnce() = test {
+    val audiobookFolder = folder("audiobooks")
+    val book = File(audiobookFolder, "book")
+    val chapter1 = audioFile(book, "1.mp3")
+    val chapter2 = audioFile(book, "2.mp3")
+
+    scan(FolderType.Root, audiobookFolder)
+
+    coVerify(exactly = 1) {
+      mediaAnalyzer.analyze(match { it.uri == chapter1.toUri() }).let { }
+    }
+    coVerify(exactly = 1) {
+      mediaAnalyzer.analyze(match { it.uri == chapter2.toUri() }).let { }
+    }
   }
 
   @Test
@@ -306,7 +324,7 @@ class MediaScannerTest {
     val bookContentRepo = BookContentRepoImpl(db.bookContentDao())
     val chapterRepo = ChapterRepoImpl(db.chapterDao())
     val ignoreFileTags = MutableStateFlow(false)
-    private val mediaAnalyzer = mockk<MediaAnalyzer>()
+    val mediaAnalyzer = mockk<MediaAnalyzer>()
 
     // The scanner now gates activation on the LIVE folder set via AudiobookFolders.isManaged. These tests drive
     // scanner.scan(folders) with a literal folder map, so the fake simply mirrors that same set: every folder

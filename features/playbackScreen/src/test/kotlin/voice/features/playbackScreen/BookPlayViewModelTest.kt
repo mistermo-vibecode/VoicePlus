@@ -32,7 +32,6 @@ import voice.core.data.ListeningEventType
 import voice.core.data.MarkData
 import voice.core.data.repo.BookCharacterRepo
 import voice.core.data.sleeptimer.SleepTimerPreference
-import voice.core.featureflag.MemoryFeatureFlag
 import voice.core.playback.CurrentBookResolver
 import voice.core.playback.LivePlaybackState
 import voice.core.playback.PlayerController
@@ -117,7 +116,6 @@ class BookPlayViewModelTest {
     sleepTimerPreferenceStore = sleepTimerDataStore,
     bookId = book.id,
     dispatcherProvider = DispatcherProvider(scope.coroutineContext, scope.coroutineContext, scope.coroutineContext),
-    experimentalPlaybackPersistenceFeatureFlag = MemoryFeatureFlag(false),
   )
 
   @Test
@@ -284,12 +282,19 @@ class BookPlayViewModelTest {
   }
 
   @Test
-  fun `viewState prefers live playback state when feature flag is enabled`() = scope.runTest {
+  fun `viewState updates chapter name and played time from live playback state`() = scope.runTest {
     val persistedBook = book()
-    val livePlaybackFlow = MutableStateFlow<LivePlaybackState?>(null)
+    val livePlaybackFlow = MutableStateFlow<LivePlaybackState?>(
+      LivePlaybackState(
+        bookId = persistedBook.id,
+        chapterId = persistedBook.currentChapter.id,
+        positionMs = persistedBook.content.positionInChapter,
+        isPlaying = false,
+        playbackSpeed = 1F,
+      ),
+    )
     val viewModel = viewModel(
       book = persistedBook,
-      experimentalPlaybackPersistence = true,
       livePlaybackFlow = livePlaybackFlow,
     )
 
@@ -297,27 +302,29 @@ class BookPlayViewModelTest {
       viewModel.viewState()
     }.test {
       awaitItem() shouldBe null
-      awaitItem()!!.playedTime shouldBe 30.seconds
+      awaitItem()!!.apply {
+        chapterName shouldBe "Middle Section"
+        playedTime shouldBe 30.seconds
+      }
 
       livePlaybackFlow.value = LivePlaybackState(
         bookId = persistedBook.id,
         chapterId = persistedBook.chapters.first().id,
-        positionMs = 1.minutes.inWholeMilliseconds,
+        positionMs = 4.minutes.inWholeMilliseconds + 45.seconds.inWholeMilliseconds,
         isPlaying = true,
         playbackSpeed = 1F,
       )
 
       val state = awaitItem()!!
       state.playing shouldBe true
-      state.chapterName shouldBe "Chapter Start"
-      state.playedTime shouldBe 1.minutes
+      state.chapterName shouldBe "Final Section"
+      state.playedTime shouldBe 45.seconds
     }
   }
 
   @Test
   fun `viewState falls back to manager play state when live playback is unavailable`() = scope.runTest {
     val viewModel = viewModel(
-      experimentalPlaybackPersistence = true,
       livePlaybackFlow = MutableStateFlow(null),
       playStateFlow = MutableStateFlow(PlayStateManager.PlayState.Playing),
     )
@@ -355,7 +362,6 @@ class BookPlayViewModelTest {
 
   private fun viewModel(
     book: Book = this.book,
-    experimentalPlaybackPersistence: Boolean = false,
     livePlaybackFlow: MutableStateFlow<LivePlaybackState?> = MutableStateFlow(null),
     playStateFlow: MutableStateFlow<PlayStateManager.PlayState> = MutableStateFlow(PlayStateManager.PlayState.Paused),
   ): BookPlayViewModel {
@@ -388,7 +394,6 @@ class BookPlayViewModelTest {
       sleepTimerPreferenceStore = sleepTimerDataStore,
       bookId = book.id,
       dispatcherProvider = DispatcherProvider(scope.coroutineContext, scope.coroutineContext, scope.coroutineContext),
-      experimentalPlaybackPersistenceFeatureFlag = MemoryFeatureFlag(experimentalPlaybackPersistence),
     )
   }
 }

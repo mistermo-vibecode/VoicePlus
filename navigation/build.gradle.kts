@@ -5,6 +5,7 @@ plugins {
 }
 
 dependencies {
+  api(libs.compose.animation.animation)
   api(libs.navigation3.runtime)
   api(projects.core.data.api)
   testImplementation(kotlin("reflect"))

@@ -23,10 +23,10 @@ internal sealed interface CustomCommand {
   data class SetGain(val gain: Decibel) : CustomCommand
 
   @Serializable
-  data object MarkNextPauseAsSleep : CustomCommand
+  data class PauseWithRewind(val rewindMs: Long) : CustomCommand
 
   // Label the next seek in the listening log (stable ListeningEventType id). Sent immediately
-  // before the seek on the same session binder, so ordering is guaranteed like MarkNextPauseAsSleep.
+  // before the seek on the same session binder, so ordering is guaranteed like PauseWithRewind.
   @Serializable
   data class TagNextSeek(val typeId: Int) : CustomCommand
 

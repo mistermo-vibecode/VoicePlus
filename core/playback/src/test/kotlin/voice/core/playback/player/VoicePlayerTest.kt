@@ -1,5 +1,6 @@
 package voice.core.playback.player
 
+import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.test.utils.FakeMediaSource
@@ -11,33 +12,43 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.kotest.matchers.Matcher
 import io.kotest.matchers.MatcherResult
 import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.ChapterMark
+import voice.core.data.LockscreenSliderMode
 import voice.core.data.MarkData
+import voice.core.data.markForPosition
 import voice.core.logging.api.LogWriter
 import voice.core.logging.api.Logger
 import voice.core.playback.ChapterMarkChangeNotifier
+import voice.core.playback.LivePlaybackState
 import voice.core.playback.MemoryDataStore
 import voice.core.playback.history.PlaybackIntentHolder
+import voice.core.playback.session.LockscreenSliderPlayer
 import voice.core.playback.session.MediaId
 import voice.core.playback.session.MediaItemProvider
 import voice.core.playback.session.search.book
 import voice.core.playback.session.toMediaIdOrNull
+import voice.core.playback.toLivePlaybackState
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -98,6 +109,7 @@ class VoicePlayerTest {
   )
   private val bookId = BookId(UUID.randomUUID().toString())
   private lateinit var currentBook: Book
+  private val chapterMarkChangeNotifier = ChapterMarkChangeNotifier()
   private val player = VoicePlayer(
     player = internalPlayer,
     repo = mockk {
@@ -120,7 +132,7 @@ class VoicePlayerTest {
     sleepTimer = mockk(relaxed = true),
     intentHolder = PlaybackIntentHolder(),
     listeningEventRecorder = mockk(relaxed = true),
-    chapterMarkChangeNotifier = mockk<ChapterMarkChangeNotifier>(relaxed = true),
+    chapterMarkChangeNotifier = chapterMarkChangeNotifier,
   )
 
   @Test
@@ -302,6 +314,237 @@ class VoicePlayerTest {
   }
 
   @Test
+  fun `lockscreen slider modes expose and seek the requested range`() = scope.runTest {
+    setMediaItems(
+      listOf(
+        chapter(
+          ChapterMark(startMs = 0, endMs = 29_999, name = null),
+          ChapterMark(startMs = 30_000, endMs = 60_000, name = null),
+        ),
+      ),
+    )
+    player.prepare()
+    awaitReady()
+    player.seekTo(45_000)
+
+    val modeStore = MemoryDataStore(LockscreenSliderMode.AUDIOBOOK)
+    val lockscreenPlayer = LockscreenSliderPlayer(
+      voicePlayer = player,
+      modeStore = modeStore,
+      chapterMarkChangeNotifier = ChapterMarkChangeNotifier(),
+      scope = backgroundScope,
+    )
+    runCurrent()
+
+    lockscreenPlayer.currentPosition shouldBe 45_000
+    lockscreenPlayer.duration shouldBe 60_000
+
+    modeStore.updateData { LockscreenSliderMode.CHAPTER }
+    runCurrent()
+
+    lockscreenPlayer.currentPosition shouldBe 15_000
+    lockscreenPlayer.duration shouldBe 29_999
+    lockscreenPlayer.seekTo(10_000)
+    player.shouldHavePosition(0, 40_000)
+
+    modeStore.updateData { LockscreenSliderMode.DISABLED }
+    runCurrent()
+
+    lockscreenPlayer.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM) shouldBe false
+    lockscreenPlayer.isCurrentMediaItemSeekable shouldBe false
+  }
+
+  @Test
+  fun `audiobook lockscreen slider aggregates files and maps clamped seeks`() = scope.runTest {
+    val chapters = listOf(
+      chapter(ChapterMark(startMs = 0, endMs = 10_000, name = null)),
+      chapter(ChapterMark(startMs = 0, endMs = 20_000, name = null)),
+      chapter(ChapterMark(startMs = 0, endMs = 30_000, name = null)),
+    )
+    setMediaItems(chapters)
+    player.prepare()
+    awaitReady()
+
+    val lockscreenPlayer = LockscreenSliderPlayer(
+      voicePlayer = player,
+      modeStore = MemoryDataStore(LockscreenSliderMode.AUDIOBOOK),
+      chapterMarkChangeNotifier = ChapterMarkChangeNotifier(),
+      scope = backgroundScope,
+    )
+    runCurrent()
+
+    player.seekTo(1, 5_000)
+    player.shouldHavePosition(1, 5_000)
+    Shadows.shadowOf(Looper.getMainLooper()).idle()
+    lockscreenPlayer.currentPosition shouldBe 15_000
+    lockscreenPlayer.duration shouldBe 60_000
+
+    lockscreenPlayer.seekTo(9_000)
+    player.shouldHavePosition(0, 9_000)
+
+    lockscreenPlayer.seekTo(10_000)
+    player.shouldHavePosition(1, 0)
+
+    lockscreenPlayer.seekTo(35_000)
+    player.shouldHavePosition(2, 5_000)
+
+    lockscreenPlayer.seekTo(-1)
+    player.shouldHavePosition(0, 0)
+
+    lockscreenPlayer.seekTo(100_000)
+    player.shouldHavePosition(2, 29_999)
+  }
+
+  @Test
+  fun `audiobook slider metadata converts aggregate position to local chapter position`() = scope.runTest {
+    val chapters = listOf(
+      chapter(ChapterMark(startMs = 0, endMs = 10_000, name = null)),
+      chapter(ChapterMark(startMs = 0, endMs = 20_000, name = null)),
+    )
+    setMediaItems(chapters)
+    player.prepare()
+    awaitReady()
+    player.seekTo(1, 5_000)
+
+    val lockscreenPlayer = LockscreenSliderPlayer(
+      voicePlayer = player,
+      modeStore = MemoryDataStore(LockscreenSliderMode.AUDIOBOOK),
+      chapterMarkChangeNotifier = ChapterMarkChangeNotifier(),
+      scope = backgroundScope,
+    )
+    runCurrent()
+
+    val snapshot = toLivePlaybackState(
+      mediaId = lockscreenPlayer.currentMediaItem?.mediaId?.toMediaIdOrNull(),
+      bookId = bookId,
+      displayedPositionMs = lockscreenPlayer.currentPosition,
+      mediaMetadata = lockscreenPlayer.mediaMetadata,
+      isPlaying = lockscreenPlayer.isPlaying,
+      playbackSpeed = lockscreenPlayer.playbackParameters.speed,
+    ) ?: error("expected a live playback snapshot")
+
+    snapshot.chapterId shouldBe chapters[1].id
+    snapshot.positionMs shouldBe 5_000
+  }
+
+  @Test
+  fun `chapter slider metadata converts displayed chapter position to source position`() = scope.runTest {
+    val chapters = listOf(
+      chapter(
+        ChapterMark(startMs = 0, endMs = 29_999, name = null),
+        ChapterMark(startMs = 30_000, endMs = 60_000, name = null),
+      ),
+    )
+    setMediaItems(chapters)
+    player.prepare()
+    awaitReady()
+    player.seekTo(45_000)
+
+    val lockscreenPlayer = LockscreenSliderPlayer(
+      voicePlayer = player,
+      modeStore = MemoryDataStore(LockscreenSliderMode.CHAPTER),
+      chapterMarkChangeNotifier = ChapterMarkChangeNotifier(),
+      scope = backgroundScope,
+    )
+    runCurrent()
+
+    lockscreenPlayer.currentPosition shouldBe 15_000
+    val snapshot = toLivePlaybackState(
+      mediaId = lockscreenPlayer.currentMediaItem?.mediaId?.toMediaIdOrNull(),
+      bookId = bookId,
+      displayedPositionMs = lockscreenPlayer.currentPosition,
+      mediaMetadata = lockscreenPlayer.mediaMetadata,
+      isPlaying = lockscreenPlayer.isPlaying,
+      playbackSpeed = lockscreenPlayer.playbackParameters.speed,
+    ) ?: error("expected a live playback snapshot")
+
+    snapshot.chapterId shouldBe chapters.single().id
+    snapshot.positionMs shouldBe 45_000
+  }
+
+  @Test
+  fun `chapter slider previous refreshes paused metadata when displayed position stays zero`() = scope.runTest {
+    val previousMark = ChapterMark(startMs = 0, endMs = 29_999, name = "Previous Section")
+    val currentMark = ChapterMark(startMs = 30_000, endMs = 60_000, name = "Current Section")
+    val chapter = chapter(previousMark, currentMark)
+    setMediaItems(listOf(chapter))
+    player.prepare()
+    awaitReady()
+    player.seekTo(currentMark.startMs)
+
+    val lockscreenScope = CoroutineScope(backgroundScope.coroutineContext + Dispatchers.Main.immediate)
+    val lockscreenPlayer = LockscreenSliderPlayer(
+      voicePlayer = player,
+      modeStore = MemoryDataStore(LockscreenSliderMode.CHAPTER),
+      chapterMarkChangeNotifier = chapterMarkChangeNotifier,
+      scope = lockscreenScope,
+    )
+    Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+    lockscreenPlayer.isPlaying shouldBe false
+    lockscreenPlayer.currentPosition shouldBe 0
+    val initialSnapshot = lockscreenPlayer.livePlaybackState() ?: error("expected initial live playback state")
+    initialSnapshot.positionMs shouldBe currentMark.startMs
+    chapter.markForPosition(initialSnapshot.positionMs).name shouldBe currentMark.name
+
+    val metadataChanges = mutableListOf<Pair<Long, LivePlaybackState>>()
+    val deliveredEvents = mutableListOf<List<Int>>()
+    lockscreenPlayer.addListener(
+      object : Player.Listener {
+        override fun onEvents(
+          player: Player,
+          events: Player.Events,
+        ) {
+          deliveredEvents += List(events.size()) { events.get(it) }
+          if (events.contains(Player.EVENT_MEDIA_METADATA_CHANGED)) {
+            player.livePlaybackState()?.let { snapshot ->
+              metadataChanges += player.currentPosition to snapshot
+            }
+          }
+        }
+      },
+    )
+
+    player.forceSeekToPrevious()
+    player.shouldHavePosition(0, previousMark.startMs)
+    Shadows.shadowOf(Looper.getMainLooper()).idle()
+    runCurrent()
+    Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+    val (displayedPosition, previousSnapshot) = metadataChanges.singleOrNull()
+      ?: error("expected metadata change event, got $deliveredEvents")
+    displayedPosition shouldBe 0
+    previousSnapshot.positionMs shouldBe previousMark.startMs
+    chapter.markForPosition(previousSnapshot.positionMs).name shouldBe previousMark.name
+  }
+
+  @Test
+  fun `every position discontinuity notifies chapter mark observers`() = scope.runTest {
+    setMediaItems(
+      listOf(
+        chapter(ChapterMark(startMs = 0, endMs = 60_000, name = "Only Section")),
+      ),
+    )
+    player.prepare()
+    awaitReady()
+    player.seekTo(10_000)
+    Shadows.shadowOf(Looper.getMainLooper()).idle()
+    runCurrent()
+
+    var notifications = 0
+    backgroundScope.launch {
+      chapterMarkChangeNotifier.flow.collect { notifications++ }
+    }
+    runCurrent()
+
+    player.seekTo(9_000)
+    Shadows.shadowOf(Looper.getMainLooper()).idle()
+    runCurrent()
+
+    notifications shouldBe 1
+  }
+
+  @Test
   fun `forceSeekToPrevious jumps to chapter start when outside the 2s window`() = scope.runTest {
     setMediaItems(
       listOf(
@@ -355,6 +598,15 @@ class VoicePlayerTest {
     return this
   }
 }
+
+private fun Player.livePlaybackState() = toLivePlaybackState(
+  mediaId = currentMediaItem?.mediaId?.toMediaIdOrNull(),
+  bookId = null,
+  displayedPositionMs = currentPosition,
+  mediaMetadata = mediaMetadata,
+  isPlaying = isPlaying,
+  playbackSpeed = playbackParameters.speed,
+)
 
 private fun havePosition(
   currentMediaItemIndex: Int,

@@ -159,6 +159,24 @@ class BackupRestorerTest {
   }
 
   @Test
+  fun `released db65 backup restores progress and listening statistics into room`() = runTest {
+    contentRepo.put(book("book-1", active = true))
+    val decoded = ExternalBackupBundleCodec.decode(
+      snapshotTestJson,
+      backupFixture("db65-envelope-without-chapter-file-size.json"),
+    ) as ExternalBackupBundleDecodeResult.Valid
+
+    restorer().applyDirect(decoded.snapshot) shouldBe 1
+
+    db.bookContentDao().all().single().positionInChapter shouldBe 42_000
+    db.bookmarkDao().all().single().time shouldBe 12_000
+    db.bookCharacterDao().all().single().name shouldBe "Test Character"
+    db.chapterDao().all().single().fileSize shouldBe 0
+    db.listeningSessionDao().all().single().durationMs shouldBe 60_000
+    db.listeningEventDao().all().single().positionMs shouldBe 42_000
+  }
+
+  @Test
   fun `applyDirect twice never duplicates sessions, characters or events`() = runTest {
     contentRepo.put(book("a", active = true))
     val snapshot = snapshotOf("a").copy(

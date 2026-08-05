@@ -8,10 +8,12 @@ import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.core.net.toUri
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import dev.zacsweers.metro.AppScope
@@ -55,18 +57,25 @@ class MainActivity : AppCompatActivity() {
       VoiceTheme {
         val dialogStrategy = remember { DialogSceneStrategy<Destination.Compose>() }
 
-        NavDisplay(
-          backStack = backStack,
-          sceneStrategies = listOf(dialogStrategy),
-          onBack = {
-            if (backStack.size > 1) {
-              backStack.removeLastOrNull()
-            }
-          },
-          entryProvider = { key ->
-            navEntryResolver.create(key)
-          },
-        )
+        SharedTransitionLayout {
+          NavDisplay(
+            backStack = backStack,
+            entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
+            sceneStrategies = listOf(dialogStrategy),
+            sharedTransitionScope = this,
+            onBack = {
+              if (backStack.size > 1) {
+                backStack.removeLastOrNull()
+              }
+            },
+            entryProvider = { key ->
+              navEntryResolver.create(
+                key = key,
+                sharedTransitionScope = this@SharedTransitionLayout,
+              )
+            },
+          )
+        }
 
         LaunchedEffect(navigator) {
           navigator.navigationCommands.collect { command ->

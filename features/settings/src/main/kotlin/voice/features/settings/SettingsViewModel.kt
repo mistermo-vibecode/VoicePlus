@@ -17,6 +17,7 @@ import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
 import voice.core.common.RetainedViewModel
 import voice.core.data.GridMode
+import voice.core.data.LockscreenSliderMode
 import voice.core.data.MediaButtonClickAction
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.AutoRewindAmountStore
@@ -24,6 +25,7 @@ import voice.core.data.store.DarkThemeStore
 import voice.core.data.store.ExperimentalPlaybackPersistenceStore
 import voice.core.data.store.GridModeStore
 import voice.core.data.store.IgnoreFileTagsStore
+import voice.core.data.store.LockscreenSliderModeStore
 import voice.core.data.store.MediaButtonDoubleClickHandlerStore
 import voice.core.data.store.MediaButtonTripleClickHandlerStore
 import voice.core.data.store.SeekTimeStore
@@ -59,6 +61,8 @@ class SettingsViewModel(
   private val mediaButtonDoubleClickHandlerStore: DataStore<MediaButtonClickAction>,
   @MediaButtonTripleClickHandlerStore
   private val mediaButtonTripleClickHandlerStore: DataStore<MediaButtonClickAction>,
+  @LockscreenSliderModeStore
+  private val lockscreenSliderModeStore: DataStore<LockscreenSliderMode>,
   @ExperimentalPlaybackPersistenceStore
   private val experimentalPlaybackPersistenceStore: DataStore<Boolean>,
   @IgnoreFileTagsStore
@@ -89,6 +93,9 @@ class SettingsViewModel(
     val mediaButtonTripleClickAction by remember { mediaButtonTripleClickHandlerStore.data }.collectAsState(
       initial = MediaButtonClickAction.SKIP_BACKWARD,
     )
+    val lockscreenSliderMode by remember { lockscreenSliderModeStore.data }.collectAsState(
+      initial = LockscreenSliderMode.CHAPTER,
+    )
     val experimentalPlaybackPersistenceEnabled by remember { experimentalPlaybackPersistenceStore.data }.collectAsState(
       initial = false,
     )
@@ -114,6 +121,7 @@ class SettingsViewModel(
       showFolderPickerEntry = showFolderPickerEntry,
       mediaButtonDoubleClickAction = mediaButtonDoubleClickAction,
       mediaButtonTripleClickAction = mediaButtonTripleClickAction,
+      lockscreenSliderMode = lockscreenSliderMode,
       experimentalPlaybackPersistenceEnabled = experimentalPlaybackPersistenceEnabled,
       sleepTimerAutoResetEnabled = autoSleepTimer.autoResetEnabled,
       ignoreFileTags = ignoreFileTags,
@@ -245,6 +253,16 @@ class SettingsViewModel(
   override fun setMediaButtonTripleClickAction(action: MediaButtonClickAction) {
     scope.launch {
       mediaButtonTripleClickHandlerStore.updateData { action }
+    }
+  }
+
+  override fun onLockscreenSliderRowClick() {
+    dialog.value = SettingsViewState.Dialog.LockscreenSliderMode
+  }
+
+  override fun setLockscreenSliderMode(mode: LockscreenSliderMode) {
+    scope.launch {
+      lockscreenSliderModeStore.updateData { mode }
     }
   }
 

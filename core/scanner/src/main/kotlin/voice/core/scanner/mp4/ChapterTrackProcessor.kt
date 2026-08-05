@@ -63,33 +63,86 @@ internal class ChapterTrackProcessor {
     }
 
     var position = 0L
-    var sampleIndex = 0
+    var durationEntryIndex = 0
+    var samplesConsumedInDurationEntry = 0L
 
     return (0 until numberOfChaptersToProcess)
       .map { chunkIndex ->
         val chapterName = names[chunkIndex]
 
         val samplesInThisChunk = getSamplesPerChunk(chunkIndex, stscEntries)
-
-        var chunkDuration = 0L
-
-        repeat(samplesInThisChunk) {
-          if (sampleIndex < durations.size) {
-            chunkDuration += durations[sampleIndex]
-            sampleIndex++
-          } else {
-            Logger.w("Not enough sample durations for chunk ${chunkIndex + 1}")
-          }
+        val consumedDuration = consumeDuration(
+          sampleCount = samplesInThisChunk,
+          durations = durations,
+          durationEntryIndex = durationEntryIndex,
+          samplesConsumedInDurationEntry = samplesConsumedInDurationEntry,
+        )
+        durationEntryIndex = consumedDuration.durationEntryIndex
+        samplesConsumedInDurationEntry = consumedDuration.samplesConsumedInDurationEntry
+        if (!consumedDuration.hasEnoughDurations) {
+          Logger.w("Not enough sample durations for chunk ${chunkIndex + 1}")
         }
 
         MarkData(
-          startMs = position * 1000 / timeScale,
+          startMs = ticksToMilliseconds(position, timeScale),
           name = chapterName,
         ).also {
-          position += chunkDuration
+          position = Math.addExact(position, consumedDuration.duration)
         }
       }
       .sorted()
+  }
+
+  private fun consumeDuration(
+    sampleCount: Int,
+    durations: List<SttsEntry>,
+    durationEntryIndex: Int,
+    samplesConsumedInDurationEntry: Long,
+  ): ConsumedDuration {
+    var remainingSamples = sampleCount.toLong()
+    var currentDurationEntryIndex = durationEntryIndex
+    var currentSamplesConsumedInDurationEntry = samplesConsumedInDurationEntry
+    var duration = 0L
+
+    while (remainingSamples > 0 && currentDurationEntryIndex < durations.size) {
+      val durationEntry = durations[currentDurationEntryIndex]
+      val samplesLeftInEntry =
+        durationEntry.sampleCount - currentSamplesConsumedInDurationEntry
+      if (samplesLeftInEntry <= 0) {
+        currentDurationEntryIndex++
+        currentSamplesConsumedInDurationEntry = 0L
+        continue
+      }
+
+      val samplesToConsume = minOf(remainingSamples, samplesLeftInEntry)
+      duration += samplesToConsume * durationEntry.sampleDuration
+      remainingSamples -= samplesToConsume
+      currentSamplesConsumedInDurationEntry += samplesToConsume
+
+      if (currentSamplesConsumedInDurationEntry == durationEntry.sampleCount) {
+        currentDurationEntryIndex++
+        currentSamplesConsumedInDurationEntry = 0L
+      }
+    }
+
+    return ConsumedDuration(
+      duration = duration,
+      durationEntryIndex = currentDurationEntryIndex,
+      samplesConsumedInDurationEntry = currentSamplesConsumedInDurationEntry,
+      hasEnoughDurations = remainingSamples == 0L,
+    )
+  }
+
+  private fun ticksToMilliseconds(
+    ticks: Long,
+    timeScale: Long,
+  ): Long {
+    val quotient = ticks / timeScale
+    val remainder = ticks % timeScale
+    return Math.addExact(
+      Math.multiplyExact(quotient, 1000L),
+      Math.multiplyExact(remainder, 1000L) / timeScale,
+    )
   }
 
   private fun getSamplesPerChunk(
@@ -106,4 +159,11 @@ internal class ChapterTrackProcessor {
     }
     return 1
   }
+
+  private data class ConsumedDuration(
+    val duration: Long,
+    val durationEntryIndex: Int,
+    val samplesConsumedInDurationEntry: Long,
+    val hasEnoughDurations: Boolean,
+  )
 }

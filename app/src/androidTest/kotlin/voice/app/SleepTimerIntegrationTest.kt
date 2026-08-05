@@ -7,19 +7,24 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.zacsweers.metro.Inject
 import io.kotest.matchers.longs.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Test
 import voice.core.common.rootGraphAs
 import voice.core.data.BookContent
 import voice.core.data.BookId
 import voice.core.data.Chapter
 import voice.core.data.ChapterId
+import voice.core.data.LockscreenSliderMode
 import voice.core.data.MarkData
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.ChapterRepo
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.FadeOutStore
+import voice.core.data.store.LockscreenSliderModeStore
 import voice.core.playback.PlayerController
 import voice.core.playback.playstate.PlayStateManager
 import voice.core.sleeptimer.SleepTimer
@@ -53,6 +58,9 @@ class SleepTimerIntegrationTest {
 
   @field:[Inject FadeOutStore]
   lateinit var fadeOutStore: DataStore<Duration>
+
+  @field:[Inject LockscreenSliderModeStore]
+  lateinit var lockscreenSliderModeStore: DataStore<LockscreenSliderMode>
 
   @Test
   fun testWithTimedMode() = runTest {
@@ -98,6 +106,30 @@ class SleepTimerIntegrationTest {
     // suspend until the position is updated to the end of the chapter
     bookContentRepo.flow(bookId)
       .first { it!!.positionInChapter == 1000L }
+  }
+
+  @Test
+  fun previousChapterPublishesFreshMetadataWhilePaused() = runTest {
+    rootGraphAs<TestGraph>().inject(this@SleepTimerIntegrationTest)
+    val bookId = prepareTestBook()
+    val chapterId = bookContentRepo.get(bookId)!!.currentChapter
+    lockscreenSliderModeStore.updateData { LockscreenSliderMode.CHAPTER }
+
+    playerController.play()
+    playStateManager.flow.first { it == PlayStateManager.PlayState.Playing }
+
+    playerController.setPosition(1_000L, chapterId)
+    withContext(Dispatchers.Main) {
+      playerController.livePlaybackStateFlow(bookId).first { it?.positionMs == 1_000L }
+    }
+    playerController.playPause()
+    playStateManager.flow.first { it == PlayStateManager.PlayState.Paused }
+
+    playerController.previous()
+    withContext(Dispatchers.Main) {
+      playerController.livePlaybackStateFlow(bookId).first { it?.positionMs == 0L }
+      playerController.livePlaybackState(bookId)!!.positionMs shouldBe 0L
+    }
   }
 
   private suspend fun prepareTestBook(): BookId {

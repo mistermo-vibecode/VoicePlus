@@ -1,58 +1,37 @@
 package voice.features.cover.api
 
-import android.app.Application
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import dev.zacsweers.metro.AppScope
-import dev.zacsweers.metro.DependencyGraph
-import dev.zacsweers.metro.Provides
-import dev.zacsweers.metro.SingleIn
-import dev.zacsweers.metro.createGraph
-import io.kotest.matchers.collections.shouldNotBeEmpty
-import io.kotest.matchers.string.shouldNotBeEmpty
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
+import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import org.junit.runner.RunWith
-import voice.core.ui.SharedGraph
 
-@Suppress("SUSPICIOUS_UNUSED_MULTIBINDING")
-@SingleIn(AppScope::class)
-@DependencyGraph(
-  scope = AppScope::class,
-  excludes = [SharedGraph::class],
-)
-interface TestGraph {
-  val coverApi: CoverApi
-
-  @Provides
-  fun application(): Application = ApplicationProvider.getApplicationContext()
-
-  @Provides
-  fun context(): Context = ApplicationProvider.getApplicationContext()
-
-  @Provides
-  fun scope(): CoroutineScope = CoroutineScope(Dispatchers.Main)
-
-  @Provides
-  fun json(): Json = Json.Default
-}
-
-@RunWith(AndroidJUnit4::class)
 internal class CoverApiTest {
 
+  private val internalApi = mockk<InternalCoverApi>()
+  private val coverApi = CoverApi(internalApi)
+
   @Test
-  fun test() {
-    runBlocking {
-      val api = createGraph<TestGraph>().coverApi
-      val query = "unicorns"
-      val token = api.token(query).shouldNotBeEmpty()!!
-      api.search(query = query, auth = token)
-        .results
-        .shouldNotBeEmpty()
-    }
+  fun `token extracts DuckDuckGo request id`() = runTest {
+    coEvery { internalApi.auth("unicorns") } returns "html vqd=12345-67890&more"
+
+    coverApi.token("unicorns") shouldBe "12345-67890"
+  }
+
+  @Test
+  fun `token returns null when response has no request id`() = runTest {
+    coEvery { internalApi.auth("unicorns") } returns "unexpected response"
+
+    coverApi.token("unicorns") shouldBe null
+  }
+
+  @Test
+  fun `search delegates query token and continuation url`() = runTest {
+    val response = SearchResponse(next = null, results = emptyList())
+    coEvery {
+      internalApi.search(url = "/next.js", query = "unicorns", auth = "token")
+    } returns response
+
+    coverApi.search(query = "unicorns", auth = "token", url = "/next.js") shouldBe response
   }
 }

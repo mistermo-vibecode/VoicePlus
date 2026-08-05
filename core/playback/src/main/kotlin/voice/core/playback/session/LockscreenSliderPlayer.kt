@@ -1,0 +1,292 @@
+package voice.core.playback.session
+
+import android.os.Bundle
+import androidx.datastore.core.DataStore
+import androidx.media3.common.C
+import androidx.media3.common.ForwardingSimpleBasePlayer
+import androidx.media3.common.Player
+import androidx.media3.common.SimpleBasePlayer.MediaItemData
+import androidx.media3.common.SimpleBasePlayer.PositionSupplier
+import androidx.media3.common.SimpleBasePlayer.State
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
+import dev.zacsweers.metro.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import voice.core.data.LockscreenSliderMode
+import voice.core.data.durationMs
+import voice.core.data.store.LockscreenSliderModeStore
+import voice.core.playback.ChapterMarkChangeNotifier
+import voice.core.playback.player.VoicePlayer
+
+@Inject
+class LockscreenSliderPlayer(
+  private val voicePlayer: VoicePlayer,
+  @LockscreenSliderModeStore modeStore: DataStore<LockscreenSliderMode>,
+  chapterMarkChangeNotifier: ChapterMarkChangeNotifier,
+  scope: CoroutineScope,
+) : ForwardingSimpleBasePlayer(voicePlayer) {
+
+  private var mode = LockscreenSliderMode.CHAPTER
+
+  init {
+    scope.launch {
+      modeStore.data.collect {
+        mode = it
+        invalidateState()
+      }
+    }
+    scope.launch {
+      chapterMarkChangeNotifier.flow.collect {
+        invalidateState()
+      }
+    }
+  }
+
+  override fun getState(): State {
+    val state = super.getState()
+    return when (mode) {
+      LockscreenSliderMode.AUDIOBOOK -> state.forWholeAudiobook()
+      LockscreenSliderMode.CHAPTER -> state.forCurrentChapter()
+      LockscreenSliderMode.DISABLED -> state.withSeekingDisabled()
+    }
+  }
+
+  override fun handleSeek(
+    mediaItemIndex: Int,
+    positionMs: Long,
+    seekCommand: Int,
+  ): ListenableFuture<*> {
+    if (seekCommand == Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM) {
+      when (mode) {
+        LockscreenSliderMode.AUDIOBOOK -> {
+          val durations = voicePlayer.currentBookChapterDurations()
+          val mediaItemCount = voicePlayer.mediaItemCount
+          val currentMediaItemIndex = voicePlayer.currentMediaItemIndex
+          val target = if (durations.size == mediaItemCount && currentMediaItemIndex in durations.indices) {
+            audiobookSeekTarget(positionMs, durations)
+          } else {
+            null
+          }
+          if (target != null) {
+            voicePlayer.seekTo(target.first, target.second)
+            return Futures.immediateVoidFuture()
+          }
+        }
+        LockscreenSliderMode.CHAPTER -> {
+          val mark = voicePlayer.currentChapterMark()
+            ?: return super.handleSeek(mediaItemIndex, positionMs, seekCommand)
+          voicePlayer.seekTo(
+            mediaItemIndex,
+            mark.startMs + positionMs.coerceIn(0L, mark.durationMs),
+          )
+          return Futures.immediateVoidFuture()
+        }
+        LockscreenSliderMode.DISABLED -> Unit
+      }
+    }
+    return super.handleSeek(mediaItemIndex, positionMs, seekCommand)
+  }
+
+  private fun State.forWholeAudiobook(): State {
+    val durations = voicePlayer.currentBookChapterDurations()
+    val playlist = getPlaylist()
+    if (durations.isEmpty() || durations.size != playlist.size || durations.any { it <= 0L }) {
+      return this
+    }
+    val currentIndex = currentMediaItemIndex.takeIf { it in durations.indices } ?: return this
+    val currentItem = playlist.getOrNull(currentIndex) ?: return this
+    if (currentItem.periods.size != 1) return this
+
+    var aggregateDurationMs = 0L
+    for (duration in durations) {
+      if (duration > Long.MAX_VALUE - aggregateDurationMs) return this
+      aggregateDurationMs += duration
+    }
+    if (aggregateDurationMs <= 0L || aggregateDurationMs > Long.MAX_VALUE / 1_000L) {
+      return this
+    }
+
+    var previousDurationMs = 0L
+    repeat(currentIndex) { previousDurationMs += durations[it] }
+    val currentDurationMs = durations[currentIndex]
+    val aggregateDurationUs = aggregateDurationMs * 1_000L
+    val aggregateItem = currentItem
+      .withDisplayToSourcePositionOffset(-previousDurationMs)
+      .buildUpon()
+      .setDurationUs(aggregateDurationUs)
+      .setPositionInFirstPeriodUs(0L)
+      .setPeriods(
+        listOf(
+          currentItem.periods.single()
+            .buildUpon()
+            .setDurationUs(aggregateDurationUs)
+            .build(),
+        ),
+      )
+      .build()
+    val aggregatePlaylist = playlist.toMutableList().apply {
+      this[currentIndex] = aggregateItem
+    }
+
+    fun aggregatePosition(positionMs: Long): Long {
+      if (positionMs == C.TIME_UNSET) return C.TIME_UNSET
+      return (previousDurationMs + positionMs.coerceIn(0L, currentDurationMs))
+        .coerceIn(0L, aggregateDurationMs)
+    }
+
+    val builder = buildUpon()
+      .setPlaylist(aggregatePlaylist)
+      .setContentPositionMs(PositionSupplier { aggregatePosition(voicePlayer.currentPosition) })
+      .setContentBufferedPositionMs(
+        PositionSupplier { aggregatePosition(voicePlayer.contentBufferedPosition) },
+      )
+      .setTotalBufferedDurationMs(
+        PositionSupplier {
+          val position = aggregatePosition(voicePlayer.currentPosition)
+          val bufferedPosition = aggregatePosition(voicePlayer.contentBufferedPosition)
+          if (position == C.TIME_UNSET || bufferedPosition == C.TIME_UNSET) {
+            0L
+          } else {
+            (bufferedPosition - position).coerceAtLeast(0L)
+          }
+        },
+      )
+    if (hasPositionDiscontinuity) {
+      builder.setPositionDiscontinuity(
+        positionDiscontinuityReason,
+        aggregatePosition(discontinuityPositionMs),
+      )
+    }
+    return builder.build()
+  }
+
+  private fun State.forCurrentChapter(): State {
+    val markInfo = voicePlayer.currentChapterMarkInfo() ?: return this
+    val mark = markInfo.mark
+    val playlist = getPlaylist()
+    val currentItem = playlist.getOrNull(currentMediaItemIndex) ?: return this
+    if (currentItem.periods.size != 1) return this
+
+    val durationMs = mark.durationMs
+    val durationUs = durationMs * 1_000
+    val period = currentItem.periods.single().buildUpon()
+      .setDurationUs(durationUs)
+      .build()
+    val chapterItem = currentItem
+      .withDisplayToSourcePositionOffset(
+        offsetMs = mark.startMs,
+        trackNumber = markInfo.number,
+        totalTrackCount = markInfo.total,
+      )
+      .buildUpon()
+      .setDurationUs(durationUs)
+      .setPositionInFirstPeriodUs(0L)
+      .setPeriods(listOf(period))
+      .build()
+    val chapterPlaylist = playlist.toMutableList().apply {
+      this[currentMediaItemIndex] = chapterItem
+    }
+
+    fun chapterPosition(positionMs: Long): Long {
+      if (positionMs == C.TIME_UNSET) return C.TIME_UNSET
+      return (positionMs - mark.startMs).coerceIn(0L, durationMs)
+    }
+
+    val builder = buildUpon()
+      .setPlaylist(chapterPlaylist)
+      .setContentPositionMs(PositionSupplier { chapterPosition(voicePlayer.currentPosition) })
+      .setContentBufferedPositionMs(PositionSupplier { chapterPosition(voicePlayer.contentBufferedPosition) })
+      .setTotalBufferedDurationMs(
+        PositionSupplier {
+          val position = chapterPosition(voicePlayer.currentPosition)
+          val bufferedPosition = chapterPosition(voicePlayer.contentBufferedPosition)
+          if (position == C.TIME_UNSET || bufferedPosition == C.TIME_UNSET) {
+            0L
+          } else {
+            (bufferedPosition - position).coerceAtLeast(0L)
+          }
+        },
+      )
+    if (hasPositionDiscontinuity) {
+      builder.setPositionDiscontinuity(
+        positionDiscontinuityReason,
+        chapterPosition(discontinuityPositionMs),
+      )
+    }
+    return builder.build()
+  }
+
+  private fun State.withSeekingDisabled(): State {
+    val playlist = getPlaylist()
+    val currentItem = playlist.getOrNull(currentMediaItemIndex) ?: return this
+    val disabledItem = currentItem
+      .withDisplayToSourcePositionOffset(0L)
+      .buildUpon()
+      .setIsSeekable(false)
+      .build()
+    val disabledPlaylist = playlist.toMutableList().apply {
+      this[currentMediaItemIndex] = disabledItem
+    }
+    return buildUpon()
+      .setPlaylist(disabledPlaylist)
+      .setAvailableCommands(
+        availableCommands.buildUpon()
+          .remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+          .build(),
+      )
+      .build()
+  }
+
+  private fun MediaItemData.withDisplayToSourcePositionOffset(
+    offsetMs: Long,
+    trackNumber: Int? = null,
+    totalTrackCount: Int? = null,
+  ): MediaItemData {
+    val currentMetadata = mediaMetadata ?: mediaItem.mediaMetadata
+    val metadataBuilder = currentMetadata.buildUpon()
+      .setExtras(
+        Bundle(currentMetadata.extras ?: Bundle()).apply {
+          putLong(DISPLAY_TO_SOURCE_POSITION_OFFSET_MS, offsetMs)
+        },
+      )
+    if (trackNumber != null && totalTrackCount != null) {
+      metadataBuilder
+        .setTrackNumber(trackNumber)
+        .setTotalTrackCount(totalTrackCount)
+    }
+    val metadata = metadataBuilder.build()
+    return buildUpon()
+      .setMediaItem(mediaItem.buildUpon().setMediaMetadata(metadata).build())
+      .setMediaMetadata(metadata)
+      .build()
+  }
+}
+
+private fun audiobookSeekTarget(
+  positionMs: Long,
+  durations: List<Long>,
+): Pair<Int, Long>? {
+  if (positionMs == C.TIME_UNSET || durations.isEmpty() || durations.any { it <= 0L }) return null
+
+  var totalDurationMs = 0L
+  for (duration in durations) {
+    if (duration > Long.MAX_VALUE - totalDurationMs) return null
+    totalDurationMs += duration
+  }
+  if (totalDurationMs <= 0L) return null
+
+  val targetPositionMs = positionMs.coerceIn(0L, totalDurationMs)
+  var itemStartMs = 0L
+  durations.forEachIndexed { index, durationMs ->
+    val itemEndMs = itemStartMs + durationMs
+    if (targetPositionMs < itemEndMs || index == durations.lastIndex) {
+      return index to (targetPositionMs - itemStartMs).coerceIn(0L, durationMs)
+    }
+    itemStartMs = itemEndMs
+  }
+  return null
+}
+
+internal const val DISPLAY_TO_SOURCE_POSITION_OFFSET_MS =
+  "voice.lockscreenDisplayToSourcePositionOffsetMs"

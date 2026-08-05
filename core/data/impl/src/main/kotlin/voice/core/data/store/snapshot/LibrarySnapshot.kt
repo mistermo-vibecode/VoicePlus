@@ -138,6 +138,7 @@ internal data class ChapterDto(
   // Folder-relative document-id tail (with extension), e.g. "Disc1/01 - Intro.mp3". The stable per-chapter
   // anchor for re-keying bookmarks/overrides/positions after an OS-wipe. Empty until the identity store fills it.
   val relName: String = "",
+  val fileSize: Long = 0L,
 )
 
 internal fun BookContent.toDto() = BookContentDto(
@@ -280,6 +281,7 @@ internal fun Chapter.toDto(relName: String = "") = ChapterDto(
   fileLastModifiedEpochMillis = fileLastModified.toEpochMilli(),
   markData = markData,
   relName = relName,
+  fileSize = fileSize,
 )
 
 internal fun ChapterDto.toChapter() = Chapter(
@@ -288,4 +290,5 @@ internal fun ChapterDto.toChapter() = Chapter(
   duration = duration,
   fileLastModified = Instant.ofEpochMilli(fileLastModifiedEpochMillis),
   markData = markData,
+  fileSize = fileSize,
 )

@@ -1,6 +1,6 @@
 # Privacy Policy — VoicePlus
 
-**Effective date:** 2026-04-17
+**Effective date:** 2026-08-04
 
 VoicePlus is an open-source Android audiobook player maintained by Mistermo. This policy describes what data the app handles, what (almost nothing) leaves your device, and what permissions the app uses and why.
 
@@ -8,7 +8,7 @@ VoicePlus is an open-source Android audiobook player maintained by Mistermo. Thi
 
 ## What data we collect
 
-**Almost none.** VoicePlus is designed as a fully offline, local-first app. It does not have an account system, does not sync to any cloud service, and does not send usage data anywhere.
+**Almost none.** VoicePlus is designed as a fully offline, local-first app. It does not have an account system or app-operated cloud sync, and it does not send usage data anywhere.
 
 The only data the app stores is what you put into it:
 
@@ -18,13 +18,23 @@ The only data the app stores is what you put into it:
 - Bookmarks
 - App preferences: playback speed, skip distance, sleep timer settings, media button mappings, library layout
 
-**All of this is stored only on your device**, in a local database (`autoBookDB`) and the Android DataStore. Nothing is uploaded, synchronized, or backed up externally by this app.
+By default, this data is stored on your device in the local database (`autoBookDB`) and Android DataStore. If Android system backup is enabled, an encrypted subset may also be stored by your configured system backup provider as described below.
+
+## Android system backup
+
+VoicePlus allows Android system-managed backup to restore app data after reinstall. Eligible data is the Room database and ordinary DataStore settings, including playback progress, bookmarks, listening history and statistics, character lists, chapter-name corrections, hidden-book state, and normal settings.
+
+Audiobook files, cover images, selected audiobook-folder URIs/SAF permissions, internal snapshot-ring files, backup-folder state, and open listening-session checkpoints are excluded.
+
+Cloud backup is permitted only when Android reports client-side encryption capability. Android 12+ device-to-device transfer is also permitted.
+
+Android controls scheduling, retention, and provider, so backup is not immediate or guaranteed. After reinstall, you must grant audiobook-folder access again. VoicePlus external folder backup remains the portable/manual recovery option.
 
 ---
 
-## What leaves your device
+## Other data that leaves your device
 
-**Only one thing:** a book title/author search query sent to DuckDuckGo when you explicitly ask the app to search for cover art online.
+Apart from the encrypted Android system backup described above, the only data VoicePlus itself sends is an explicitly initiated DuckDuckGo book title/author cover query.
 
 **Details:**
 
@@ -36,7 +46,7 @@ The only data the app stores is what you put into it:
 
 No device identifiers, account tokens, or persistent identifiers are attached to these requests beyond what any standard HTTPS request carries (your IP address as seen by DuckDuckGo's servers).
 
-**Everything else stays on your device.** There is no telemetry, no crash reporting, no analytics, and no advertising network.
+**VoicePlus sends no other data itself.** It still has no telemetry, no crash reporting, no analytics, and no advertising network.
 
 ---
 
@@ -49,7 +59,7 @@ No device identifiers, account tokens, or persistent identifiers are attached to
 - All playback preferences and settings
 - Cover art images you select or set manually
 
-All of this remains on your device and is never transmitted anywhere unless you manually export it using standard Android features (e.g., backup apps).
+Except for the Android system backup described above or a backup you manually export, this data remains on your device.
 
 ---
 
@@ -82,7 +92,7 @@ There are no analytics SDKs, no crash-reporting services, no advertising network
 
 ## No analytics, no tracking, no ads
 
-VoicePlus contains no analytics code, no tracking SDKs, and no advertising networks. It does not transmit usage statistics, error reports, or any behavioral data to any server. The listening log and statistics features are stored entirely on your device and are not shared with anyone.
+VoicePlus contains no analytics code, no tracking SDKs, and no advertising networks. It does not transmit usage statistics, error reports, or any behavioral data to any server. The listening log and statistics features are stored locally and are not sent by VoicePlus; when Android system backup is enabled, eligible database records may be included as described above.
 
 ---
 

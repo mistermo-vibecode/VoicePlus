@@ -1,5 +1,6 @@
 package voice.features.playbackScreen.view
 
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -11,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
+import voice.core.data.BookId
 import voice.core.strings.R
 import voice.core.ui.ImmutableFile
 import voice.core.ui.formatTime
@@ -18,13 +20,20 @@ import voice.features.playbackScreen.BookPlayViewState
 
 @Composable
 internal fun CoverRow(
+  bookId: BookId,
+  sharedTransitionScope: SharedTransitionScope?,
   cover: ImmutableFile?,
   sleepTimerState: BookPlayViewState.SleepTimerViewState,
   onPlayClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Box(modifier) {
-    Cover(onDoubleClick = onPlayClick, cover = cover)
+    Cover(
+      bookId = bookId,
+      sharedTransitionScope = sharedTransitionScope,
+      onDoubleClick = onPlayClick,
+      cover = cover,
+    )
     when (sleepTimerState) {
       BookPlayViewState.SleepTimerViewState.Disabled -> {
       }

@@ -1,5 +1,19 @@
 # VoicePlus Changelog
 
+## Unreleased
+
+### Playback
+
+- Added a lock-screen slider preference with Current chapter, Whole audiobook, and Disabled modes. Current chapter is the default.
+
+### Backup and restore
+
+- Added scoped Android system backup so encrypted backups can restore playback progress, bookmarks, listening history and statistics, character lists, chapter-name corrections, hidden-book state, and ordinary settings after reinstall. Android 12+ device-to-device transfer is also supported.
+- Audiobook files, cover images, selected audiobook-folder permissions, internal backup snapshots, backup-folder state, and open listening-session checkpoints are excluded. Audiobook-folder access must be granted again after reinstall.
+- The existing user-controlled external folder backup remains available for portable and manual recovery because Android controls backup timing, retention, and availability.
+
+---
+
 ## v1.23.1 — Media Button Hotfix
 
 - Fixed Bluetooth headphones ignoring configured double/triple-click actions when their firmware reports taps as Previous/Next media keys.

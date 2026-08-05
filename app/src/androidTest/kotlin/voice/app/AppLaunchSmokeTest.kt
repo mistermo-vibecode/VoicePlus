@@ -1,0 +1,155 @@
+package voice.app
+
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.waitUntilAtLeastOneExists
+import androidx.datastore.core.DataStore
+import androidx.lifecycle.Lifecycle
+import androidx.test.core.app.ActivityScenario
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.zacsweers.metro.Inject
+import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.runBlocking
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import voice.core.common.rootGraphAs
+import voice.core.data.BookContent
+import voice.core.data.BookId
+import voice.core.data.Chapter
+import voice.core.data.ChapterId
+import voice.core.data.GridMode
+import voice.core.data.repo.BookContentRepo
+import voice.core.data.repo.ChapterRepo
+import voice.core.data.store.GridModeStore
+import voice.core.data.store.NotStartedExpandedStore
+import voice.core.data.store.OnboardingCompletedStore
+import java.time.Instant
+
+@RunWith(AndroidJUnit4::class)
+class AppLaunchSmokeTest {
+
+  @get:Rule
+  val composeRule = createEmptyComposeRule()
+
+  @Inject
+  lateinit var bookContentRepo: BookContentRepo
+
+  @Inject
+  lateinit var chapterRepo: ChapterRepo
+
+  @field:[Inject GridModeStore]
+  lateinit var gridModeStore: DataStore<GridMode>
+
+  @field:[Inject NotStartedExpandedStore]
+  lateinit var notStartedExpandedStore: DataStore<Boolean>
+
+  @field:[Inject OnboardingCompletedStore]
+  lateinit var onboardingCompletedStore: DataStore<Boolean>
+
+  @Test
+  fun mainActivityReachesResumedState() {
+    ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+      scenario.onActivity { activity ->
+        activity.lifecycle.currentState shouldBe Lifecycle.State.RESUMED
+      }
+    }
+  }
+
+  @Test
+  @OptIn(ExperimentalTestApi::class)
+  fun bookOverviewListRestoresScrollPositionAfterPlaybackBack() {
+    assertBookOverviewRestoresScrollPosition(GridMode.LIST)
+  }
+
+  @Test
+  @OptIn(ExperimentalTestApi::class)
+  fun bookOverviewGridRestoresScrollPositionAfterPlaybackBack() {
+    assertBookOverviewRestoresScrollPosition(GridMode.GRID)
+  }
+
+  @OptIn(ExperimentalTestApi::class)
+  private fun assertBookOverviewRestoresScrollPosition(gridMode: GridMode) {
+    rootGraphAs<TestGraph>().inject(this)
+
+    val targetBookName = "Scroll Test Book 29"
+    runBlocking {
+      onboardingCompletedStore.updateData { true }
+      gridModeStore.updateData { gridMode }
+      notStartedExpandedStore.updateData { true }
+      prepareScrollableLibrary()
+    }
+
+    ActivityScenario.launch(MainActivity::class.java).use {
+      val library = composeRule.onNode(hasScrollToIndexAction())
+      library.performScrollToNode(hasText(targetBookName))
+      composeRule.onNode(hasText(targetBookName) and hasClickAction())
+        .assertIsDisplayed()
+        .performClick()
+
+      composeRule.waitUntil(timeoutMillis = 10_000) {
+        composeRule.onAllNodes(hasScrollToIndexAction()).fetchSemanticsNodes().isEmpty()
+      }
+      composeRule.waitUntilAtLeastOneExists(
+        matcher = hasContentDescription("Close"),
+        timeoutMillis = 10_000,
+      )
+      composeRule.onNode(hasContentDescription("Close")).performClick()
+
+      composeRule.waitUntilAtLeastOneExists(
+        matcher = hasScrollToIndexAction(),
+        timeoutMillis = 10_000,
+      )
+      composeRule.waitUntilAtLeastOneExists(
+        matcher = hasText(targetBookName) and hasClickAction(),
+        timeoutMillis = 10_000,
+      )
+      composeRule.onNode(hasText(targetBookName) and hasClickAction())
+        .assertIsDisplayed()
+    }
+  }
+
+  private suspend fun prepareScrollableLibrary() {
+    val chapterId = ChapterId("file:///scroll-position-test.mp3")
+    chapterRepo.put(
+      Chapter(
+        id = chapterId,
+        duration = 120_000L,
+        name = "Scroll Test Chapter",
+        fileLastModified = Instant.EPOCH,
+        markData = emptyList(),
+      ),
+    )
+
+    repeat(30) { index ->
+      bookContentRepo.put(
+        BookContent(
+          id = BookId("scroll-test-book-$index"),
+          playbackSpeed = 1f,
+          skipSilence = false,
+          isActive = true,
+          lastPlayedAt = Instant.EPOCH.plusSeconds(index.toLong()),
+          author = "Scroll Test Author",
+          name = "Scroll Test Book $index",
+          addedAt = Instant.EPOCH.plusSeconds(index.toLong()),
+          chapters = listOf(chapterId),
+          currentChapter = chapterId,
+          positionInChapter = 0L,
+          cover = null,
+          gain = 0f,
+          genre = null,
+          narrator = null,
+          series = null,
+          part = null,
+        ),
+      )
+    }
+  }
+}

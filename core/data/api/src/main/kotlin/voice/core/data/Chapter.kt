@@ -2,6 +2,7 @@ package voice.core.data
 
 import android.net.Uri
 import androidx.core.net.toUri
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
@@ -21,6 +22,8 @@ public data class Chapter(
   val duration: Long,
   val fileLastModified: Instant,
   val markData: List<MarkData>,
+  @ColumnInfo(defaultValue = "0")
+  val fileSize: Long = 0L,
 ) : Comparable<Chapter> {
 
   @Ignore
