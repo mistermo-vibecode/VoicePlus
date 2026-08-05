@@ -1,0 +1,74 @@
+name: Tester Release
+
+on:
+  push:
+    tags:
+      - 'test-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/build_setup
+
+      - name: Read tester version from tag
+        env:
+          TESTER_TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TESTER_TAG" =~ ^test-v[0-9][0-9A-Za-z.-]*-[0-9]+$ ]]; then
+            echo "Expected tag format test-v<version-name>-<version-code>" >&2
+            exit 1
+          fi
+          version_code="${TESTER_TAG##*-}"
+          version_name="${TESTER_TAG#test-v}"
+          version_name="${version_name%-$version_code}"
+          echo "TESTER_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
+          echo "TESTER_VERSION_NAME=$version_name" >> "$GITHUB_ENV"
+          echo "TESTER_APK=VoicePlus-$version_name-signed.apk" >> "$GITHUB_ENV"
+
+      - name: Decode release keystore
+        run: |
+          mkdir -p signing
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > signing/voiceplus-release.jks
+          echo "storeFile=signing/voiceplus-release.jks" > signing/keystore.properties
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> signing/keystore.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> signing/keystore.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> signing/keystore.properties
+
+      - name: Build production-signed tester APK
+        run: >-
+          ./gradlew :app:assembleLibreRelease --no-configuration-cache
+          "-Pvoice.releaseVersionName=$TESTER_VERSION_NAME"
+          "-Pvoice.releaseVersionCode=$TESTER_VERSION_CODE"
+
+      - name: Name tester APK
+        run: >-
+          mv app/build/outputs/apk/libre/release/app-libre-release.apk
+          "app/build/outputs/apk/libre/release/$TESTER_APK"
+
+      - name: Publish tester prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          name: VoicePlus ${{ env.TESTER_VERSION_NAME }}
+          files: app/build/outputs/apk/libre/release/${{ env.TESTER_APK }}
+          fail_on_unmatched_files: true
+          generate_release_notes: false
+          make_latest: false
+          prerelease: true
+          draft: false
+          body: |
+            Production-signed VoicePlus tester build. It can update an existing release installation.
+
+            Test focus:
+            - audiobook loading and scanner performance
+            - playback position, chapter names, and lockscreen chapter seeking
+            - backup and restore reliability
+            - settings organization, cover transitions, and library scroll restoration
+
+            This is a GitHub prerelease for testing and is not an F-Droid release.

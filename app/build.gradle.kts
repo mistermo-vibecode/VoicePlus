@@ -14,6 +14,11 @@ plugins {
 val keystoreProps = Properties()
 val keystorePropsFile = rootProject.file("signing/keystore.properties")
 val debugVersionNameOverride = providers.gradleProperty("voice.debugVersionName")
+val releaseVersionNameOverride = providers.gradleProperty("voice.releaseVersionName")
+val releaseVersionCodeOverride = providers.gradleProperty("voice.releaseVersionCode")
+check(releaseVersionNameOverride.isPresent == releaseVersionCodeOverride.isPresent) {
+  "voice.releaseVersionName and voice.releaseVersionCode must be supplied together"
+}
 if (keystorePropsFile.exists()) {
   keystorePropsFile.inputStream().use { keystoreProps.load(it) }
 }
@@ -34,8 +39,8 @@ android {
 
   defaultConfig {
     applicationId = "com.github.mistermo_vibecode.voiceplus"
-    versionName = "1.23.1"
-    versionCode = 5404013
+    versionName = releaseVersionNameOverride.getOrElse("1.23.1")
+    versionCode = releaseVersionCodeOverride.map(String::toInt).getOrElse(5404013)
 
     testInstrumentationRunner = "voice.app.VoiceJUnitRunner"
   }
