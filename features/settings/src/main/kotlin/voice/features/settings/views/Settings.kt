@@ -238,7 +238,7 @@ private fun Settings(
                   IconButton(onClick = listener::onIgnoreFileTagsInfoClick) {
                     Icon(
                       imageVector = Icons.Outlined.Info,
-                      contentDescription = stringResource(StringsR.string.pref_sleep_timer_info),
+                      contentDescription = stringResource(StringsR.string.pref_ignore_file_tags_more_info),
                     )
                   }
                   Switch(
@@ -308,7 +308,9 @@ private fun Settings(
                   IconButton(onClick = listener::onExperimentalPlaybackPersistenceInfoClick) {
                     Icon(
                       imageVector = Icons.Outlined.Info,
-                      contentDescription = stringResource(StringsR.string.pref_sleep_timer_info),
+                      contentDescription = stringResource(
+                        StringsR.string.pref_experimental_playback_persistence_more_info,
+                      ),
                     )
                   }
                   Switch(

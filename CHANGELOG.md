@@ -9,7 +9,7 @@
 ### Backup and restore
 
 - Added scoped Android system backup so encrypted backups can restore playback progress, bookmarks, listening history and statistics, character lists, chapter-name corrections, hidden-book state, and ordinary settings after reinstall. Android 12+ device-to-device transfer is also supported.
-- Audiobook files, cover images, selected audiobook-folder permissions, internal backup snapshots, backup-folder state, and open listening-session checkpoints are excluded. Audiobook-folder access must be granted again after reinstall.
+- Cloud backup excludes audiobook files, cover images, selected audiobook-folder permissions, internal backup snapshots, backup-folder state, and open listening-session checkpoints. Device-to-device transfer may include cached cover images. Audiobook-folder access must be granted again after reinstall.
 - The existing user-controlled external folder backup remains available for portable and manual recovery because Android controls backup timing, retention, and availability.
 
 ---

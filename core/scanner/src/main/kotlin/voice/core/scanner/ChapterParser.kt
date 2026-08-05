@@ -78,7 +78,7 @@ internal class ChapterParser(
             fileSize = file.length,
           ) {
             analyze(file, id)
-          }
+          } ?: chapterRepo.get(id)
         }
         if (chapter != null) {
           result.add(chapter)

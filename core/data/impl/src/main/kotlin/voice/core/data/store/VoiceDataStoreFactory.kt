@@ -40,6 +40,8 @@ internal class VoiceDataStoreFactory(
         serializer = serializer,
       ),
     ) {
+      // New stores participate in Android system backup by default. Device-specific or transient
+      // stores must be added (including their .tmp file) to both backup XMLs and BackupRulesTest.
       File(context.applicationContext.filesDir, "datastore/$fileName")
     }
   }

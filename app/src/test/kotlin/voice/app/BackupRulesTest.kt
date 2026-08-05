@@ -12,19 +12,28 @@ import org.xmlpull.v1.XmlPullParser
 class BackupRulesTest {
 
   @Test
-  fun bookCoversAreIncludedInEveryBackupMode() {
+  fun bookCoversAreExcludedFromCloudAndIncludedInDeviceTransfer() {
     ApplicationProvider.getApplicationContext<Context>()
       .resources
       .getXml(R.xml.full_backup_content)
       .use { parser ->
-        assertEquals(1, parser.includeCount(domain = "file", path = "bookCovers/"))
+        assertEquals(
+          1,
+          parser.includeCount(
+            domain = "file",
+            path = "bookCovers/",
+            requiredFlags = "deviceToDeviceTransfer",
+          ),
+        )
       }
 
     ApplicationProvider.getApplicationContext<Context>()
       .resources
       .getXml(R.xml.data_extraction_rules)
       .use { parser ->
-        assertEquals(2, parser.includeCount(domain = "file", path = "bookCovers/"))
+        val includes = parser.dataExtractionIncludes(domain = "file", path = "bookCovers/")
+        assertEquals(0, includes.cloudBackup)
+        assertEquals(1, includes.deviceTransfer)
       }
   }
 
@@ -67,6 +76,7 @@ class BackupRulesTest {
   private fun XmlPullParser.includeCount(
     domain: String,
     path: String,
+    requiredFlags: String,
   ): Int {
     var count = 0
     var eventType = next()
@@ -75,13 +85,45 @@ class BackupRulesTest {
         eventType == XmlPullParser.START_TAG &&
         name == "include" &&
         getAttributeValue(null, "domain") == domain &&
-        getAttributeValue(null, "path") == path
+        getAttributeValue(null, "path") == path &&
+        getAttributeValue(null, "requireFlags") == requiredFlags
       ) {
         count++
       }
       eventType = next()
     }
     return count
+  }
+
+  private fun XmlPullParser.dataExtractionIncludes(
+    domain: String,
+    path: String,
+  ): DataExtractionIncludeCounts {
+    var cloudBackup = 0
+    var deviceTransfer = 0
+    var currentSection: String? = null
+    var eventType = next()
+    while (eventType != XmlPullParser.END_DOCUMENT) {
+      when (eventType) {
+        XmlPullParser.START_TAG -> when (name) {
+          "cloud-backup", "device-transfer" -> currentSection = name
+          "include" -> if (
+            getAttributeValue(null, "domain") == domain &&
+            getAttributeValue(null, "path") == path
+          ) {
+            when (currentSection) {
+              "cloud-backup" -> cloudBackup++
+              "device-transfer" -> deviceTransfer++
+            }
+          }
+        }
+        XmlPullParser.END_TAG -> if (name == currentSection) {
+          currentSection = null
+        }
+      }
+      eventType = next()
+    }
+    return DataExtractionIncludeCounts(cloudBackup, deviceTransfer)
   }
 
   private fun XmlPullParser.dataExtractionExcludes(): DataExtractionExcludes {
@@ -110,6 +152,11 @@ class BackupRulesTest {
   private data class DataExtractionExcludes(
     val cloudBackup: Set<String>,
     val deviceTransfer: Set<String>,
+  )
+
+  private data class DataExtractionIncludeCounts(
+    val cloudBackup: Int,
+    val deviceTransfer: Int,
   )
 
   private companion object {

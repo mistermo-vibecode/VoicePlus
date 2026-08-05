@@ -24,7 +24,7 @@ By default, this data is stored on your device in the local database (`autoBookD
 
 VoicePlus allows Android system-managed backup to restore app data after reinstall. Eligible data is the Room database and ordinary DataStore settings, including playback progress, bookmarks, listening history and statistics, character lists, chapter-name corrections, hidden-book state, and normal settings.
 
-Audiobook files, cover images, selected audiobook-folder URIs/SAF permissions, internal snapshot-ring files, backup-folder state, and open listening-session checkpoints are excluded.
+Cloud backup excludes audiobook files, cover images, selected audiobook-folder URIs/SAF permissions, internal snapshot-ring files, backup-folder state, and open listening-session checkpoints. Device-to-device transfer may include cached cover images, but never audiobook files or folder permissions.
 
 Cloud backup is permitted only when Android reports client-side encryption capability. Android 12+ device-to-device transfer is also permitted.
 

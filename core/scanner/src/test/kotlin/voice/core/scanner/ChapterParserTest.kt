@@ -149,6 +149,29 @@ class ChapterParserTest {
     coVerify(exactly = 1) { mediaAnalyzer.analyze(any()).let { } }
   }
 
+  @Test
+  fun transientReparseFailureKeepsCachedChapter() = runTest {
+    val audioFile = testFolder.newFile("temporarily-unreadable.mp3").apply {
+      writeBytes(byteArrayOf(1, 2, 3, 4))
+    }
+    val documentFile = FileBasedDocumentFile(audioFile)
+    val cachedChapter = Chapter(
+      id = ChapterId(documentFile.uri),
+      name = "Cached chapter",
+      duration = 1000L,
+      fileLastModified = Instant.ofEpochMilli(audioFile.lastModified()),
+      markData = emptyList(),
+      fileSize = 0L,
+    )
+    val (chapterParser, mediaAnalyzer) = parserFixture(cachedChapter)
+    coEvery { mediaAnalyzer.analyze(any()) } returns null
+
+    val result = chapterParser.parse(documentFile)
+
+    result.chapters.shouldContainExactly(cachedChapter)
+    coVerify(exactly = 1) { mediaAnalyzer.analyze(any()).let { } }
+  }
+
   private fun parserFixture(initialChapter: Chapter? = null): Pair<ChapterParser, MediaAnalyzer> {
     val mediaAnalyzer = mockk<MediaAnalyzer>()
     coEvery { mediaAnalyzer.analyze(any()) } answers {

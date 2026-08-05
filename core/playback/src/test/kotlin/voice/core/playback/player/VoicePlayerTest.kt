@@ -72,6 +72,7 @@ class VoicePlayerTest {
   }
 
   private val seekTimeStore = MemoryDataStore(2)
+  private var periodCount = 1
 
   private val internalPlayer = TestExoPlayerBuilder(ApplicationProvider.getApplicationContext())
     .setMediaSourceFactory(
@@ -85,7 +86,7 @@ class VoicePlayerTest {
           FakeMediaSource(
             FakeTimeline(
               FakeTimeline.TimelineWindowDefinition.Builder()
-                .setPeriodCount(1)
+                .setPeriodCount(periodCount)
                 .setSeekable(true)
                 .setDurationUs(TimeUnit.MILLISECONDS.toMicros(chapter.duration))
                 .setMediaItem(mediaItem)
@@ -393,6 +394,60 @@ class VoicePlayerTest {
 
     lockscreenPlayer.seekTo(100_000)
     player.shouldHavePosition(2, 29_999)
+  }
+
+  @Test
+  fun `audiobook slider does not remap seeks when current item has multiple periods`() = scope.runTest {
+    periodCount = 2
+    val chapters = listOf(
+      chapter(ChapterMark(startMs = 0, endMs = 10_000, name = null)),
+      chapter(ChapterMark(startMs = 0, endMs = 20_000, name = null)),
+    )
+    setMediaItems(chapters)
+    player.prepare()
+    awaitReady()
+    player.seekTo(1, 5_000)
+
+    val lockscreenPlayer = LockscreenSliderPlayer(
+      voicePlayer = player,
+      modeStore = MemoryDataStore(LockscreenSliderMode.AUDIOBOOK),
+      chapterMarkChangeNotifier = ChapterMarkChangeNotifier(),
+      scope = backgroundScope,
+    )
+    runCurrent()
+
+    lockscreenPlayer.currentPosition shouldBe 5_000
+    lockscreenPlayer.duration shouldBe 20_000
+
+    lockscreenPlayer.seekTo(15_000)
+    player.shouldHavePosition(1, 15_000)
+  }
+
+  @Test
+  fun `chapter slider does not clamp in-app seek to a later mark in the same file`() = scope.runTest {
+    setMediaItems(
+      listOf(
+        chapter(
+          ChapterMark(startMs = 0, endMs = 29_999, name = "First Section"),
+          ChapterMark(startMs = 30_000, endMs = 60_000, name = "Later Section"),
+        ),
+      ),
+    )
+    player.prepare()
+    awaitReady()
+    player.seekTo(5_000)
+
+    val lockscreenPlayer = LockscreenSliderPlayer(
+      voicePlayer = player,
+      modeStore = MemoryDataStore(LockscreenSliderMode.CHAPTER),
+      chapterMarkChangeNotifier = ChapterMarkChangeNotifier(),
+      scope = backgroundScope,
+    )
+    runCurrent()
+
+    lockscreenPlayer.duration shouldBe 29_999
+    lockscreenPlayer.seekTo(0, 45_000)
+    player.shouldHavePosition(0, 45_000)
   }
 
   @Test

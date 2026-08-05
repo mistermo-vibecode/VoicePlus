@@ -15,6 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,15 +94,22 @@ class BookOverviewScrollState {
   ) {
     when (layoutMode) {
       BookOverviewLayoutMode.List -> {
-        listIndex = listState.firstVisibleItemIndex
-        listOffset = listState.firstVisibleItemScrollOffset
-        listRestorePending = true
+        captureList(listState)
       }
       BookOverviewLayoutMode.Grid -> {
-        gridIndex = gridState.firstVisibleItemIndex
-        gridOffset = gridState.firstVisibleItemScrollOffset
-        gridRestorePending = true
+        captureGrid(gridState)
       }
+    }
+  }
+
+  fun captureIfNoRestorePending(
+    layoutMode: BookOverviewLayoutMode,
+    listState: LazyListState,
+    gridState: LazyGridState,
+  ) {
+    when (layoutMode) {
+      BookOverviewLayoutMode.List -> if (!listRestorePending) captureList(listState)
+      BookOverviewLayoutMode.Grid -> if (!gridRestorePending) captureGrid(gridState)
     }
   }
 
@@ -120,6 +128,18 @@ class BookOverviewScrollState {
         gridRestorePending = false
       }
     }
+  }
+
+  private fun captureList(state: LazyListState) {
+    listIndex = state.firstVisibleItemIndex
+    listOffset = state.firstVisibleItemScrollOffset
+    listRestorePending = true
+  }
+
+  private fun captureGrid(state: LazyGridState) {
+    gridIndex = state.firstVisibleItemIndex
+    gridOffset = state.firstVisibleItemScrollOffset
+    gridRestorePending = true
   }
 }
 
@@ -145,6 +165,11 @@ fun BookOverviewScreen(
     bookOverviewViewModel.attach()
   }
   val viewState = bookOverviewViewModel.state()
+  DisposableEffect(viewState.layoutMode, listState, gridState) {
+    onDispose {
+      scrollState.captureIfNoRestorePending(viewState.layoutMode, listState, gridState)
+    }
+  }
   LaunchedEffect(viewState.isLoading, viewState.books.isNotEmpty(), viewState.layoutMode) {
     if (!viewState.isLoading && viewState.books.isNotEmpty()) {
       scrollState.restore(viewState.layoutMode, listState, gridState)
@@ -170,7 +195,10 @@ fun BookOverviewScreen(
     listState = listState,
     gridState = gridState,
     viewState = viewState,
-    onSettingsClick = bookOverviewViewModel::onSettingsClick,
+    onSettingsClick = {
+      scrollState.capture(viewState.layoutMode, listState, gridState)
+      bookOverviewViewModel.onSettingsClick()
+    },
     onBookClick = { bookId ->
       scrollState.capture(viewState.layoutMode, listState, gridState)
       bookOverviewViewModel.onBookClick(bookId)
@@ -181,7 +209,10 @@ fun BookOverviewScreen(
         showBottomSheet = true
       }
     },
-    onBookFolderClick = bookOverviewViewModel::onBookFolderClick,
+    onBookFolderClick = {
+      scrollState.capture(viewState.layoutMode, listState, gridState)
+      bookOverviewViewModel.onBookFolderClick()
+    },
     onPlayButtonClick = bookOverviewViewModel::playPause,
     onSearchActiveChange = bookOverviewViewModel::onSearchActiveChange,
     onSearchQueryChange = bookOverviewViewModel::onSearchQueryChange,

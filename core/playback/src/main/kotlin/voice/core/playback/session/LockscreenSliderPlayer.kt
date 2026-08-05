@@ -60,14 +60,8 @@ class LockscreenSliderPlayer(
     if (seekCommand == Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM) {
       when (mode) {
         LockscreenSliderMode.AUDIOBOOK -> {
-          val durations = voicePlayer.currentBookChapterDurations()
-          val mediaItemCount = voicePlayer.mediaItemCount
-          val currentMediaItemIndex = voicePlayer.currentMediaItemIndex
-          val target = if (durations.size == mediaItemCount && currentMediaItemIndex in durations.indices) {
-            audiobookSeekTarget(positionMs, durations)
-          } else {
-            null
-          }
+          val mapping = super.getState().audiobookMapping()
+          val target = mapping?.let { audiobookSeekTarget(positionMs, it.durations) }
           if (target != null) {
             voicePlayer.seekTo(target.first, target.second)
             return Futures.immediateVoidFuture()
@@ -89,50 +83,30 @@ class LockscreenSliderPlayer(
   }
 
   private fun State.forWholeAudiobook(): State {
-    val durations = voicePlayer.currentBookChapterDurations()
-    val playlist = getPlaylist()
-    if (durations.isEmpty() || durations.size != playlist.size || durations.any { it <= 0L }) {
-      return this
-    }
-    val currentIndex = currentMediaItemIndex.takeIf { it in durations.indices } ?: return this
-    val currentItem = playlist.getOrNull(currentIndex) ?: return this
-    if (currentItem.periods.size != 1) return this
-
-    var aggregateDurationMs = 0L
-    for (duration in durations) {
-      if (duration > Long.MAX_VALUE - aggregateDurationMs) return this
-      aggregateDurationMs += duration
-    }
-    if (aggregateDurationMs <= 0L || aggregateDurationMs > Long.MAX_VALUE / 1_000L) {
-      return this
-    }
-
-    var previousDurationMs = 0L
-    repeat(currentIndex) { previousDurationMs += durations[it] }
-    val currentDurationMs = durations[currentIndex]
-    val aggregateDurationUs = aggregateDurationMs * 1_000L
-    val aggregateItem = currentItem
-      .withDisplayToSourcePositionOffset(-previousDurationMs)
+    val mapping = audiobookMapping() ?: return this
+    val aggregateDurationUs = mapping.aggregateDurationMs * 1_000L
+    val aggregateItem = mapping.currentItem
+      .withDisplayToSourcePositionOffset(-mapping.previousDurationMs)
       .buildUpon()
       .setDurationUs(aggregateDurationUs)
       .setPositionInFirstPeriodUs(0L)
       .setPeriods(
         listOf(
-          currentItem.periods.single()
+          mapping.currentItem.periods.single()
             .buildUpon()
             .setDurationUs(aggregateDurationUs)
             .build(),
         ),
       )
       .build()
-    val aggregatePlaylist = playlist.toMutableList().apply {
-      this[currentIndex] = aggregateItem
+    val aggregatePlaylist = mapping.playlist.toMutableList().apply {
+      this[mapping.currentIndex] = aggregateItem
     }
 
     fun aggregatePosition(positionMs: Long): Long {
       if (positionMs == C.TIME_UNSET) return C.TIME_UNSET
-      return (previousDurationMs + positionMs.coerceIn(0L, currentDurationMs))
-        .coerceIn(0L, aggregateDurationMs)
+      return (mapping.previousDurationMs + positionMs.coerceIn(0L, mapping.currentDurationMs))
+        .coerceIn(0L, mapping.aggregateDurationMs)
     }
 
     val builder = buildUpon()
@@ -159,6 +133,38 @@ class LockscreenSliderPlayer(
       )
     }
     return builder.build()
+  }
+
+  private fun State.audiobookMapping(): AudiobookMapping? {
+    val durations = voicePlayer.currentBookChapterDurations()
+    val playlist = getPlaylist()
+    if (durations.isEmpty() || durations.size != playlist.size || durations.any { it <= 0L }) {
+      return null
+    }
+    val currentIndex = currentMediaItemIndex.takeIf { it in durations.indices } ?: return null
+    val currentItem = playlist.getOrNull(currentIndex) ?: return null
+    if (currentItem.periods.size != 1) return null
+
+    var aggregateDurationMs = 0L
+    for (duration in durations) {
+      if (duration > Long.MAX_VALUE - aggregateDurationMs) return null
+      aggregateDurationMs += duration
+    }
+    if (aggregateDurationMs <= 0L || aggregateDurationMs > Long.MAX_VALUE / 1_000L) {
+      return null
+    }
+
+    var previousDurationMs = 0L
+    repeat(currentIndex) { previousDurationMs += durations[it] }
+    return AudiobookMapping(
+      durations = durations,
+      playlist = playlist,
+      currentIndex = currentIndex,
+      currentItem = currentItem,
+      aggregateDurationMs = aggregateDurationMs,
+      previousDurationMs = previousDurationMs,
+      currentDurationMs = durations[currentIndex],
+    )
   }
 
   private fun State.forCurrentChapter(): State {
@@ -261,6 +267,16 @@ class LockscreenSliderPlayer(
       .setMediaMetadata(metadata)
       .build()
   }
+
+  private data class AudiobookMapping(
+    val durations: List<Long>,
+    val playlist: List<MediaItemData>,
+    val currentIndex: Int,
+    val currentItem: MediaItemData,
+    val aggregateDurationMs: Long,
+    val previousDurationMs: Long,
+    val currentDurationMs: Long,
+  )
 }
 
 private fun audiobookSeekTarget(

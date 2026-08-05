@@ -12,7 +12,7 @@
   <include
     domain="file"
     path="bookCovers/"
-    requireFlags="clientSideEncryption" />
+    requireFlags="deviceToDeviceTransfer" />
   <exclude
     domain="file"
     path="datastore/audiobookFolders" />

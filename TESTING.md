@@ -26,7 +26,9 @@ CI runs these jobs in parallel:
 
 - JVM tests, Kotlin lint, and a debug APK build.
 - Android lint.
-- Four managed-device smoke journeys on API 33: app launch; play, seek, pause, and Previous metadata; timed sleep; end-of-chapter sleep.
+- Eight managed-device smoke journeys on API 33: app launch; library scroll restoration in list/grid, Settings, and activity recreation; play, seek, pause, and Previous metadata; timed sleep; end-of-chapter sleep.
+
+The instrumentation command intentionally runs only `AppLaunchSmokeTest` and `SleepTimerIntegrationTest` to keep this lane short. A new critical instrumentation class is not covered until its class name is added to both `.github/workflows/ci.yml` and the command below.
 
 To reproduce the device lane locally:
 

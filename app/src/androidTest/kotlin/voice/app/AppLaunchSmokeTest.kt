@@ -75,17 +75,57 @@ class AppLaunchSmokeTest {
     assertBookOverviewRestoresScrollPosition(GridMode.GRID)
   }
 
+  @Test
+  @OptIn(ExperimentalTestApi::class)
+  fun bookOverviewRestoresListPositionAfterSettingsBack() {
+    rootGraphAs<TestGraph>().inject(this)
+
+    val targetBookName = "Scroll Test Book 29"
+    prepareScrollableLibrary(GridMode.LIST)
+
+    ActivityScenario.launch(MainActivity::class.java).use {
+      composeRule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(targetBookName))
+      composeRule.onNode(hasText(targetBookName) and hasClickAction()).assertIsDisplayed()
+      composeRule.onNode(hasContentDescription("Settings")).performClick()
+      composeRule.waitUntilAtLeastOneExists(hasContentDescription("Close"), 10_000)
+      composeRule.onNode(hasContentDescription("Close")).performClick()
+
+      composeRule.waitUntilAtLeastOneExists(
+        matcher = hasText(targetBookName) and hasClickAction(),
+        timeoutMillis = 10_000,
+      )
+      composeRule.onNode(hasText(targetBookName) and hasClickAction()).assertIsDisplayed()
+    }
+  }
+
+  @Test
+  @OptIn(ExperimentalTestApi::class)
+  fun bookOverviewRestoresListPositionAfterActivityRecreation() {
+    rootGraphAs<TestGraph>().inject(this)
+
+    val targetBookName = "Scroll Test Book 29"
+    prepareScrollableLibrary(GridMode.LIST)
+
+    ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+      composeRule.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(targetBookName))
+      composeRule.onNode(hasText(targetBookName) and hasClickAction()).assertIsDisplayed()
+
+      scenario.recreate()
+
+      composeRule.waitUntilAtLeastOneExists(
+        matcher = hasText(targetBookName) and hasClickAction(),
+        timeoutMillis = 10_000,
+      )
+      composeRule.onNode(hasText(targetBookName) and hasClickAction()).assertIsDisplayed()
+    }
+  }
+
   @OptIn(ExperimentalTestApi::class)
   private fun assertBookOverviewRestoresScrollPosition(gridMode: GridMode) {
     rootGraphAs<TestGraph>().inject(this)
 
     val targetBookName = "Scroll Test Book 29"
-    runBlocking {
-      onboardingCompletedStore.updateData { true }
-      gridModeStore.updateData { gridMode }
-      notStartedExpandedStore.updateData { true }
-      prepareScrollableLibrary()
-    }
+    prepareScrollableLibrary(gridMode)
 
     ActivityScenario.launch(MainActivity::class.java).use {
       val library = composeRule.onNode(hasScrollToIndexAction())
@@ -114,6 +154,13 @@ class AppLaunchSmokeTest {
       composeRule.onNode(hasText(targetBookName) and hasClickAction())
         .assertIsDisplayed()
     }
+  }
+
+  private fun prepareScrollableLibrary(gridMode: GridMode) = runBlocking {
+    onboardingCompletedStore.updateData { true }
+    gridModeStore.updateData { gridMode }
+    notStartedExpandedStore.updateData { true }
+    prepareScrollableLibrary()
   }
 
   private suspend fun prepareScrollableLibrary() {
