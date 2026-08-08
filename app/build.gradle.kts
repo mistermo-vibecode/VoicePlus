@@ -39,8 +39,9 @@ android {
 
   defaultConfig {
     applicationId = "com.github.mistermo_vibecode.voiceplus"
-    versionName = releaseVersionNameOverride.getOrElse("1.24")
-    versionCode = releaseVersionCodeOverride.map(String::toInt).getOrElse(5408001)
+    // Keep these as literals so F-Droid's tag checker can discover releases.
+    versionName = "1.24"
+    versionCode = 5408001
 
     testInstrumentationRunner = "voice.app.VoiceJUnitRunner"
   }
@@ -129,6 +130,15 @@ android {
 }
 
 androidComponents {
+  onVariants(selector().withBuildType("release")) { variant ->
+    if (releaseVersionNameOverride.isPresent) {
+      variant.outputs.forEach { output ->
+        output.versionName.set(releaseVersionNameOverride)
+        output.versionCode.set(releaseVersionCodeOverride.map(String::toInt))
+      }
+    }
+  }
+
   onVariants(selector().withBuildType("debug")) { variant ->
     if (debugVersionNameOverride.isPresent) {
       variant.outputs.forEach { output ->
