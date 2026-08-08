@@ -21,7 +21,9 @@ But you can try both. If the features below add value to your listining experien
 
 ## What's different from Voice
 
-- **[new]** Backup and restore with automatic daily saves and manual save points
+- **[new]** Lock-screen slider modes — seek the chapter, the whole book, or disable the slider
+- **[new]** Encrypted Android system backup — progress, history and settings survive reinstall
+- Backup and restore to a folder you choose, with automatic daily saves and manual save points
 - Editable chapter names with ability to fix out of sync chapter numbering
 - Listening log and statistics
 - Character lists per book

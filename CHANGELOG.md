@@ -1,16 +1,28 @@
 # VoicePlus Changelog
 
-## Unreleased
+## v1.24 — Lock-Screen Slider, System Backup & Polish
 
 ### Playback
+- **Lock-screen slider modes:** choose what the lock-screen slider seeks — the current chapter (default), the whole audiobook, or disabled.
+- Your live position is preserved across durable saves, and corrected chapter names stay aligned with playback everywhere.
 
-- Added a lock-screen slider preference with Current chapter, Whole audiobook, and Disabled modes. Current chapter is the default.
+### Backup & Restore
+- **Survives reinstall automatically:** encrypted Android system backup now restores playback progress, bookmarks, listening history and stats, character lists, chapter-name fixes, hidden books, and settings on a reinstall or new phone (Android 12+ device transfer included). Audiobook folders must be re-granted; audio files and covers are not uploaded. The folder backup from v1.23 remains the manual, portable option.
+- Covers are preserved when restoring a backup over an existing library.
 
-### Backup and restore
+### Library & Scanner
+- Faster scans: unchanged files are no longer re-read, and file changes are detected even when the timestamp doesn't change.
+- Fixed high memory use when scanning m4b books with many chapters, and chapter positions stay precise on very long files.
+- Natural sorting now handles accented titles correctly (é, ö, č…).
 
-- Added scoped Android system backup so encrypted backups can restore playback progress, bookmarks, listening history and statistics, character lists, chapter-name corrections, hidden-book state, and ordinary settings after reinstall. Android 12+ device-to-device transfer is also supported.
-- Cloud backup excludes audiobook files, cover images, selected audiobook-folder permissions, internal backup snapshots, backup-folder state, and open listening-session checkpoints. Device-to-device transfer may include cached cover images. Audiobook-folder access must be granted again after reinstall.
-- The existing user-controlled external folder backup remains available for portable and manual recovery because Android controls backup timing, retention, and availability.
+### Sleep Timer & Widget
+- End-of-chapter timer counts each chapter boundary exactly once, and a timer left over after playback stops is disarmed.
+- Widget controls no longer vanish after some updates; dark-mode icon tint restored.
+
+### UI
+- Settings redesigned into Material 3 sections.
+- Covers animate between library and player, and the library remembers your scroll position.
+- Refreshed listening statistics screen and editors.
 
 ---
 

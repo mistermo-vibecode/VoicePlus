@@ -39,8 +39,8 @@ android {
 
   defaultConfig {
     applicationId = "com.github.mistermo_vibecode.voiceplus"
-    versionName = releaseVersionNameOverride.getOrElse("1.23.1")
-    versionCode = releaseVersionCodeOverride.map(String::toInt).getOrElse(5404013)
+    versionName = releaseVersionNameOverride.getOrElse("1.24")
+    versionCode = releaseVersionCodeOverride.map(String::toInt).getOrElse(5408001)
 
     testInstrumentationRunner = "voice.app.VoiceJUnitRunner"
   }

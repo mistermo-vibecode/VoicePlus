@@ -1,0 +1,4 @@
+* New: Lock-screen slider modes — seek the current chapter (default), the whole audiobook, or disable it.
+* New: Encrypted Android system backup restores progress, bookmarks, history and settings after reinstall.
+* Redesigned settings; covers animate between library and player; library keeps your scroll position.
+* Faster scans and fixes for sleep timer, widget, and playback position.
