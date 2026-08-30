@@ -220,6 +220,12 @@ fun BookOverviewScreen(
       scrollState.capture(viewState.layoutMode, listState, gridState)
       bookOverviewViewModel.onSearchBookClick(bookId)
     },
+    onSearchBookLongClick = { bookId ->
+      scope.launch {
+        bottomSheetViewModel.bookSelected(bookId)
+        showBottomSheet = true
+      }
+    },
     onPermissionBugCardClick = bookOverviewViewModel::onPermissionBugCardClick,
     categoryExpanded = { category ->
       when (category) {
@@ -290,6 +296,7 @@ internal fun BookOverview(
   onSearchActiveChange: (Boolean) -> Unit,
   onSearchQueryChange: (String) -> Unit,
   onSearchBookClick: (BookId) -> Unit,
+  onSearchBookLongClick: (BookId) -> Unit,
   onPermissionBugCardClick: () -> Unit,
   categoryExpanded: (BookOverviewCategory) -> Boolean,
   onCategoryToggle: (BookOverviewCategory) -> Unit,
@@ -307,6 +314,7 @@ internal fun BookOverview(
         onActiveChange = onSearchActiveChange,
         onQueryChange = onSearchQueryChange,
         onSearchBookClick = onSearchBookClick,
+        onSearchBookLongClick = onSearchBookLongClick,
       )
     },
     floatingActionButton = {
@@ -380,6 +388,7 @@ fun BookOverviewPreview(
       onSearchActiveChange = {},
       onSearchQueryChange = {},
       onSearchBookClick = {},
+      onSearchBookLongClick = {},
       onPermissionBugCardClick = {},
       categoryExpanded = { true },
       onCategoryToggle = {},
