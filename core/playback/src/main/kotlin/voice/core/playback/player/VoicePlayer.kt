@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.PlayerMessage
@@ -427,10 +428,10 @@ class VoicePlayer(
     }
   }
 
-  override fun setPlaybackSpeed(speed: Float) {
-    super.setPlaybackSpeed(speed)
+  override fun setPlaybackParameters(playbackParameters: PlaybackParameters) {
+    super.setPlaybackParameters(playbackParameters)
     scope.launch {
-      updateBook { it.copy(playbackSpeed = speed) }
+      updateBook { it.copy(playbackSpeed = playbackParameters.speed)}
     }
   }
 
