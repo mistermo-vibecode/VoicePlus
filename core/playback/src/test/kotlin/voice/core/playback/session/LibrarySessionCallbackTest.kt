@@ -1,7 +1,9 @@
 package voice.core.playback.session
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.InputDevice
+import android.view.KeyEvent
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionResult
 import io.kotest.matchers.shouldBe
@@ -11,14 +13,123 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifySequence
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import voice.core.data.MediaButtonClickAction
+import voice.core.playback.MemoryDataStore
 import voice.core.playback.history.PlaybackIntentHolder
 import voice.core.playback.player.VoicePlayer
 
 @RunWith(RobolectricTestRunner::class)
 class LibrarySessionCallbackTest {
+
+  @Test
+  fun `Android Auto next and previous ignore reversed headset actions`() = runTest {
+    val player = mockk<VoicePlayer>(relaxed = true)
+    val callback = mediaButtonCallback(player, this)
+    val controller = mockk<MediaSession.ControllerInfo>()
+    val session = mockk<MediaSession>(relaxed = true) {
+      every { isAutoCompanionController(controller) } returns true
+    }
+
+    callback.onMediaButtonEvent(session, controller, mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)) shouldBe true
+    advanceUntilIdle()
+    verify(exactly = 1) { player.seekForward() }
+    verify(exactly = 0) { player.seekBack() }
+
+    callback.onMediaButtonEvent(session, controller, mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)) shouldBe true
+    advanceUntilIdle()
+    verify(exactly = 1) { player.seekBack() }
+    verify(exactly = 1) { player.seekForward() }
+  }
+
+  @Test
+  fun `Android Automotive next and previous ignore reversed headset actions`() = runTest {
+    val player = mockk<VoicePlayer>(relaxed = true)
+    val callback = mediaButtonCallback(player, this)
+    val controller = mockk<MediaSession.ControllerInfo>()
+    val session = mockk<MediaSession>(relaxed = true) {
+      every { isAutomotiveController(controller) } returns true
+    }
+
+    callback.onMediaButtonEvent(session, controller, mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)) shouldBe true
+    advanceUntilIdle()
+    verify(exactly = 1) { player.seekForward() }
+    verify(exactly = 0) { player.seekBack() }
+
+    callback.onMediaButtonEvent(session, controller, mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)) shouldBe true
+    advanceUntilIdle()
+    verify(exactly = 1) { player.seekBack() }
+    verify(exactly = 1) { player.seekForward() }
+  }
+
+  @Test
+  fun `headset next and previous retain configured actions`() = runTest {
+    val player = mockk<VoicePlayer>(relaxed = true)
+    val callback = mediaButtonCallback(player, this)
+    val session = mockk<MediaSession>(relaxed = true)
+    val controller = mockk<MediaSession.ControllerInfo>()
+
+    callback.onMediaButtonEvent(session, controller, mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)) shouldBe true
+    advanceUntilIdle()
+    verify(exactly = 1) { player.seekBack() }
+    verify(exactly = 0) { player.seekForward() }
+
+    callback.onMediaButtonEvent(session, controller, mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)) shouldBe true
+    advanceUntilIdle()
+    verify(exactly = 1) { player.seekForward() }
+    verify(exactly = 1) { player.seekBack() }
+  }
+
+  @Test
+  fun `car key up and repeat events are consumed without seeking`() = runTest {
+    val player = mockk<VoicePlayer>(relaxed = true)
+    val callback = mediaButtonCallback(player, this)
+    val controller = mockk<MediaSession.ControllerInfo>()
+    val session = mockk<MediaSession>(relaxed = true) {
+      every { isAutoCompanionController(controller) } returns true
+    }
+
+    for (keyCode in listOf(KeyEvent.KEYCODE_MEDIA_NEXT, KeyEvent.KEYCODE_MEDIA_PREVIOUS)) {
+      callback.onMediaButtonEvent(session, controller, mediaKey(keyCode, KeyEvent.ACTION_UP)) shouldBe true
+      callback.onMediaButtonEvent(session, controller, mediaKey(keyCode, repeat = 1)) shouldBe true
+    }
+    advanceUntilIdle()
+    verify(exactly = 0) { player.seekForward() }
+    verify(exactly = 0) { player.seekBack() }
+  }
+
+  private fun mediaButtonCallback(
+    player: VoicePlayer,
+    scope: CoroutineScope,
+  ) = LibrarySessionCallback(
+    mediaItemProvider = mockk(),
+    scope = scope,
+    player = player,
+    bookSearchParser = mockk(),
+    bookSearchHandler = mockk(),
+    currentBookStoreId = mockk(),
+    bookRepository = mockk(),
+    doubleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_BACKWARD),
+    tripleClickHandlerStore = MemoryDataStore(MediaButtonClickAction.SKIP_FORWARD),
+    bookmarkRepo = mockk(),
+    intentHolder = mockk(),
+    positionUpdater = mockk(),
+    context = mockk(),
+  )
+
+  private fun mediaKey(
+    keyCode: Int,
+    action: Int = KeyEvent.ACTION_DOWN,
+    repeat: Int = 0,
+  ) = Intent(Intent.ACTION_MEDIA_BUTTON).putExtra(
+    Intent.EXTRA_KEY_EVENT,
+    KeyEvent(0, 0, action, keyCode, repeat, 0, -1, 0),
+  )
 
   @Test
   fun `lockscreen timed skip commands seek back and forward`() {

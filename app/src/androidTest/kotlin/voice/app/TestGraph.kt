@@ -17,6 +17,10 @@ interface TestGraph : AppGraph {
 
   fun inject(target: SleepTimerIntegrationTest)
 
+  fun inject(target: AndroidAutoMediaButtonTest)
+
+  val mediaButtonTestGraphFactory: MediaButtonTestGraph.Factory
+
   @DependencyGraph.Factory
   interface Factory {
     fun create(@Provides application: Application): TestGraph
