@@ -310,12 +310,13 @@ class LibrarySessionCallback(
         return true
       }
       // Many earbuds translate double/triple taps into NEXT/PREVIOUS in firmware, so those
-      // keycodes route through the user's configured click actions. A real keyboard's dedicated
-      // next/previous keys must keep their literal meaning, though — otherwise customized click
-      // actions reverse them (GitHub issue #7).
+      // keycodes route through the user's configured click actions. Dedicated keyboard and car
+      // controls must keep their literal direction, regardless of headset settings (#7, #20).
       KeyEvent.KEYCODE_MEDIA_NEXT -> {
-        if (keyEvent.isFromHardwareKeyboard()) {
-          Logger.d("onMediaButtonEvent: NEXT (hardware keyboard)")
+        if (keyEvent.isFromHardwareKeyboard() ||
+          session.isAutoCompanionController(controller) || session.isAutomotiveController(controller)
+        ) {
+          Logger.d("onMediaButtonEvent: NEXT (keyboard/car)")
           player.seekForward()
         } else {
           Logger.d("onMediaButtonEvent: NEXT")
@@ -328,8 +329,10 @@ class LibrarySessionCallback(
         return true
       }
       KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
-        if (keyEvent.isFromHardwareKeyboard()) {
-          Logger.d("onMediaButtonEvent: PREVIOUS (hardware keyboard)")
+        if (keyEvent.isFromHardwareKeyboard() ||
+          session.isAutoCompanionController(controller) || session.isAutomotiveController(controller)
+        ) {
+          Logger.d("onMediaButtonEvent: PREVIOUS (keyboard/car)")
           player.seekBack()
         } else {
           Logger.d("onMediaButtonEvent: PREVIOUS")

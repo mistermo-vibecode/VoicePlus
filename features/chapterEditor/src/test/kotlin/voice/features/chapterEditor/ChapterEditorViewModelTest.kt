@@ -146,6 +146,137 @@ class ChapterEditorViewModelTest {
   }
 
   @Test
+  fun `later correction preserves prior names and applies new offset from current chapter`() = runTest {
+    val chapter = chapter(
+      durationMs = 4.minutesMs(),
+      marks = listOf(
+        MarkData(startMs = 0L, name = "Chapter 10"),
+        MarkData(startMs = 60_000L, name = "Chapter 11"),
+        MarkData(startMs = 120_000L, name = "Chapter 12"),
+        MarkData(startMs = 180_000L, name = "Chapter 13"),
+      ),
+    )
+    val bookFlow = MutableStateFlow(book(chapters = listOf(chapter), offset = -2, positionInChapter = 130_000L))
+    val overrideFlow = MutableStateFlow<List<ChapterNameOverride>>(emptyList())
+    val overrideRepo = mockk<ChapterNameOverrideRepo> {
+      every { overridesForBook(bookId) } returns overrideFlow
+      coEvery { delete(any(), any()) } answers {
+        val id = firstArg<ChapterId>().value
+        val start = secondArg<Long>()
+        overrideFlow.value = overrideFlow.value.filterNot { it.chapterId == id && it.markStartMs == start }
+      }
+      coEvery { set(any(), any(), any(), any()) } answers {
+        overrideFlow.value += ChapterNameOverride(
+          chapterId = firstArg<ChapterId>().value,
+          markStartMs = secondArg(),
+          bookId = thirdArg<BookId>().value,
+          name = arg(3),
+        )
+      }
+    }
+    val bookRepository = mockk<BookRepository> {
+      every { flow(bookId) } returns bookFlow
+      coEvery { updateBook(bookId, any()) } answers {
+        val update = secondArg<(BookContent) -> BookContent>()
+        bookFlow.value = bookFlow.value.copy(content = update(bookFlow.value.content))
+      }
+    }
+    val vm = viewModel(bookFlow.value, overrideRepo = overrideRepo, bookRepository = bookRepository)
+
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      var state = awaitNonNull()
+      while (state.currentChapterIndex != 2) state = awaitNonNull()
+      assertEquals(listOf("Chapter 8", "Chapter 9", "Chapter 10", "Chapter 11"), state.chapters.map { it.displayName })
+
+      vm.onOffsetSet(-9)
+
+      state = awaitNonNull()
+      while (state.offset != -9 || state.chapters.take(2).any { !it.hasOverride }) state = awaitNonNull()
+      assertEquals(listOf("Chapter 8", "Chapter 9", "Chapter 3", "Chapter 4"), state.chapters.map { it.displayName })
+      assertEquals(listOf(0L, 60_000L), overrideFlow.value.map { it.markStartMs })
+      assertFalse(state.chapters[2].hasOverride)
+      assertFalse(state.chapters[3].hasOverride)
+
+      // Restoring one preserved name must remain effective when adjusting the offset again.
+      vm.onDeleteOverride(state.chapters[0])
+      state = awaitNonNull()
+      while (state.chapters[0].hasOverride) state = awaitNonNull()
+      vm.onOffsetSet(-8)
+      state = awaitNonNull()
+      while (state.offset != -8) state = awaitNonNull()
+      assertEquals(listOf("Chapter 2", "Chapter 9", "Chapter 4", "Chapter 5"), state.chapters.map { it.displayName })
+      assertFalse(state.chapters[0].hasOverride)
+      coVerify(exactly = 1) { overrideRepo.set(chapterId, 0L, bookId, "Chapter 8") }
+    }
+  }
+
+  @Test
+  fun `first correction remains global and creates no frozen names`() = runTest {
+    val overrideRepo = mockk<ChapterNameOverrideRepo>(relaxed = true) {
+      every { overridesForBook(bookId) } returns MutableStateFlow(emptyList())
+    }
+    val chapter = chapter(
+      durationMs = 3.minutesMs(),
+      marks = listOf(
+        MarkData(startMs = 0L, name = "Chapter 10"),
+        MarkData(startMs = 60_000L, name = "Chapter 11"),
+        MarkData(startMs = 120_000L, name = "Chapter 12"),
+      ),
+    )
+    val vm = viewModel(
+      book = book(chapters = listOf(chapter), offset = 0, positionInChapter = 130_000L),
+      overrideRepo = overrideRepo,
+    )
+
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      var state = awaitNonNull()
+      while (state.currentChapterIndex != 2) state = awaitNonNull()
+
+      vm.onOffsetSet(-2)
+      state = awaitNonNull()
+      while (state.offset != -2) state = awaitNonNull()
+
+      assertEquals(listOf("Chapter 8", "Chapter 9", "Chapter 10"), state.chapters.map { it.displayName })
+      coVerify(exactly = 0) { overrideRepo.set(any(), any(), any(), any()) }
+    }
+  }
+
+  @Test
+  fun `later correction does not replace manual names`() = runTest {
+    val chapter = chapter(
+      durationMs = 3.minutesMs(),
+      marks = listOf(
+        MarkData(startMs = 0L, name = "Chapter 10"),
+        MarkData(startMs = 60_000L, name = "Chapter 11"),
+        MarkData(startMs = 120_000L, name = "Chapter 12"),
+      ),
+    )
+    val manual = ChapterNameOverride(chapterId.value, 0L, bookId.value, "Prologue")
+    val overrideFlow = MutableStateFlow(listOf(manual))
+    val overrideRepo = mockk<ChapterNameOverrideRepo>(relaxed = true) {
+      every { overridesForBook(bookId) } returns overrideFlow
+    }
+    val vm = viewModel(
+      book = book(chapters = listOf(chapter), offset = -2, positionInChapter = 130_000L),
+      overrides = listOf(manual),
+      overrideRepo = overrideRepo,
+    )
+
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { vm.viewState() }.test {
+      var state = awaitNonNull()
+      while (state.currentChapterIndex != 2 || !state.chapters[0].hasOverride) state = awaitNonNull()
+
+      vm.onOffsetSet(-9)
+      state = awaitNonNull()
+      while (state.offset != -9) state = awaitNonNull()
+
+      assertEquals("Prologue", state.chapters[0].displayName)
+      coVerify(exactly = 0) { overrideRepo.set(chapterId, 0L, bookId, any()) }
+      coVerify { overrideRepo.set(chapterId, 60_000L, bookId, "Chapter 9") }
+    }
+  }
+
+  @Test
   fun `override takes precedence over offset`() = runTest {
     val override = ChapterNameOverride(
       chapterId = chapterId.value,

@@ -1,0 +1,3 @@
+- Fixed later Chapter Fix corrections changing earlier chapter names or undoing restored names.
+- Restored long-press menus in search results. Thanks @JamesDBartlett3.
+- Fixed reversed Android Auto forward/rewind keys while preserving headset preferences. Thanks @geofgowan.

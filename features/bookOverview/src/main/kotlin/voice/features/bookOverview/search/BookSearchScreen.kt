@@ -39,6 +39,7 @@ internal fun BookSearchContent(
   contentPadding: PaddingValues,
   onQueryChange: (String) -> Unit,
   onBookClick: (BookId) -> Unit,
+  onBookLongClick: (BookId) -> Unit,
 ) {
   when (viewState) {
     is BookSearchViewState.EmptySearch -> {
@@ -88,7 +89,7 @@ internal fun BookSearchContent(
                 ListBookRow(
                   book = book,
                   onBookClick = onBookClick,
-                  onBookLongClick = onBookClick,
+                  onBookLongClick = onBookLongClick,
                   sharedTransitionScope = sharedTransitionScope,
                 )
               }
@@ -106,7 +107,7 @@ internal fun BookSearchContent(
                 GridBook(
                   book = book,
                   onBookClick = onBookClick,
-                  onBookLongClick = onBookClick,
+                  onBookLongClick = onBookLongClick,
                   sharedTransitionScope = sharedTransitionScope,
                 )
               }

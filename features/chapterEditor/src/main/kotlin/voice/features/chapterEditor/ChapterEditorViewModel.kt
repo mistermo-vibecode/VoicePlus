@@ -12,8 +12,11 @@ import dev.zacsweers.metro.AssistedInject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import voice.core.common.DispatcherProvider
 import voice.core.common.MainScope
 import voice.core.common.RetainedViewModel
@@ -36,6 +39,10 @@ public class ChapterEditorViewModel(
   @Assisted private val bookId: BookId,
 ) : RetainedViewModel(MainScope(dispatcherProvider)) {
   private val localOffset = MutableStateFlow<Int?>(null)
+  private val editMutex = Mutex()
+  private var initialOffset: Int? = null
+  private var chaptersBeforeCurrent = emptyList<ChapterItemState>()
+  private var chaptersToFreeze: List<ChapterItemState>? = null
 
   private val _editingChapter = mutableStateOf<ChapterItemState?>(null)
   internal val editingChapter: State<ChapterItemState?> get() = _editingChapter
@@ -67,7 +74,10 @@ public class ChapterEditorViewModel(
     // Seed the editable offset from the persisted value once the book first loads; thereafter
     // localOffset is the source of truth and every edit is persisted back to the book.
     remember(book.content.id) {
-      if (localOffset.value == null) localOffset.value = book.content.chapterNameOffset
+      if (localOffset.value == null) {
+        initialOffset = book.content.chapterNameOffset
+        localOffset.value = book.content.chapterNameOffset
+      }
       book.content.id
     }
     val offset = localOffset.collectAsState().value ?: book.content.chapterNameOffset
@@ -98,6 +108,7 @@ public class ChapterEditorViewModel(
         item
       }
     }
+    chaptersBeforeCurrent = items.take(currentChapterIndex)
 
     return ChapterEditorViewState(
       offset = offset,
@@ -109,18 +120,17 @@ public class ChapterEditorViewModel(
   }
 
   public fun onOffsetIncrement() {
-    localOffset.value = (localOffset.value ?: 0).let { if (it == Int.MAX_VALUE) it else it + 1 }
-    persistOffset()
+    val current = localOffset.value ?: 0
+    setOffset(if (current == Int.MAX_VALUE) current else current + 1)
   }
 
   public fun onOffsetDecrement() {
-    localOffset.value = (localOffset.value ?: 0).let { if (it == Int.MIN_VALUE) it else it - 1 }
-    persistOffset()
+    val current = localOffset.value ?: 0
+    setOffset(if (current == Int.MIN_VALUE) current else current - 1)
   }
 
   public fun onOffsetSet(value: Int) {
-    localOffset.value = value
-    persistOffset()
+    setOffset(value)
   }
 
   public fun onEditChapterClick(item: ChapterItemState) {
@@ -136,13 +146,19 @@ public class ChapterEditorViewModel(
     newName: String,
   ) {
     scope.launch {
-      overrideRepo.set(item.chapterId, item.markStartMs, bookId, newName.trim())
+      editMutex.withLock {
+        overrideRepo.set(item.chapterId, item.markStartMs, bookId, newName.trim())
+      }
       _editingChapter.value = null
     }
   }
 
   public fun onDeleteOverride(item: ChapterItemState) {
-    scope.launch { overrideRepo.delete(item.chapterId, item.markStartMs) }
+    scope.launch {
+      editMutex.withLock {
+        overrideRepo.delete(item.chapterId, item.markStartMs)
+      }
+    }
   }
 
   public fun onResetAllClick() {
@@ -153,8 +169,12 @@ public class ChapterEditorViewModel(
     _showResetConfirm.value = false
     localOffset.value = 0
     scope.launch {
-      bookRepository.updateBook(bookId) { it.copy(chapterNameOffset = 0) }
-      overrideRepo.deleteAll(bookId)
+      editMutex.withLock {
+        bookRepository.updateBook(bookId) { it.copy(chapterNameOffset = 0) }
+        overrideRepo.deleteAll(bookId)
+        initialOffset = 0
+        chaptersToFreeze = null
+      }
     }
   }
 
@@ -163,13 +183,34 @@ public class ChapterEditorViewModel(
   }
 
   public fun onBack() {
-    // Each offset change is already persisted by persistOffset(), so just navigate back.
+    // Each offset change is already persisted, so just navigate back.
     navigator.goBack()
   }
 
-  private fun persistOffset() {
+  private fun setOffset(offset: Int) {
+    if (localOffset.value == offset) return
+    // ponytail: Reuse existing overrides as range anchors; add a dedicated anchor table only if
+    // users need to edit or remove individual offset ranges later.
+    if (initialOffset?.let { it != 0 } == true && chaptersToFreeze == null) {
+      chaptersToFreeze = chaptersBeforeCurrent.filterNot { it.hasOverride }
+    }
+    localOffset.value = offset
     scope.launch {
-      localOffset.value?.let { offset ->
+      editMutex.withLock {
+        val existingOverrides = overrideRepo.overridesForBook(bookId).first().byMarkKey()
+        chaptersToFreeze.orEmpty().forEach { chapter ->
+          val key = Pair(chapter.chapterId.value, chapter.markStartMs)
+          if (key !in existingOverrides) {
+            overrideRepo.set(
+              chapterId = chapter.chapterId,
+              markStartMs = chapter.markStartMs,
+              bookId = bookId,
+              name = chapter.displayName,
+            )
+          }
+        }
+        // Freeze once per editor session so subsequent adjustments respect restored names.
+        if (chaptersToFreeze != null) chaptersToFreeze = emptyList()
         bookRepository.updateBook(bookId) { it.copy(chapterNameOffset = offset) }
       }
     }
