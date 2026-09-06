@@ -19,11 +19,11 @@ But you can try both. If the features below add value to your listening experien
 
 ---
 
-## What's new in v1.26
+## What's new in v1.27
 
-- Redesigned Listening Statistics with clearer records, finished-book details, and relisten counts
-- Playback speed changes are now remembered — thanks [@tomwhat](https://github.com/tomwhat)
-- More reliable Android restore of listening history and cover art
+- Later Chapter Fix corrections preserve earlier chapter names and respect restored names
+- Long-press menus work in search results — thanks [@JamesDBartlett3](https://github.com/JamesDBartlett3)
+- Android Auto forward/rewind keys keep the correct direction without changing headset preferences — thanks [@geofgowan](https://github.com/geofgowan) for reporting
 
 ---
 
