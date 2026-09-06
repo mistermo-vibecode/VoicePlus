@@ -209,6 +209,8 @@ public class ChapterEditorViewModel(
             )
           }
         }
+        // Freeze once per editor session so subsequent adjustments respect restored names.
+        if (chaptersToFreeze != null) chaptersToFreeze = emptyList()
         bookRepository.updateBook(bookId) { it.copy(chapterNameOffset = offset) }
       }
     }

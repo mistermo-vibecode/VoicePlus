@@ -160,6 +160,11 @@ class ChapterEditorViewModelTest {
     val overrideFlow = MutableStateFlow<List<ChapterNameOverride>>(emptyList())
     val overrideRepo = mockk<ChapterNameOverrideRepo> {
       every { overridesForBook(bookId) } returns overrideFlow
+      coEvery { delete(any(), any()) } answers {
+        val id = firstArg<ChapterId>().value
+        val start = secondArg<Long>()
+        overrideFlow.value = overrideFlow.value.filterNot { it.chapterId == id && it.markStartMs == start }
+      }
       coEvery { set(any(), any(), any(), any()) } answers {
         overrideFlow.value += ChapterNameOverride(
           chapterId = firstArg<ChapterId>().value,
@@ -191,6 +196,17 @@ class ChapterEditorViewModelTest {
       assertEquals(listOf(0L, 60_000L), overrideFlow.value.map { it.markStartMs })
       assertFalse(state.chapters[2].hasOverride)
       assertFalse(state.chapters[3].hasOverride)
+
+      // Restoring one preserved name must remain effective when adjusting the offset again.
+      vm.onDeleteOverride(state.chapters[0])
+      state = awaitNonNull()
+      while (state.chapters[0].hasOverride) state = awaitNonNull()
+      vm.onOffsetSet(-8)
+      state = awaitNonNull()
+      while (state.offset != -8) state = awaitNonNull()
+      assertEquals(listOf("Chapter 2", "Chapter 9", "Chapter 4", "Chapter 5"), state.chapters.map { it.displayName })
+      assertFalse(state.chapters[0].hasOverride)
+      coVerify(exactly = 1) { overrideRepo.set(chapterId, 0L, bookId, "Chapter 8") }
     }
   }
 

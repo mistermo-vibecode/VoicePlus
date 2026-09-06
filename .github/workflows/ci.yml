@@ -49,7 +49,7 @@ jobs:
         run: >-
           ./gradlew :app:voiceDeviceLibreDebugAndroidTest
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
-          -Pandroid.testInstrumentationRunnerArguments.class=voice.app.AppLaunchSmokeTest,voice.app.SleepTimerIntegrationTest
+          -Pandroid.testInstrumentationRunnerArguments.class=voice.app.AppLaunchSmokeTest,voice.app.SleepTimerIntegrationTest,voice.app.FeatureRegressionTest,voice.app.AndroidAutoMediaButtonTest
       - name: Publish JUnit Report
         uses: mikepenz/action-junit-report@v6
         if: always()
