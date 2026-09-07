@@ -1,0 +1,7 @@
+Customize the now-playing toolbar with up to four shortcuts; other actions stay in the menu. Toolbar choices are saved in settings backups.
+
+Add quick bookmarks directly from the bookmarks screen, alongside named bookmarks.
+
+Completed books now show a badge and finish date in the library.
+
+Refreshed dark-mode phone and tablet screenshots.

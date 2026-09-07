@@ -340,7 +340,10 @@
     <string name="pref_media_button_double_click">Media button double-click</string>
     <string name="pref_media_button_triple_click">Media button triple-click</string>
     <string name="playback_toolbar_customize">Customize toolbar</string>
-    <string name="playback_toolbar_description">Choose up to %1$d actions to show as icons at the top of the now playing screen. The rest stay in the ⋮ menu.</string>
+    <plurals name="playback_toolbar_description">
+        <item quantity="one">Choose up to %1$d action to show as an icon at the top of the now playing screen. The rest stay in the ⋮ menu.</item>
+        <item quantity="other">Choose up to %1$d actions to show as icons at the top of the now playing screen. The rest stay in the ⋮ menu.</item>
+    </plurals>
     <string name="media_button_action_none">None</string>
     <string name="media_button_action_skip_forward">Skip forward</string>
     <string name="media_button_action_skip_backward">Skip backward</string>

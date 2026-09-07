@@ -16,6 +16,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -35,7 +36,11 @@ internal fun PlaybackToolbarDialog(
     text = {
       Column {
         Text(
-          text = stringResource(StringsR.string.playback_toolbar_description, PlaybackToolbarAction.MAX_PINNED),
+          text = pluralStringResource(
+            StringsR.plurals.playback_toolbar_description,
+            PlaybackToolbarAction.MAX_PINNED,
+            PlaybackToolbarAction.MAX_PINNED,
+          ),
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           modifier = Modifier.padding(bottom = 8.dp),
