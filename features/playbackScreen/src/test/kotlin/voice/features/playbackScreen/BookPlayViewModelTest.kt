@@ -30,6 +30,7 @@ import voice.core.data.Chapter
 import voice.core.data.ChapterId
 import voice.core.data.ListeningEventType
 import voice.core.data.MarkData
+import voice.core.data.PlaybackToolbarAction
 import voice.core.data.repo.BookCharacterRepo
 import voice.core.data.repo.BookmarkRepo
 import voice.core.data.sleeptimer.SleepTimerPreference
@@ -106,6 +107,7 @@ class BookPlayViewModelTest {
     volumeGainFormatter = mockk(),
     batteryOptimization = mockk(),
     sleepTimerPreferenceStore = sleepTimerDataStore,
+    toolbarActionsStore = MemoryDataStore(PlaybackToolbarAction.DEFAULT),
     bookId = book.id,
     dispatcherProvider = DispatcherProvider(scope.coroutineContext, scope.coroutineContext, scope.coroutineContext),
   )
@@ -355,10 +357,49 @@ class BookPlayViewModelTest {
     }
   }
 
+  @Test
+  fun `pinning a toolbar action persists it and stops at the cap`() = scope.runTest {
+    val store = MemoryDataStore(PlaybackToolbarAction.DEFAULT)
+    val viewModel = viewModel(toolbarActionsStore = store)
+
+    viewModel.setToolbarAction(PlaybackToolbarAction.LISTENING_LOG, pinned = true)
+    yield()
+    store.data.first() shouldBe PlaybackToolbarAction.DEFAULT + PlaybackToolbarAction.LISTENING_LOG
+
+    // Fifth pin is refused; four is all a compact app bar can take.
+    viewModel.setToolbarAction(PlaybackToolbarAction.CHAPTER_FIX, pinned = true)
+    yield()
+    store.data.first() shouldBe PlaybackToolbarAction.DEFAULT + PlaybackToolbarAction.LISTENING_LOG
+
+    viewModel.setToolbarAction(PlaybackToolbarAction.PLAYBACK_SPEED, pinned = false)
+    yield()
+    store.data.first() shouldBe setOf(
+      PlaybackToolbarAction.BOOKMARKS,
+      PlaybackToolbarAction.CHARACTER_LIST,
+      PlaybackToolbarAction.LISTENING_LOG,
+    )
+  }
+
+  @Test
+  fun `customize toolbar opens its dialog and the view state carries the pinned set`() = scope.runTest {
+    val store = MemoryDataStore(setOf(PlaybackToolbarAction.BOOKMARKS))
+    val viewModel = viewModel(toolbarActionsStore = store)
+
+    viewModel.onCustomizeToolbarClick()
+    viewModel.dialogState.value shouldBe BookPlayDialogViewState.ToolbarActions
+
+    backgroundScope.launchMolecule(RecompositionMode.Immediate) { viewModel.viewState() }.test {
+      var state = awaitItem()
+      while (state == null) state = awaitItem()
+      state.toolbarActions shouldBe setOf(PlaybackToolbarAction.BOOKMARKS)
+    }
+  }
+
   private fun viewModel(
     book: Book = this.book,
     livePlaybackFlow: MutableStateFlow<LivePlaybackState?> = MutableStateFlow(null),
     playStateFlow: MutableStateFlow<PlayStateManager.PlayState> = MutableStateFlow(PlayStateManager.PlayState.Paused),
+    toolbarActionsStore: MemoryDataStore<Set<PlaybackToolbarAction>> = MemoryDataStore(PlaybackToolbarAction.DEFAULT),
   ): BookPlayViewModel {
     return BookPlayViewModel(
       bookRepository = mockk {
@@ -387,6 +428,7 @@ class BookPlayViewModelTest {
       volumeGainFormatter = mockk(),
       batteryOptimization = mockk(),
       sleepTimerPreferenceStore = sleepTimerDataStore,
+      toolbarActionsStore = toolbarActionsStore,
       bookId = book.id,
       dispatcherProvider = DispatcherProvider(scope.coroutineContext, scope.coroutineContext, scope.coroutineContext),
     )

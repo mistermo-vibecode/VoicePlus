@@ -8,9 +8,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.BedtimeOff
-import androidx.compose.material.icons.outlined.CollectionsBookmark
-import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -24,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import voice.core.data.PlaybackToolbarAction
 import voice.core.strings.R
 import voice.features.playbackScreen.BookPlayViewState
 
@@ -38,10 +36,25 @@ internal fun BookPlayAppBar(
   onVolumeBoostClick: () -> Unit,
   onListeningLogClick: () -> Unit,
   onCharacterListClick: () -> Unit,
+  onCustomizeToolbarClick: () -> Unit,
   onCloseClick: () -> Unit,
   useLandscapeLayout: Boolean,
   onEditChapterNamesClick: (() -> Unit)? = null,
 ) {
+  val (pinnedActions, overflowActions) = partitionToolbarActions(
+    pinnedActions = viewState.toolbarActions,
+    chapterFixAvailable = onEditChapterNamesClick != null,
+  )
+  val onActionClick: (PlaybackToolbarAction) -> Unit = { action ->
+    when (action) {
+      PlaybackToolbarAction.BOOKMARKS -> onBookmarkClick()
+      PlaybackToolbarAction.CHARACTER_LIST -> onCharacterListClick()
+      PlaybackToolbarAction.PLAYBACK_SPEED -> onSpeedChangeClick()
+      PlaybackToolbarAction.CHAPTER_FIX -> onEditChapterNamesClick?.invoke()
+      PlaybackToolbarAction.LISTENING_LOG -> onListeningLogClick()
+    }
+  }
+
   val appBarActions: @Composable RowScope.() -> Unit = {
     IconButton(onClick = onSleepTimerClick) {
       Icon(
@@ -53,49 +66,62 @@ internal fun BookPlayAppBar(
         contentDescription = stringResource(id = R.string.action_sleep),
       )
     }
-    Box(
-      modifier = Modifier
-        .size(40.dp)
-        .combinedClickable(
-          onClick = onBookmarkClick,
-          onLongClick = onBookmarkLongClick,
-          indication = ripple(bounded = false, radius = 20.dp),
-          interactionSource = remember { MutableInteractionSource() },
-        ),
-      contentAlignment = Alignment.Center,
-    ) {
-      Icon(
-        imageVector = Icons.Outlined.CollectionsBookmark,
-        contentDescription = stringResource(id = R.string.bookmark),
-      )
-    }
-    IconButton(onClick = onCharacterListClick) {
-      BadgedBox(
-        badge = {
-          if (viewState.characterCount > 0) {
-            Badge()
+    pinnedActions.forEach { action ->
+      when (action) {
+        PlaybackToolbarAction.BOOKMARKS -> {
+          // Not an IconButton: long-press adds a quick bookmark without leaving the screen.
+          Box(
+            modifier = Modifier
+              .size(40.dp)
+              .combinedClickable(
+                onClick = onBookmarkClick,
+                onLongClick = onBookmarkLongClick,
+                indication = ripple(bounded = false, radius = 20.dp),
+                interactionSource = remember { MutableInteractionSource() },
+              ),
+            contentAlignment = Alignment.Center,
+          ) {
+            Icon(
+              imageVector = action.icon,
+              contentDescription = stringResource(id = action.labelRes),
+            )
           }
-        },
-      ) {
-        Icon(
-          imageVector = Icons.Outlined.Group,
-          contentDescription = stringResource(id = R.string.character_list),
-        )
+        }
+        PlaybackToolbarAction.CHARACTER_LIST -> {
+          IconButton(onClick = onCharacterListClick) {
+            BadgedBox(
+              badge = {
+                if (viewState.characterCount > 0) {
+                  Badge()
+                }
+              },
+            ) {
+              Icon(
+                imageVector = action.icon,
+                contentDescription = stringResource(id = action.labelRes),
+              )
+            }
+          }
+        }
+        else -> {
+          IconButton(onClick = { onActionClick(action) }) {
+            Icon(
+              imageVector = action.icon,
+              contentDescription = stringResource(id = action.labelRes),
+            )
+          }
+        }
       }
-    }
-    IconButton(onClick = onSpeedChangeClick) {
-      Icon(
-        imageVector = Icons.Outlined.Speed,
-        contentDescription = stringResource(id = R.string.playback_speed),
-      )
     }
     OverflowMenu(
       skipSilence = viewState.skipSilence,
       onSkipSilenceClick = onSkipSilenceClick,
       onVolumeBoostClick = onVolumeBoostClick,
-      onListeningLogClick = onListeningLogClick,
-      onCharacterListClick = onCharacterListClick,
-      onEditChapterNamesClick = onEditChapterNamesClick,
+      overflowActions = overflowActions,
+      onActionClick = onActionClick,
+      // Long-press on the pinned icon is the quick bookmark; with the icon gone it needs a menu entry.
+      onQuickBookmarkClick = onBookmarkLongClick.takeIf { PlaybackToolbarAction.BOOKMARKS in overflowActions },
+      onCustomizeToolbarClick = onCustomizeToolbarClick,
     )
   }
   if (useLandscapeLayout) {

@@ -3,6 +3,7 @@ package voice.core.data.store.snapshot
 import kotlinx.serialization.json.Json
 import voice.core.data.GridMode
 import voice.core.data.MediaButtonClickAction
+import voice.core.data.PlaybackToolbarAction
 import voice.core.data.repo.internals.MemoryDataStore
 import voice.core.data.sleeptimer.SleepTimerPreference
 import kotlin.time.Duration.Companion.seconds
@@ -26,6 +27,7 @@ internal fun testSettingsSnapshotter(): SettingsSnapshotter = SettingsSnapshotte
   gridMode = MemoryDataStore(GridMode.FOLLOW_DEVICE),
   mediaDoubleClick = MemoryDataStore(MediaButtonClickAction.NONE),
   mediaTripleClick = MemoryDataStore(MediaButtonClickAction.NONE),
+  playbackToolbarActions = MemoryDataStore(PlaybackToolbarAction.DEFAULT),
   experimentalPersistence = MemoryDataStore(false),
   ignoreFileTags = MemoryDataStore(false),
   json = snapshotTestJson,

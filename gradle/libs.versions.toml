@@ -88,6 +88,7 @@ compose-ui-testManifest = { module = "androidx.compose.ui:ui-test-manifest" }
 compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
 compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 compose-animation-graphics = { module = "androidx.compose.animation:animation-graphics" }
+graphicsShapes = "androidx.graphics:graphics-shapes:1.0.1"
 compose-animation-animation = { module = "androidx.compose.animation:animation" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
 compose-activity = "androidx.activity:activity-compose:1.13.0"

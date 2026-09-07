@@ -40,7 +40,15 @@ But you can try both. If the features below add value to your listening experien
 
 ---
 
-## What's new in v1.27
+## What's new in v1.28
+
+- Customize the now-playing toolbar with up to four shortcuts; other actions stay in the menu
+- Toolbar choices are saved and included in settings backups
+- Add a quick bookmark directly from the bookmarks screen, or use the separate named-bookmark button
+- Completed books show a completion badge and finish date in the library
+- Refreshed dark-mode phone and tablet screenshots
+
+### Previous fixes in v1.27
 
 - Later Chapter Fix corrections preserve earlier chapter names and respect restored names
 - Long-press menus work in search results — thanks [@JamesDBartlett3](https://github.com/JamesDBartlett3)

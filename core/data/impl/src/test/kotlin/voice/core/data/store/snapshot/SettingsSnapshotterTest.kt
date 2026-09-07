@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import voice.core.data.GridMode
 import voice.core.data.MediaButtonClickAction
+import voice.core.data.PlaybackToolbarAction
 import voice.core.data.repo.internals.MemoryDataStore
 import voice.core.data.sleeptimer.SleepTimerPreference
 import kotlin.time.Duration.Companion.seconds
@@ -29,6 +30,7 @@ class SettingsSnapshotterTest {
     val gridMode = MemoryDataStore(GridMode.FOLLOW_DEVICE)
     val mediaDoubleClick = MemoryDataStore(MediaButtonClickAction.NONE)
     val mediaTripleClick = MemoryDataStore(MediaButtonClickAction.NONE)
+    val playbackToolbarActions = MemoryDataStore(PlaybackToolbarAction.DEFAULT)
     val experimentalPersistence = MemoryDataStore(false)
     val ignoreFileTags = MemoryDataStore(false)
 
@@ -41,6 +43,7 @@ class SettingsSnapshotterTest {
       gridMode = gridMode,
       mediaDoubleClick = mediaDoubleClick,
       mediaTripleClick = mediaTripleClick,
+      playbackToolbarActions = playbackToolbarActions,
       experimentalPersistence = experimentalPersistence,
       ignoreFileTags = ignoreFileTags,
       json = snapshotTestJson,
@@ -55,6 +58,7 @@ class SettingsSnapshotterTest {
     source.gridMode.updateData { GridMode.GRID }
     source.mediaDoubleClick.updateData { MediaButtonClickAction.QUICK_BOOKMARK }
     source.ignoreFileTags.updateData { true }
+    source.playbackToolbarActions.updateData { setOf(PlaybackToolbarAction.LISTENING_LOG) }
 
     val captured = source.snapshotter().capture()
     val target = Stores()
@@ -65,6 +69,7 @@ class SettingsSnapshotterTest {
     target.gridMode.data.first() shouldBe GridMode.GRID
     target.mediaDoubleClick.data.first() shouldBe MediaButtonClickAction.QUICK_BOOKMARK
     target.ignoreFileTags.data.first() shouldBe true
+    target.playbackToolbarActions.data.first() shouldBe setOf(PlaybackToolbarAction.LISTENING_LOG)
     // Untouched settings keep their defaults.
     target.autoRewind.data.first() shouldBe 2
   }
@@ -91,7 +96,7 @@ class SettingsSnapshotterTest {
       stores.snapshotter().changes().collect { emissions++ }
     }
     runCurrent()
-    emissions shouldBe 0 // initial replays of all ten stores are dropped
+    emissions shouldBe 0 // initial replays of every store are dropped
 
     stores.gridMode.updateData { GridMode.GRID }
     runCurrent()

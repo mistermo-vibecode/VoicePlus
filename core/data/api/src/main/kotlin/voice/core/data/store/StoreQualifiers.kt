@@ -61,3 +61,6 @@ public annotation class IgnoreFileTagsStore
 
 @Qualifier
 public annotation class OpenListeningSessionStore
+
+@Qualifier
+public annotation class PlaybackToolbarActionsStore

@@ -174,11 +174,20 @@ class BookmarkViewModel(
 
   fun addBookmark(name: String) {
     if (name.isBlank()) return
+    addBookmarkAtCurrentPosition(title = name)
+  }
+
+  /** One tap, no name: the list shows it under the chapter it was set in, tagged "Quick bookmark". */
+  fun addQuickBookmark() {
+    addBookmarkAtCurrentPosition(title = null)
+  }
+
+  private fun addBookmarkAtCurrentPosition(title: String?) {
     scope.launch {
       val book = currentBookResolver.book(bookId) ?: return@launch
       val newBookmark = bookmarkRepo.addBookmarkAtBookPosition(
         book = book,
-        title = name,
+        title = title,
         setBySleepTimer = false,
       )
       bookmarks = (bookmarks + newBookmark)

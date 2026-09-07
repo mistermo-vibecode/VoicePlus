@@ -22,6 +22,7 @@ import voice.core.common.resolveChapterName
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.ListeningEventType
+import voice.core.data.PlaybackToolbarAction
 import voice.core.data.byMarkKey
 import voice.core.data.durationMs
 import voice.core.data.markForPosition
@@ -31,6 +32,7 @@ import voice.core.data.repo.BookmarkRepo
 import voice.core.data.repo.ChapterNameOverrideRepo
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.CurrentBookStore
+import voice.core.data.store.PlaybackToolbarActionsStore
 import voice.core.data.store.SleepTimerPreferenceStore
 import voice.core.logging.api.Logger
 import voice.core.playback.CurrentBookResolver
@@ -71,6 +73,8 @@ class BookPlayViewModel(
   dispatcherProvider: DispatcherProvider,
   @SleepTimerPreferenceStore
   private val sleepTimerPreferenceStore: DataStore<SleepTimerPreference>,
+  @PlaybackToolbarActionsStore
+  private val toolbarActionsStore: DataStore<Set<PlaybackToolbarAction>>,
   @Assisted
   private val bookId: BookId,
 ) : RetainedViewModel(MainScope(dispatcherProvider)) {
@@ -108,6 +112,9 @@ class BookPlayViewModel(
     val isPlaying = livePlaybackState?.isPlaying ?: (managerPlayState == PlayStateManager.PlayState.Playing)
 
     val characterCount by remember { characterRepo.characterCount(bookId) }.collectAsState(initial = 0)
+    // Held until the store answers so a customised toolbar never flashes the default set first.
+    val toolbarActions = remember { toolbarActionsStore.data }.collectAsState(initial = null).value
+      ?: return null
 
     val currentMark = book.currentChapter.markForPosition(book.content.positionInChapter)
     val positionInCurrentMark = if (isPlaying && currentMark.durationMs > 0) {
@@ -142,7 +149,27 @@ class BookPlayViewModel(
       // Gate on chapter MARKS (what the editor actually lists), not raw markData — otherwise the
       // entry is hidden for the common one-file-per-chapter book whose files carry no embedded marks.
       editChapterNamesVisible = hasMoreThanOneChapter,
+      toolbarActions = toolbarActions,
     )
+  }
+
+  fun onCustomizeToolbarClick() {
+    _dialogState.value = BookPlayDialogViewState.ToolbarActions
+  }
+
+  fun setToolbarAction(
+    action: PlaybackToolbarAction,
+    pinned: Boolean,
+  ) {
+    scope.launch {
+      toolbarActionsStore.updateData { current ->
+        when {
+          !pinned -> current - action
+          current.size >= PlaybackToolbarAction.MAX_PINNED -> current
+          else -> current + action
+        }
+      }
+    }
   }
 
   fun dismissDialog() {

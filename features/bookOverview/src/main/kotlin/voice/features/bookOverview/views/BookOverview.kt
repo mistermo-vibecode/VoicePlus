@@ -424,7 +424,7 @@ internal class BookOverviewPreviewParameterProvider : PreviewParameterProvider<B
           repeat(2) {
             put(
               BookId(UUID.randomUUID().toString()),
-              mutableStateOf(book()),
+              mutableStateOf(book().copy(progress = 1f, finished = true, finishedOn = "12 Mar 2026")),
             )
           }
         },
