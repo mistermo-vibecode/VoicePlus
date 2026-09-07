@@ -9,9 +9,7 @@ A fork of [Voice](https://github.com/PaulWoitaschek/Voice) by Paul Woitaschek â€
 
 This started as a personal learning project by someone who had no idea what they were doing (and still isn't entirely sure). If you find it useful, great. Updates may happen. No promises.
 
-## A look at v1.28
-
-Dark-mode screenshots from the upcoming v1.28 update. Tap a frame for the full-size screenshot.
+## Screenshots
 
 <p align="center">
   <a href="docs/screenshots/phone/playback.png"><img src="docs/screenshots/framed/playback.png" width="32%" alt="Playback with cover art and chapter controls"></a>
@@ -31,8 +29,6 @@ Dark-mode screenshots from the upcoming v1.28 update. Tap a frame for the full-s
   <a href="docs/screenshots/phone/playback-settings.png"><img src="docs/screenshots/framed/playback-settings.png" width="32%" alt="Customize media-button actions, skip duration and lock-screen options"></a>
   <a href="docs/screenshots/phone/sleep-timer.png"><img src="docs/screenshots/framed/sleep-timer.png" width="32%" alt="Sleep timer with time presets and end-of-chapter options"></a>
 </p>
-
-Screenshots use a fictional demo library. [Cover credits and capture details](docs/screenshots/README.md).
 
 ---
 
