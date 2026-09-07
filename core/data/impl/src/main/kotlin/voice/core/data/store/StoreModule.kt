@@ -17,6 +17,7 @@ import voice.core.data.LockscreenSecondaryTextMode
 import voice.core.data.LockscreenSliderMode
 import voice.core.data.MediaButtonClickAction
 import voice.core.data.OpenSessionCheckpoint
+import voice.core.data.PlaybackToolbarAction
 import voice.core.data.sleeptimer.SleepTimerPreference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -202,6 +203,17 @@ public interface StoreModule {
       serializer = MediaButtonClickAction.serializer(),
       defaultValue = MediaButtonClickAction.SKIP_BACKWARD,
       fileName = "mediaButtonTripleClickHandlerStore",
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  @PlaybackToolbarActionsStore
+  private fun playbackToolbarActionsStore(factory: VoiceDataStoreFactory): DataStore<Set<PlaybackToolbarAction>> {
+    return factory.create(
+      serializer = SetSerializer(PlaybackToolbarAction.serializer()),
+      defaultValue = PlaybackToolbarAction.DEFAULT,
+      fileName = "playbackToolbarActions",
     )
   }
 

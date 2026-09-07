@@ -1,6 +1,7 @@
 package voice.features.playbackScreen
 
 import androidx.compose.runtime.Immutable
+import voice.core.data.PlaybackToolbarAction
 import voice.core.playback.misc.Decibel
 import voice.core.ui.ImmutableFile
 import voice.features.sleepTimer.SleepTimerViewState
@@ -19,6 +20,7 @@ data class BookPlayViewState(
   val skipSilence: Boolean,
   val characterCount: Int,
   val editChapterNamesVisible: Boolean,
+  val toolbarActions: Set<PlaybackToolbarAction>,
 ) {
 
   sealed interface SleepTimerViewState {
@@ -64,4 +66,6 @@ internal sealed interface BookPlayDialogViewState {
 
   @JvmInline
   value class SleepTimer(val viewState: SleepTimerViewState) : BookPlayDialogViewState
+
+  data object ToolbarActions : BookPlayDialogViewState
 }

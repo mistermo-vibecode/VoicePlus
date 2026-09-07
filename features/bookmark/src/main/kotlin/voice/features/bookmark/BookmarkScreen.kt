@@ -18,15 +18,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -116,6 +118,7 @@ fun BookmarkScreen(bookId: BookId) {
     snackbarHostState = snackbarHostState,
     onClose = viewModel::closeScreen,
     onAdd = viewModel::onAddClick,
+    onQuickAdd = viewModel::addQuickBookmark,
     onDelete = viewModel::deleteBookmark,
     onEdit = viewModel::onEditClick,
     onScrollConfirm = viewModel::onScrollConfirm,
@@ -132,6 +135,7 @@ internal fun BookmarkScreen(
   snackbarHostState: SnackbarHostState,
   onClose: () -> Unit,
   onAdd: () -> Unit,
+  onQuickAdd: () -> Unit,
   onDelete: (Bookmark.Id) -> Unit,
   onEdit: (Bookmark.Id) -> Unit,
   onScrollConfirm: () -> Unit,
@@ -160,12 +164,21 @@ internal fun BookmarkScreen(
       )
     },
     floatingActionButton = {
-      FloatingActionButton(
-        onClick = onAdd,
-        content = {
-          Icon(Icons.Default.Add, contentDescription = stringResource(id = StringsR.string.add))
-        },
-      )
+      Column(horizontalAlignment = Alignment.End) {
+        SmallFloatingActionButton(
+          onClick = onAdd,
+          containerColor = MaterialTheme.colorScheme.secondaryContainer,
+          contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ) {
+          Icon(Icons.Default.Add, contentDescription = stringResource(id = StringsR.string.bookmark_add_named))
+        }
+        Spacer(Modifier.size(16.dp))
+        ExtendedFloatingActionButton(
+          onClick = onQuickAdd,
+          icon = { Icon(Icons.Outlined.BookmarkAdd, contentDescription = null) },
+          text = { Text(stringResource(id = StringsR.string.bookmark_type_quick)) },
+        )
+      }
     },
   ) { paddingValues ->
     val lazyListState = rememberLazyListState()
@@ -193,7 +206,7 @@ internal fun BookmarkScreen(
         )
       }
       item {
-        Spacer(Modifier.size(88.dp))
+        Spacer(Modifier.size(144.dp))
       }
     }
   }

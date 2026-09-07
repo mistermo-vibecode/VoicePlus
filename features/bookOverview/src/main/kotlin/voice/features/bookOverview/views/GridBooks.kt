@@ -153,6 +153,14 @@ internal fun GridBook(
           error = painterResource(id = UiR.drawable.album_art),
           contentDescription = null,
         )
+        if (book.finished) {
+          CompletedMedal(
+            size = 36.dp,
+            modifier = Modifier
+              .align(Alignment.TopEnd)
+              .padding(6.dp),
+          )
+        }
       }
 
       Spacer(Modifier.height(4.dp))
@@ -171,11 +179,11 @@ internal fun GridBook(
         verticalAlignment = Alignment.CenterVertically,
       ) {
         Text(
-          text = book.remainingTime,
+          text = book.statusLabel(),
           style = MaterialTheme.typography.labelMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (book.progress > 0f) {
+        if (!book.finished && book.progress > 0f) {
           Text(
             text = "${(book.progress * 100).toInt()}%",
             style = MaterialTheme.typography.labelMedium,
@@ -185,7 +193,10 @@ internal fun GridBook(
       }
 
       Spacer(Modifier.height(8.dp))
-      if (book.progress > 0.05f) {
+      if (book.finished) {
+        // Keeps the tile the height it had with a progress bar.
+        Spacer(Modifier.height(4.dp))
+      } else if (book.progress > 0.05f) {
         LinearProgressIndicator(
           progress = { book.progress },
         )

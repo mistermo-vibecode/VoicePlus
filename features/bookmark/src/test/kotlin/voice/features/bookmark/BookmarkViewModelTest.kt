@@ -327,6 +327,35 @@ class BookmarkViewModelTest {
   }
 
   @Test
+  fun `quick bookmark is created without a title at the live position`() = runTest {
+    val persistedBook = book(offset = 0)
+    val liveBook = persistedBook.copy(
+      content = persistedBook.content.copy(positionInChapter = 30_000L),
+    )
+    val created = bookmark(title = null).copy(time = 30_000L)
+    val bookmarkRepo = mockk<BookmarkRepo> {
+      coEvery { addBookmarkAtBookPosition(liveBook, null, false) } returns created
+    }
+    val vm = BookmarkViewModel(
+      currentBookStore = mockk(relaxed = true),
+      repo = mockk(relaxed = true),
+      bookmarkRepo = bookmarkRepo,
+      chapterNameOverrideRepo = mockk(relaxed = true),
+      playStateManager = mockk(relaxed = true),
+      playerController = mockk(relaxed = true),
+      currentBookResolver = mockk {
+        coEvery { book(bookId) } returns liveBook
+      },
+      navigator = mockk(relaxed = true),
+      bookId = bookId,
+    )
+
+    vm.addQuickBookmark()
+
+    coVerify(exactly = 1) { bookmarkRepo.addBookmarkAtBookPosition(liveBook, null, false) }
+  }
+
+  @Test
   fun `blank name does not create a bookmark`() = runTest {
     val theBook = book(offset = 0)
     val bookmarkRepo = mockk<BookmarkRepo>(relaxed = true) {

@@ -26,6 +26,7 @@ import dev.zacsweers.metro.Provides
 import voice.core.common.rootGraphAs
 import voice.core.data.BookId
 import voice.features.playbackScreen.view.BookPlayView
+import voice.features.playbackScreen.view.PlaybackToolbarDialog
 import voice.features.sleepTimer.SleepTimerDialog
 import voice.navigation.Destination
 import voice.navigation.NavEntryProvider
@@ -84,6 +85,7 @@ fun BookPlayScreen(
     onSpeedChangeClick = viewModel::onPlaybackSpeedIconClick,
     onListeningLogClick = viewModel::onListeningLogClick,
     onCharacterListClick = viewModel::onCharacterListClick,
+    onCustomizeToolbarClick = viewModel::onCustomizeToolbarClick,
     onCloseClick = viewModel::onCloseClick,
     onSkipToNext = viewModel::next,
     onSkipToPrevious = viewModel::previous,
@@ -102,6 +104,13 @@ fun BookPlayScreen(
       }
       is BookPlayDialogViewState.SelectChapterDialog -> {
         SelectChapterDialog(dialogState, viewModel)
+      }
+      BookPlayDialogViewState.ToolbarActions -> {
+        PlaybackToolbarDialog(
+          pinnedActions = viewState.toolbarActions,
+          onActionToggle = viewModel::setToolbarAction,
+          onDismiss = viewModel::dismissDialog,
+        )
       }
       is BookPlayDialogViewState.SleepTimer -> {
         SleepTimerDialog(

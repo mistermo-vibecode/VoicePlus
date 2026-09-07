@@ -188,6 +188,7 @@
     <string name="bookmark_unavailable">Bookmark unavailable</string>
     <string name="bookmark_type_manual">Manual</string>
     <string name="bookmark_type_quick">Quick bookmark</string>
+    <string name="bookmark_add_named">Add bookmark with name</string>
     <string name="bookmark_type_sleep_timer">Sleep timer</string>
     <string name="bookmark_position">%1$s in chapter · %2$s in book</string>
     <string name="bookmark_saved">Saved %1$s</string>
@@ -225,6 +226,7 @@
     <string name="book_header_current">Current</string>
     <string name="book_header_not_started">Not started Yet</string>
     <string name="book_header_completed">Completed</string>
+    <string name="book_finished_on">Finished %1$s</string>
     <string name="book_header_expand_section">Expand %1$s</string>
     <string name="book_header_collapse_section">Collapse %1$s</string>
     <string name="close">Close</string>
@@ -337,6 +339,11 @@
     <string name="listening_log_clear_all">Clear all</string>
     <string name="pref_media_button_double_click">Media button double-click</string>
     <string name="pref_media_button_triple_click">Media button triple-click</string>
+    <string name="playback_toolbar_customize">Customize toolbar</string>
+    <plurals name="playback_toolbar_description">
+        <item quantity="one">Choose up to %1$d action to show as an icon at the top of the now playing screen. The rest stay in the ⋮ menu.</item>
+        <item quantity="other">Choose up to %1$d actions to show as icons at the top of the now playing screen. The rest stay in the ⋮ menu.</item>
+    </plurals>
     <string name="media_button_action_none">None</string>
     <string name="media_button_action_skip_forward">Skip forward</string>
     <string name="media_button_action_skip_backward">Skip backward</string>

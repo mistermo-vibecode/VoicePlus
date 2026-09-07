@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,6 +42,7 @@ import voice.core.ui.sharedBookCover
 import voice.features.bookOverview.overview.BookOverviewCategory
 import voice.features.bookOverview.overview.BookOverviewItemViewState
 import voice.features.bookOverview.overview.isCollapsible
+import voice.core.strings.R as StringsR
 import voice.core.ui.R as UiR
 
 @Composable
@@ -162,13 +164,13 @@ internal fun ListBookRow(
             horizontalArrangement = Arrangement.SpaceBetween,
           ) {
             Text(
-              text = book.remainingTime,
+              text = book.statusLabel(),
               style = MaterialTheme.typography.labelMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
               maxLines = 1,
             )
 
-            if (book.progress > 0f) {
+            if (!book.finished && book.progress > 0f) {
               Text(
                 text = "${(book.progress * 100).toInt()}%",
                 style = MaterialTheme.typography.labelMedium,
@@ -178,9 +180,16 @@ internal fun ListBookRow(
             }
           }
         }
+
+        if (book.finished) {
+          CompletedMedal(
+            size = 44.dp,
+            modifier = Modifier.padding(end = 12.dp),
+          )
+        }
       }
 
-      if (book.progress > 0.05f) {
+      if (!book.finished && book.progress > 0.05f) {
         Spacer(Modifier.size(0.dp))
         LinearProgressIndicator(
           progress = { book.progress },
@@ -193,6 +202,16 @@ internal fun ListBookRow(
         )
       }
     }
+  }
+}
+
+/** Remaining time while listening; the finish date, or plain "Completed", once done. */
+@Composable
+internal fun BookOverviewItemViewState.statusLabel(): String {
+  return when {
+    !finished -> remainingTime
+    finishedOn != null -> stringResource(StringsR.string.book_finished_on, finishedOn)
+    else -> stringResource(StringsR.string.book_header_completed)
   }
 }
 
@@ -215,6 +234,17 @@ private fun CoverImage(
     error = painterResource(id = UiR.drawable.album_art),
     contentScale = ContentScale.Crop,
     contentDescription = null,
+  )
+}
+
+@Composable
+@Preview
+private fun ListBookRowPreviewFinished() {
+  ListBookRow(
+    book = BookOverviewPreviewParameterProvider().book().copy(progress = 1f, finished = true, finishedOn = "12 Mar 2026"),
+    onBookClick = {},
+    onBookLongClick = {},
+    sharedTransitionScope = null,
   )
 }
 

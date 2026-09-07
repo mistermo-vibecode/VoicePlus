@@ -10,10 +10,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.SetSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import voice.core.data.GridMode
 import voice.core.data.MediaButtonClickAction
+import voice.core.data.PlaybackToolbarAction
 import voice.core.data.sleeptimer.SleepTimerPreference
 import voice.core.data.store.AutoRewindAmountStore
 import voice.core.data.store.DarkThemeStore
@@ -23,6 +25,7 @@ import voice.core.data.store.GridModeStore
 import voice.core.data.store.IgnoreFileTagsStore
 import voice.core.data.store.MediaButtonDoubleClickHandlerStore
 import voice.core.data.store.MediaButtonTripleClickHandlerStore
+import voice.core.data.store.PlaybackToolbarActionsStore
 import voice.core.data.store.SeekTimeStore
 import voice.core.data.store.SleepTimerPreferenceStore
 import kotlin.time.Duration
@@ -47,6 +50,7 @@ internal class SettingsSnapshotter(
   @GridModeStore gridMode: DataStore<GridMode>,
   @MediaButtonDoubleClickHandlerStore mediaDoubleClick: DataStore<MediaButtonClickAction>,
   @MediaButtonTripleClickHandlerStore mediaTripleClick: DataStore<MediaButtonClickAction>,
+  @PlaybackToolbarActionsStore playbackToolbarActions: DataStore<Set<PlaybackToolbarAction>>,
   @ExperimentalPlaybackPersistenceStore experimentalPersistence: DataStore<Boolean>,
   @IgnoreFileTagsStore ignoreFileTags: DataStore<Boolean>,
   @SnapshotJson private val json: Json,
@@ -74,6 +78,7 @@ internal class SettingsSnapshotter(
     Entry("gridMode", gridMode, GridMode.serializer()),
     Entry("mediaButtonDoubleClick", mediaDoubleClick, MediaButtonClickAction.serializer()),
     Entry("mediaButtonTripleClick", mediaTripleClick, MediaButtonClickAction.serializer()),
+    Entry("playbackToolbarActions", playbackToolbarActions, SetSerializer(PlaybackToolbarAction.serializer())),
     Entry("experimentalPlaybackPersistence", experimentalPersistence, Boolean.serializer()),
     Entry("ignoreFileTags", ignoreFileTags, Boolean.serializer()),
   )

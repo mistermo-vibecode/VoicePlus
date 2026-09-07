@@ -10,6 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import voice.core.data.BookId
+import voice.core.data.PlaybackToolbarAction
 import voice.core.ui.VoiceTheme
 import voice.features.playbackScreen.BookPlayViewState
 import kotlin.time.Duration
@@ -33,6 +34,7 @@ internal fun BookPlayView(
   onVolumeBoostClick: () -> Unit,
   onListeningLogClick: () -> Unit,
   onCharacterListClick: () -> Unit,
+  onCustomizeToolbarClick: () -> Unit,
   onSkipToNext: () -> Unit,
   onSkipToPrevious: () -> Unit,
   onCloseClick: () -> Unit,
@@ -55,6 +57,7 @@ internal fun BookPlayView(
         onVolumeBoostClick = onVolumeBoostClick,
         onListeningLogClick = onListeningLogClick,
         onCharacterListClick = onCharacterListClick,
+        onCustomizeToolbarClick = onCustomizeToolbarClick,
         onCloseClick = onCloseClick,
         useLandscapeLayout = useLandscapeLayout,
         onEditChapterNamesClick = onEditChapterNamesClick,
@@ -102,6 +105,7 @@ private fun BookPlayPreview(
       onVolumeBoostClick = {},
       onListeningLogClick = {},
       onCharacterListClick = {},
+      onCustomizeToolbarClick = {},
       onSkipToNext = {},
       onSkipToPrevious = {},
       onCloseClick = {},
@@ -125,6 +129,7 @@ private class BookPlayViewStatePreviewProvider : PreviewParameterProvider<BookPl
       title = "Das Ende der Welt",
       characterCount = 0,
       editChapterNamesVisible = false,
+      toolbarActions = PlaybackToolbarAction.DEFAULT,
     )
     yield(initial)
     yield(

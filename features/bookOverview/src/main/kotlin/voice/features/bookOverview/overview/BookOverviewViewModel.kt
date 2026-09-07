@@ -18,14 +18,17 @@ import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import voice.core.common.RetainedViewModel
 import voice.core.common.comparator.sortedNaturally
 import voice.core.data.Book
 import voice.core.data.BookId
 import voice.core.data.GridMode
+import voice.core.data.ListeningSessionEndReason
 import voice.core.data.repo.BookContentRepo
 import voice.core.data.repo.BookRepository
+import voice.core.data.repo.ListeningSessionRepo
 import voice.core.data.repo.internals.dao.RecentBookSearchDao
 import voice.core.data.store.CurrentBookStore
 import voice.core.data.store.FinishedExpandedStore
@@ -46,6 +49,7 @@ import voice.features.bookOverview.di.BookOverviewScope
 import voice.features.bookOverview.search.BookSearchViewState
 import voice.navigation.Destination
 import voice.navigation.Navigator
+import java.time.Instant
 import kotlin.time.Duration.Companion.minutes
 
 @SingleIn(BookOverviewScope::class)
@@ -64,6 +68,7 @@ class BookOverviewViewModel(
   private val recentBookSearchDao: RecentBookSearchDao,
   private val search: BookSearch,
   private val contentRepo: BookContentRepo,
+  private val sessionRepo: ListeningSessionRepo,
   private val deviceHasStoragePermissionBug: DeviceHasStoragePermissionBug,
   @FolderPickerInSettingsFeatureFlagQualifier
   private val folderPickerInSettingsFeatureFlag: FeatureFlag<Boolean>,
@@ -113,6 +118,14 @@ class BookOverviewViewModel(
       .collectAsState().value
     val books = remember { repo.flow() }
       .collectAsState(initial = emptyList()).value
+    val finishedAt = remember {
+      sessionRepo.allSessions().map { sessions ->
+        sessions
+          .filter { it.endReason == ListeningSessionEndReason.EndOfBook.id }
+          .groupBy({ it.bookId }, { it.endedAt })
+          .mapValues { (_, endings) -> endings.max() }
+      }
+    }.collectAsState(initial = emptyMap()).value
     val currentBookId = remember { currentBookStoreDataStore.data }
       .collectAsState(initial = null).value
     val scannerActive = remember { mediaScanner.scannerActive }
@@ -155,6 +168,7 @@ class BookOverviewViewModel(
             .associate { book ->
               book.id to book.itemViewState(
                 currentBookId = currentBookId,
+                finishedAt = finishedAt[book.id],
                 livePlaybackState = { livePlaybackState.value },
               )
             }
@@ -275,20 +289,21 @@ class BookOverviewViewModel(
 @Composable
 private fun Book.itemViewState(
   currentBookId: BookId?,
+  finishedAt: Instant?,
   livePlaybackState: () -> LivePlaybackState?,
 ): State<BookOverviewItemViewState> {
   if (id != currentBookId) {
-    return rememberUpdatedState(toItemViewState())
+    return rememberUpdatedState(toItemViewState(finishedAt))
   }
   val currentPlaybackState by rememberUpdatedState(livePlaybackState)
-  return remember(this, currentBookId) {
+  return remember(this, currentBookId, finishedAt) {
     derivedStateOf {
       val livePlayback = currentPlaybackState()
       if (livePlayback != null) {
         overlay(livePlayback)
       } else {
         this
-      }.toItemViewState()
+      }.toItemViewState(finishedAt)
     }
   }
 }
